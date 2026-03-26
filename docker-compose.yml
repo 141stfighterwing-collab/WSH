@@ -1,5 +1,3 @@
-version: '3.8'
-
 # WSH - Weavenote Self Hosted
 # Self-hosted notes with PostgreSQL and robust PowerShell execution
 # FORCED INSTALLATION - Overwrites any previous setup
