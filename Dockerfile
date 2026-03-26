@@ -1,7 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
 # Unified Dockerfile with Node.js + PowerShell support
-# FORCED INSTALLATION - Overwrites any previous setup
-# Version: 2.1.0 - Windows Compatible
+# Version: 2.2.0 - Fixed Database Schema Push
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -10,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.1.0"
+LABEL version="2.2.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -31,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="2.1.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="2.2.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -106,11 +105,14 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.1.0"
+    POWERSHELL_EXECUTOR_VERSION="2.2.0"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
+
+# Install Prisma CLI globally for schema migrations
+RUN npm install -g prisma@latest
 
 # Copy Next.js standalone build
 COPY --from=builder /app/public ./public
@@ -128,107 +130,16 @@ COPY --from=builder /modules/ /modules/
 COPY --from=builder /app/pwsh/ /app/pwsh/
 COPY --from=builder /scripts/ /scripts/
 
+# Copy startup and healthcheck scripts from the scripts directory
+COPY scripts/start.ps1 /app/start.ps1
+COPY scripts/healthcheck.ps1 /app/healthcheck.ps1
+COPY scripts/db-diagnostic.ps1 /scripts/db-diagnostic.ps1
+COPY scripts/db-inject-schema.ps1 /scripts/db-inject-schema.ps1
+
 # Set permissions
-RUN chmod -R 755 /modules /app/pwsh /scripts /logs /output /config /data && \
+RUN chmod -R 755 /modules /app/pwsh /scripts /logs /output /config /data /app && \
+    chmod +x /app/start.ps1 /app/healthcheck.ps1 /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 && \
     chown -R nextjs:nodejs /app /logs /output /config /scripts /data
-
-# Create health check script
-RUN echo '#!/usr/bin/env pwsh\n\
-param()\n\
-\n\
-$health = @{\n\
-    status = "healthy"\n\
-    timestamp = (Get-Date -Format "o")\n\
-    version = $env:POWERSHELL_EXECUTOR_VERSION\n\
-    nodejs = "unknown"\n\
-    database = "checking"\n\
-}\n\
-\n\
-try {\n\
-    $nodeVersion = node --version 2>$null\n\
-    $health.nodejs = $nodeVersion\n\
-} catch {\n\
-    $health.nodejs = "error"\n\
-}\n\
-\n\
-try {\n\
-    $result = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -TimeoutSec 5 -UseBasicParsing 2>$null\n\
-    if ($result.StatusCode -eq 200) {\n\
-        $health.database = "connected"\n\
-    } else {\n\
-        $health.database = "error"\n\
-    }\n\
-} catch {\n\
-    $health.database = "disconnected"\n\
-    $health.status = "degraded"\n\
-}\n\
-\n\
-Write-Output ($health | ConvertTo-Json -Compress)\n\
-exit $(if ($health.status -eq "healthy") { 0 } else { 1 })\n\
-' > /app/healthcheck.ps1 && chmod +x /app/healthcheck.ps1
-
-# Create startup script
-RUN echo '#!/usr/bin/env pwsh\n\
-param(\n\
-    [Parameter(Position=0)]\n\
-    [ValidateSet("app", "script", "daemon")]\n\
-    [string]$Mode = "app"\n\
-)\n\
-\n\
-Write-Host "========================================" -ForegroundColor Cyan\n\
-Write-Host "WSH - Weavenote Self Hosted" -ForegroundColor Cyan\n\
-Write-Host "Mode: $Mode" -ForegroundColor Cyan\n\
-Write-Host "========================================" -ForegroundColor Cyan\n\
-\n\
-# Set database URL\n\
-$env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"\n\
-\n\
-# Run database schema push with retry\n\
-$schemaPushed = $false\n\
-for ($i = 1; $i -le 5; $i++) {\n\
-    Write-Host "Attempting database schema push ($i/5)..." -ForegroundColor Yellow\n\
-    try {\n\
-        $result = npx prisma db push --accept-data-loss --skip-generate 2>&1\n\
-        if ($LASTEXITCODE -eq 0) {\n\
-            $schemaPushed = $true\n\
-            Write-Host "Database schema ready!" -ForegroundColor Green\n\
-            break\n\
-        }\n\
-    } catch {\n\
-        Write-Host "Schema push attempt $i failed, retrying..." -ForegroundColor Yellow\n\
-    }\n\
-    Start-Sleep -Seconds 3\n\
-}\n\
-\n\
-if (-not $schemaPushed) {\n\
-    Write-Warning "Database schema push had issues, starting anyway..."\n\
-}\n\
-\n\
-switch ($Mode) {\n\
-    "app" {\n\
-        Write-Host "Starting WSH Application on port 3000..." -ForegroundColor Green\n\
-        & node server.js\n\
-    }\n\
-    "script" {\n\
-        $ScriptPath = $env:SCRIPT_PATH\n\
-        if (-not $ScriptPath) { \n\
-            Write-Error "SCRIPT_PATH environment variable not set"\n\
-            exit 1\n\
-        }\n\
-        Write-Host "Executing script: $ScriptPath" -ForegroundColor Green\n\
-        & pwsh -NoProfile -File $ScriptPath\n\
-    }\n\
-    "daemon" {\n\
-        Write-Host "Starting daemon mode with health server..." -ForegroundColor Green\n\
-        & node server.js &\n\
-        Start-Sleep -Seconds 5\n\
-        while ($true) {\n\
-            Start-Sleep -Seconds 60\n\
-            Write-Host "Health check: $(Get-Date -Format "o")"\n\
-        }\n\
-    }\n\
-}\n\
-' > /app/start.ps1 && chmod +x /app/start.ps1
 
 # Health check configuration
 HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=3 \
