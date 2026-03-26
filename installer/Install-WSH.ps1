@@ -60,7 +60,7 @@ param (
     [switch]$SkipPortCheck,
     
     [Parameter(ParameterSetName = 'Install')]
-    [switch]$Force = $true,
+    [switch]$Force,
     
     [Parameter(ParameterSetName = 'Install')]
     [string]$GeminiApiKey = "",
@@ -556,20 +556,26 @@ function Test-WorkingDirectory {
     
     try {
         if (Test-Path $InstallPath) {
-            if ($Force) {
-                Write-SubStep "Existing installation found, will overwrite" -Status warning
-                Write-Log "Existing installation will be overwritten at: $InstallPath" -Level WARNING
-            } else {
-                # Check if it's empty
-                $existingFiles = Get-ChildItem -Path $InstallPath -ErrorAction SilentlyContinue
-                if ($existingFiles) {
-                    Write-SubStep "Directory exists with files. Use -Force to overwrite." -Status warning
-                    Write-Log "Installation directory exists with files: $InstallPath" -Level WARNING
-                    return @{
-                        Success = $false
-                        Message = "Installation directory exists with files. Use -Force to overwrite."
+            # Check if it has files
+            $existingFiles = Get-ChildItem -Path $InstallPath -ErrorAction SilentlyContinue
+            if ($existingFiles) {
+                if (-not $Force) {
+                    Write-SubStep "Directory exists with files: $InstallPath" -Status warning
+                    Write-Host ""
+                    Write-Host "  Existing installation found at: $InstallPath" -ForegroundColor Yellow
+                    Write-Host "  Do you want to overwrite it? (Y/N): " -NoNewline -ForegroundColor Cyan
+                    $response = Read-Host
+                    
+                    if ($response -ne 'Y' -and $response -ne 'y') {
+                        Write-SubStep "Installation cancelled by user" -Status error
+                        return @{
+                            Success = $false
+                            Message = "Installation cancelled by user. Use -Force to overwrite automatically."
+                        }
                     }
                 }
+                Write-SubStep "Existing installation will be overwritten" -Status warning
+                Write-Log "Existing installation will be overwritten at: $InstallPath" -Level WARNING
             }
         }
         
@@ -735,18 +741,16 @@ function Invoke-EnvironmentPreparation {
         return $volResult
     }
     
-    # Create Docker network
-    Write-ProgressDetail -Activity "Preparing Environment" -Status "Creating Docker network..." -PercentComplete 100
+    # Remove old network if it exists (let Docker Compose manage it)
+    Write-ProgressDetail -Activity "Preparing Environment" -Status "Cleaning up old network..." -PercentComplete 100
     try {
         $existingNetwork = docker network ls -q --filter "name=$($script:Config.DockerNetworkName)" 2>&1
-        if (-not $existingNetwork) {
-            docker network create $script:Config.DockerNetworkName | Out-Null
-            Write-SubStep "Created Docker network: $($script:Config.DockerNetworkName)" -Status success
-        } else {
-            Write-SubStep "Docker network already exists: $($script:Config.DockerNetworkName)" -Status info
+        if ($existingNetwork) {
+            Write-SubStep "Removing old Docker network for fresh creation..." -Status info
+            docker network rm $script:Config.DockerNetworkName 2>&1 | Out-Null
         }
     } catch {
-        Write-SubStep "Docker network creation warning: $($_.Exception.Message)" -Status warning
+        Write-SubStep "Network cleanup warning: $($_.Exception.Message)" -Status warning
     }
     
     Write-Log "Environment preparation completed" -Level SUCCESS
@@ -957,7 +961,6 @@ volumes:
 
 networks:
   wsh-network:
-    name: $($script:Config.DockerNetworkName)
     driver: bridge
 "@
 
