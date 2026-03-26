@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  password      String
+  role          String   @default("user")
+  permission    String   @default("edit")
+  status        String   @default("active")
+  lastLogin     DateTime?
+  aiUsageCount  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  notes         Note[]
+  folders       Folder[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Note {
+  id              String   @id @default(uuid())
+  title           String
+  content         String   @db.Text
+  rawContent      String?  @db.Text
+  category        String   @default("QUICK")
+  type            String   @default("quick")
+  tags            String[] @default([])
+  color           String   @default("yellow")
+  textColor       String?
+  backgroundColor String?
+  folderId        String?
+  userId          String
+  isDeleted       Boolean  @default(false)
+  deletedAt       DateTime?
+  isSynthesized   Boolean  @default(false)
+  accessCount     Int      @default(0)
+  wordCount       Int      @default(0)
+  projectData     Json?
+  attachments     String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder          Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([folderId])
+  @@index([isDeleted])
+  @@map("notes")
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
+  order     Int      @default(0)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes     Note[]
+
+  @@index([userId])
+  @@map("folders")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  actor     String
+  target    String?
+  details   String?  @db.Text
+  timestamp DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_config")
+}

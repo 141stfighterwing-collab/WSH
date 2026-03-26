@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wsh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wsh
+      POSTGRES_PASSWORD: wsh_secure_password
+      POSTGRES_DB: wsh_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wsh -d wsh_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wsh-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      NEXT_PUBLIC_APP_NAME: WSH - Weavenote Self Hosted
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wsh.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: wsh-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@wsh.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    depends_on:
+      - postgres
+    profiles:
+      - admin
+
+volumes:
+  postgres_data:
