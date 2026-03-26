@@ -197,14 +197,39 @@ Write-Host "PowerShell Executor v$env:POWERSHELL_EXECUTOR_VERSION" -ForegroundCo
 Write-Host "Mode: $Mode" -ForegroundColor Cyan\n\
 Write-Host "========================================" -ForegroundColor Cyan\n\
 \n\
-# Run database migrations if needed\n\
+# Wait for database to be ready\n\
+Write-Host "Waiting for database to be ready..." -ForegroundColor Yellow\n\
+$maxRetries = 30\n\
+$retry = 0\n\
+$dbReady = $false\n\
+while ($retry -lt $maxRetries) {\n\
+    try {\n\
+        $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"\n\
+        $result = npx prisma db pull 2>&1\n\
+        if ($LASTEXITCODE -eq 0) {\n\
+            $dbReady = $true\n\
+            break\n\
+        }\n\
+    } catch {}\n\
+    $retry++\n\
+    Write-Host "Database not ready, waiting... ($retry/$maxRetries)" -ForegroundColor Gray\n\
+    Start-Sleep -Seconds 2\n\
+}\n\
+\n\
+if (-not $dbReady) {\n\
+    Write-Warning "Database connection timeout, proceeding anyway..."\n\
+}\n\
+\n\
+# Run database schema push\n\
 try {\n\
     Push-Location /app\n\
-    npx prisma migrate deploy 2>$null\n\
+    Write-Host "Running database schema push..." -ForegroundColor Yellow\n\
+    $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"\n\
+    npx prisma db push --accept-data-loss 2>&1\n\
     Pop-Location\n\
-    Write-Host "Database migrations completed" -ForegroundColor Green\n\
+    Write-Host "Database schema push completed" -ForegroundColor Green\n\
 } catch {\n\
-    Write-Warning "Database migration check: $($_.Exception.Message)"\n\
+    Write-Warning "Database schema push error: $($_.Exception.Message)"\n\
 }\n\
 \n\
 switch ($Mode) {\n\
