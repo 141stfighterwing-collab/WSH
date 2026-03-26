@@ -728,30 +728,21 @@ function Invoke-EnvironmentPreparation {
     Write-StepHeader -StepNumber 2 -StepName "Environment Preparation"
     
     # Create directory structure
-    Write-ProgressDetail -Activity "Preparing Environment" -Status "Creating directories..." -PercentComplete 33
+    Write-ProgressDetail -Activity "Preparing Environment" -Status "Creating directories..." -PercentComplete 50
     $dirResult = New-InstallationDirectory
     if (-not $dirResult.Success) {
         return $dirResult
     }
     
     # Create Docker volumes
-    Write-ProgressDetail -Activity "Preparing Environment" -Status "Creating Docker volumes..." -PercentComplete 66
+    Write-ProgressDetail -Activity "Preparing Environment" -Status "Creating Docker volumes..." -PercentComplete 100
     $volResult = New-DockerVolumes
     if (-not $volResult.Success) {
         return $volResult
     }
     
-    # Remove old network if it exists (let Docker Compose manage it)
-    Write-ProgressDetail -Activity "Preparing Environment" -Status "Cleaning up old network..." -PercentComplete 100
-    try {
-        $existingNetwork = docker network ls -q --filter "name=$($script:Config.DockerNetworkName)" 2>&1
-        if ($existingNetwork) {
-            Write-SubStep "Removing old Docker network for fresh creation..." -Status info
-            docker network rm $script:Config.DockerNetworkName 2>&1 | Out-Null
-        }
-    } catch {
-        Write-SubStep "Network cleanup warning: $($_.Exception.Message)" -Status warning
-    }
+    # NOTE: Don't create network - let Docker Compose manage it entirely
+    # This avoids conflicts with network labels
     
     Write-Log "Environment preparation completed" -Level SUCCESS
     return @{ Success = $true }
@@ -1106,6 +1097,22 @@ function Start-DatabaseDeployment {
     $composePath = Join-Path $InstallPath "docker-compose.yml"
     
     try {
+        # Clean up old network before starting (fixes label conflict)
+        Write-ProgressDetail -Activity "Deploying Database" -Status "Cleaning up old network..." -PercentComplete 10
+        Write-SubStep "Cleaning up old Docker network..." -Status running
+        
+        # Stop any existing containers first
+        docker compose -f "$composePath" down --remove-orphans 2>&1 | Out-Null
+        
+        # Force remove the network if it exists
+        $existingNetwork = docker network ls -q --filter "name=wsh-network" 2>&1
+        if ($existingNetwork) {
+            docker network rm wsh-network 2>&1 | Out-Null
+            Write-SubStep "Removed old network for fresh creation" -Status success
+        } else {
+            Write-SubStep "No existing network to clean up" -Status info
+        }
+        
         # Pull PostgreSQL image
         Write-ProgressDetail -Activity "Deploying Database" -Status "Pulling PostgreSQL image..." -PercentComplete 25
         Write-SubStep "Pulling PostgreSQL image: $($script:Config.PostgresImage)" -Status running
