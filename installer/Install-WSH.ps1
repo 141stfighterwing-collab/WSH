@@ -1226,31 +1226,38 @@ function Start-ApplicationDeployment {
             Remove-Item -Path $repoPath -Recurse -Force
         }
         
-        git clone https://github.com/141stfighterwing-collab/WSH.git $repoPath 2>&1 | Out-Null
+        $cloneResult = git clone https://github.com/141stfighterwing-collab/WSH.git $repoPath 2>&1
         
         if (-not (Test-Path $repoPath)) {
-            Write-SubStep "Failed to clone repository" -Status error
-            Write-Log "Failed to clone WSH repository" -Level ERROR
-            return @{ Success = $false; Message = "Failed to clone WSH repository" }
+            Write-SubStep "Failed to clone repository: $cloneResult" -Status error
+            Write-Log "Failed to clone WSH repository: $cloneResult" -Level ERROR
+            return @{ Success = $false; Message = "Failed to clone WSH repository: $cloneResult" }
         }
         
         Write-SubStep "Repository cloned successfully" -Status success
         
-        # Build Docker image locally
-        Write-ProgressDetail -Activity "Deploying Application" -Status "Building WSH Docker image (this may take a few minutes)..." -PercentComplete 30
+        # Build Docker image locally - show output for debugging
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Building WSH Docker image (this may take 3-5 minutes)..." -PercentComplete 30
         Write-SubStep "Building WSH Docker image locally..." -Status running
+        Write-Host "  --- Docker Build Output ---" -ForegroundColor DarkGray
         
         Push-Location $repoPath
-        docker build -t wsh-app:latest . 2>&1 | Out-Null
+        $buildOutput = docker build -t wsh-app:latest . 2>&1
         Pop-Location
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-SubStep "Failed to build Docker image" -Status error
+        # Show build output
+        Write-Host $buildOutput -ForegroundColor DarkGray
+        Write-Host "  --- End Build Output ---" -ForegroundColor DarkGray
+        
+        # Check if image was created
+        $imageCheck = docker images wsh-app:latest --format "{{.ID}}" 2>&1
+        if (-not $imageCheck) {
+            Write-SubStep "Failed to build Docker image - see output above" -Status error
             Write-Log "Failed to build WSH Docker image" -Level ERROR
-            return @{ Success = $false; Message = "Failed to build WSH Docker image" }
+            return @{ Success = $false; Message = "Failed to build WSH Docker image. Check Docker build output above." }
         }
         
-        Write-SubStep "WSH Docker image built successfully" -Status success
+        Write-SubStep "WSH Docker image built successfully (Image ID: $imageCheck)" -Status success
         
         # Update docker-compose to use local image
         Write-ProgressDetail -Activity "Deploying Application" -Status "Updating configuration..." -PercentComplete 40
@@ -1262,13 +1269,14 @@ function Start-ApplicationDeployment {
         Write-ProgressDetail -Activity "Deploying Application" -Status "Starting WSH application..." -PercentComplete 50
         Write-SubStep "Starting WSH application container..." -Status running
         
-        $composeCmd = "docker compose -f `"$composePath`" up -d app"
-        Invoke-Expression $composeCmd
+        $composeCmd = "docker compose -f `"$composePath`" up -d app 2>&1"
+        $upOutput = Invoke-Expression $composeCmd
+        Write-Host $upOutput -ForegroundColor DarkGray
         
         if ($LASTEXITCODE -ne 0) {
             Write-SubStep "Failed to start WSH application container" -Status error
-            Write-Log "Failed to start WSH application container" -Level ERROR
-            return @{ Success = $false; Message = "Failed to start WSH application container" }
+            Write-Log "Failed to start WSH application container: $upOutput" -Level ERROR
+            return @{ Success = $false; Message = "Failed to start WSH application container: $upOutput" }
         }
         
         Write-SubStep "WSH application container started" -Status success
