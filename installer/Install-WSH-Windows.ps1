@@ -1,4 +1,3 @@
-#Requires -Version 7.0
 <#
 .SYNOPSIS
     WSH (Weavenote Self Hosted) - Windows Installation Script
@@ -33,8 +32,9 @@
     .\Install-WSH-Windows.ps1 -Force -SkipTests
 
 .NOTES
-    Version: 2.0.0
+    Version: 2.1.0
     Author: WSH Team
+    Compatible: Windows PowerShell 5.1+, PowerShell 7+
 #>
 
 [CmdletBinding()]
@@ -52,12 +52,17 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$SCRIPT_VERSION = "2.0.0"
+$SCRIPT_VERSION = "2.1.0"
 $WSH_NAME = "WSH - Weavenote Self Hosted"
 $DOCKER_COMPOSE_FILE = "docker-compose.yml"
 $MAX_RETRIES = 3
 $RETRY_DELAY_SECONDS = 5
 $HEALTH_CHECK_TIMEOUT = 120
+
+# Handle $PSScriptRoot for different PowerShell versions
+if (-not $PSScriptRoot) {
+    $PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+}
 
 # Colors for output
 function Write-Success { Write-Host $args -ForegroundColor Green }
@@ -200,6 +205,52 @@ function Safe-Execute {
 # ============================================================================
 # PREREQUISITES CHECKING
 # ============================================================================
+function Start-DockerDesktop {
+    <#
+    .SYNOPSIS
+        Attempts to start Docker Desktop if not running
+    #>
+    $dockerDesktopPath = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+    $dockerDesktopPathAlt = "${env:ProgramFiles}\Docker\Docker\Docker Desktop.exe"
+    
+    if (-not (Test-Path $dockerDesktopPath)) {
+        $dockerDesktopPath = $dockerDesktopPathAlt
+    }
+    
+    if (Test-Path $dockerDesktopPath) {
+        Write-Log "Starting Docker Desktop..." -Level "INFO"
+        Start-Process $dockerDesktopPath
+        Write-Log "Waiting for Docker Desktop to start (this may take 30-60 seconds)..." -Level "INFO"
+        
+        # Wait for Docker to be ready
+        $maxWait = 90
+        $waited = 0
+        while ($waited -lt $maxWait) {
+            Start-Sleep -Seconds 5
+            $waited += 5
+            try {
+                $dockerInfo = docker info 2>&1 | Select-String -Pattern "Server Version"
+                if ($dockerInfo) {
+                    Write-Success "Docker Desktop is now running!"
+                    return $true
+                }
+            }
+            catch {
+                # Continue waiting
+            }
+            Write-Log "Still waiting for Docker... ($waited/$maxWait seconds)" -Level "DEBUG"
+        }
+        
+        Write-Warning-Custom "Docker Desktop did not start within $maxWait seconds"
+        return $false
+    }
+    else {
+        Write-Error-Custom "Docker Desktop not found at: $dockerDesktopPath"
+        Write-Info "Please install Docker Desktop: https://www.docker.com/products/docker-desktop"
+        return $false
+    }
+}
+
 function Test-Prerequisites {
     Write-Header "=== PREREQUISITES CHECK ==="
     
@@ -256,10 +307,36 @@ function Test-Prerequisites {
             $results.DockerRunning = $true
             Write-Success "Docker daemon is running"
         }
+        else {
+            # Try to start Docker Desktop
+            Write-Warning-Custom "Docker daemon is not running. Attempting to start Docker Desktop..."
+            $started = Start-DockerDesktop
+            if ($started) {
+                $results.DockerRunning = $true
+            }
+            else {
+                Write-Error-Custom "Docker daemon is not running. Please start Docker Desktop manually."
+                Write-Info "1. Open Docker Desktop from Start Menu"
+                Write-Info "2. Wait for it to fully start (whale icon should be steady)"
+                Write-Info "3. Run this script again"
+                throw "Docker not running - please start Docker Desktop"
+            }
+        }
     }
     catch {
-        Write-Error-Custom "Docker daemon is not running. Please start Docker Desktop."
-        throw "Docker not running"
+        if ($_.Exception.Message -like "*Docker not running*") {
+            throw
+        }
+        # Try to start Docker Desktop
+        Write-Warning-Custom "Docker daemon is not running. Attempting to start Docker Desktop..."
+        $started = Start-DockerDesktop
+        if ($started) {
+            $results.DockerRunning = $true
+        }
+        else {
+            Write-Error-Custom "Docker daemon is not running. Please start Docker Desktop."
+            throw "Docker not running"
+        }
     }
     
     # Check memory
