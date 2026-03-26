@@ -8,9 +8,9 @@ WORKDIR /app
 # Install Prisma CLI
 RUN npm install -g prisma
 
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY prisma ./prisma/
-RUN npm ci
+RUN npm install
 
 # Generate Prisma Client
 RUN npx prisma generate

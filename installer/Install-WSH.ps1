@@ -1236,6 +1236,19 @@ function Start-ApplicationDeployment {
         
         Write-SubStep "Repository cloned successfully" -Status success
         
+        # Patch Dockerfile if package-lock.json is missing (npm ci will fail without it)
+        $dockerfilePath = Join-Path $repoPath "Dockerfile"
+        $packageLockPath = Join-Path $repoPath "package-lock.json"
+        
+        if (-not (Test-Path $packageLockPath)) {
+            Write-SubStep "Patching Dockerfile (no package-lock.json found)..." -Status info
+            $dockerfileContent = Get-Content $dockerfilePath -Raw
+            $dockerfileContent = $dockerfileContent -replace 'COPY package\.json package-lock\.json\* \./', 'COPY package.json ./'
+            $dockerfileContent = $dockerfileContent -replace 'RUN npm ci', 'RUN npm install'
+            [System.IO.File]::WriteAllText($dockerfilePath, $dockerfileContent)
+            Write-SubStep "Dockerfile patched: using 'npm install' instead of 'npm ci'" -Status success
+        }
+        
         # Build Docker image locally - show output for debugging
         Write-ProgressDetail -Activity "Deploying Application" -Status "Building WSH Docker image (this may take 3-5 minutes)..." -PercentComplete 30
         Write-SubStep "Building WSH Docker image locally..." -Status running
