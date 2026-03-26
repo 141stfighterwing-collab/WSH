@@ -1,6 +1,11 @@
 version: '3.8'
 
+# WSH - Weavenote Self Hosted
+# Self-hosted notes with PostgreSQL and robust PowerShell execution
+# FORCED INSTALLATION - Overwrites any previous setup
+
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: wsh-postgres
@@ -18,30 +23,117 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - wsh-network
 
+  # Main WSH Application with PowerShell Executor
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: wsh-app
     restart: unless-stopped
+    
     environment:
+      # Database
       DATABASE_URL: postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public
+      
+      # JWT Configuration
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      NEXT_PUBLIC_APP_NAME: WSH - Weavenote Self Hosted
+      
+      # Application
+      NEXT_PUBLIC_APP_NAME: "WSH - Weavenote Self Hosted"
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      
+      # Admin
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wsh.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      
+      # PowerShell Executor Settings
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      RETRY_DELAY: ${RETRY_DELAY:-5}
+      DEFAULT_TIMEOUT: ${DEFAULT_TIMEOUT:-3600}
+      STRICT_MODE: ${STRICT_MODE:-true}
+      ERROR_ACTION: ${ERROR_ACTION:-Stop}
+      HEALTH_CHECK_ENABLED: ${HEALTH_CHECK_ENABLED:-true}
+      HEALTH_CHECK_PORT: ${HEALTH_CHECK_PORT:-8080}
+      TZ: ${TZ:-UTC}
+    
     ports:
       - "3000:3000"
+      - "8080:8080"
+    
     depends_on:
       postgres:
         condition: service_healthy
+    
     volumes:
-      - ./uploads:/app/uploads
+      - ./pwsh/scripts:/scripts:ro
+      - ./logs:/logs:rw
+      - ./config:/config:ro
+      - ./output:/output:rw
+      - ./data:/data:rw
+    
+    healthcheck:
+      test: ["CMD", "pwsh", "-NoProfile", "-Command", "& /app/healthcheck.ps1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    
+    networks:
+      - wsh-network
 
+  # Scheduled Script Executor (Optional)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wsh-scheduler
+    restart: unless-stopped
+    profiles:
+      - scheduled
+    
+    environment:
+      DATABASE_URL: postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public
+      EXECUTOR_MODE: scheduled
+      SCRIPT_PATH: ${SCHEDULED_SCRIPT:-/scripts/scheduled_task.ps1}
+      SCHEDULE_CRON: ${SCHEDULE_CRON:-0 * * * *}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-UTC}
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    volumes:
+      - ./pwsh/scripts:/scripts:ro
+      - ./logs:/logs:rw
+      - ./output:/output:rw
+    
+    networks:
+      - wsh-network
+
+  # pgAdmin (Optional - Database Management)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: wsh-pgadmin
@@ -56,6 +148,13 @@ services:
       - postgres
     profiles:
       - admin
+    networks:
+      - wsh-network
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  wsh-network:
+    driver: bridge
