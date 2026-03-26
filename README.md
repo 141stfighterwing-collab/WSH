@@ -4,14 +4,14 @@ A fully self-hosted notes application with PostgreSQL database. No cloud depende
 
 ## Features
 
-- 🗄️ **PostgreSQL Database** - All data stored locally in your own database
-- 🔐 **User Authentication** - Secure login with JWT tokens
-- 📝 **Multiple Note Types** - Quick, Deep, Project, and Notebook notes
-- 📁 **Folder Organization** - Organize notes into folders
-- 🌙 **Dark Mode** - Easy on the eyes
-- 🐳 **Docker Ready** - One-command deployment with Docker Compose
-- 🚀 **Self-Contained** - No external cloud services required
-- ✅ **Automated Testing** - Built-in Playwright UI tests with screenshots
+- **PostgreSQL Database** - All data stored locally in your own database
+- **User Authentication** - Secure login with JWT tokens
+- **Multiple Note Types** - Quick, Deep, Project, and Notebook notes
+- **Folder Organization** - Organize notes into folders
+- **Dark Mode** - Easy on the eyes
+- **Docker Ready** - One-command deployment with Docker Compose
+- **Self-Contained** - No external cloud services required
+- **One-Click Installer** - Windows PowerShell installer for easy deployment
 
 ---
 
@@ -19,24 +19,21 @@ A fully self-hosted notes application with PostgreSQL database. No cloud depende
 
 ### Option 1: One-Click PowerShell Installer (Windows 11) - RECOMMENDED
 
-The easiest way to deploy WSH on Windows with full validation, testing, and screenshots.
+The easiest way to deploy WSH on Windows with automated Docker deployment.
 
 ```powershell
 # Download and run the installer
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/141stfighterwing-collab/WSH/main/installer/Install-WSH-Extended.ps1" -OutFile "Install-WSH.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/141stfighterwing-collab/WSH/main/installer/Install-WSH.ps1" -OutFile "Install-WSH.ps1"
 .\Install-WSH.ps1
 ```
 
 **What the installer does:**
-1. ✅ Validates prerequisites (Docker, Node.js, ports)
-2. ✅ Creates environment and Docker configuration
-3. ✅ Deploys PostgreSQL database
-4. ✅ Deploys WSH application
-5. ✅ Runs health validation
-6. ✅ Performs functional API testing
-7. ✅ Runs Playwright UI tests (14 tests)
-8. ✅ Captures screenshots automatically
-9. ✅ Generates HTML validation report
+1. Validates prerequisites (Docker, ports, permissions)
+2. Creates environment and Docker configuration
+3. Deploys PostgreSQL database
+4. Deploys WSH application
+5. Validates health endpoints
+6. Creates desktop shortcut and opens browser
 
 **Installation Options:**
 
@@ -48,10 +45,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/141stfighterwing-colla
 .\Install-WSH.ps1 -EnablePgAdmin
 
 # With AI API key for testing AI features
-.\Install-WSH.ps1 -AIApiKey "your-gemini-api-key"
-
-# Skip UI tests (validation only)
-.\Install-WSH.ps1 -SkipUITests
+.\Install-WSH.ps1 -GeminiApiKey "your-gemini-api-key"
 
 # Custom installation path
 .\Install-WSH.ps1 -InstallPath "D:\WSH" -AppPort 8080
@@ -62,8 +56,8 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/141stfighterwing-colla
 
 **After installation:**
 - Application: http://localhost:3000
-- Validation Report: `%USERPROFILE%\WSH\wsh-validation-report.html`
-- Screenshots: `%USERPROFILE%\WSH\screenshots\`
+- pgAdmin (if enabled): http://localhost:5050
+- Log file: `%USERPROFILE%\WSH\wsh-install.log`
 
 ---
 
@@ -114,48 +108,23 @@ The installer directory contains:
 
 | File | Description |
 |------|-------------|
-| `Install-WSH.ps1` | Basic one-click installer |
-| `Install-WSH-Extended.ps1` | Full installer with validation & UI testing |
+| `Install-WSH.ps1` | One-click installer with all features |
 | `docker-compose.yml` | Standalone Docker Compose configuration |
-| `.env.example` | Environment configuration template |
 | `init-db.sql` | Database initialization script |
-| `tests/` | Playwright test suite |
+| `README.md` | Detailed installer documentation |
 | `VERIFICATION.md` | Verification checklist |
-| `EXAMPLE_OUTPUT.md` | Example output logs |
 
 ### Deployment Phases
 
 | Phase | Step | Description |
 |-------|------|-------------|
-| 1 | Prerequisites | Docker, Node.js, ports validation |
+| 1 | Prerequisites | Docker, ports, permissions validation |
 | 2 | Environment | Directories, volumes, network |
-| 3 | Configuration | .env, docker-compose, Playwright |
+| 3 | Configuration | .env, docker-compose generation |
 | 4 | Database | PostgreSQL deployment & health |
 | 5 | Application | WSH app deployment & validation |
 | 6 | Health Validation | Container, HTTP, DB checks |
-| 7 | Functional Testing | API endpoints, login testing |
-| 8 | UI Testing Setup | Playwright & browser install |
-| 9 | Playwright Tests | 14 UI tests with screenshots |
-| 10 | Report Generation | HTML report with all results |
-
-### Playwright UI Tests
-
-The installer automatically runs these tests:
-
-1. Homepage loads successfully
-2. Login page accessibility
-3. Login with credentials
-4. Dashboard/Notes page
-5. New Note button functionality
-6. Navigation menu
-7. Dark mode toggle
-8. Mobile responsiveness (375x667)
-9. UI Elements capture
-10. Error page handling
-11. Folder creation button
-12. Search functionality
-13. Settings button
-14. Logout button
+| 7 | Finalization | Shortcuts, installation info |
 
 ---
 
@@ -270,66 +239,6 @@ npm start
 
 ---
 
-## 🧪 Manual Testing
-
-If you want to run tests manually after installation:
-
-```powershell
-cd C:\Users\<User>\WSH\tests
-
-# Install dependencies
-npm install
-
-# Run all tests
-npm test
-
-# Run in headed mode (visible browser)
-npm run test:headed
-
-# Capture screenshots only
-npm run test:screenshot
-
-# View test report
-npm run report
-```
-
----
-
-## 📸 Screenshots
-
-The installer automatically captures screenshots:
-
-```
-C:\Users\<User>\WSH\screenshots\<timestamp>\
-├── 01-homepage.png
-├── 02-login-page.png
-├── 03-login-filled.png
-├── 04-dashboard.png
-├── 05-create-note-form.png
-├── 06-navigation.png
-├── 07-dark-mode.png
-├── 08-mobile-view.png
-└── ... (more screenshots)
-```
-
----
-
-## 📊 Validation Report
-
-After installation, a comprehensive HTML report is generated:
-
-- **Location:** `%USERPROFILE%\WSH\wsh-validation-report.html`
-- **Contents:**
-  - Test summary with pass/fail counts
-  - Response times for all endpoints
-  - Screenshot gallery
-  - Container status
-  - File locations
-
-The report automatically opens in your browser after installation.
-
----
-
 ## ❓ Troubleshooting
 
 ### Container Won't Start
@@ -339,28 +248,26 @@ docker logs wsh-app
 docker logs wsh-postgres
 
 # Restart containers
-docker-compose -f C:\Users\<User>\WSH\docker-compose.yml restart
-```
-
-### Node.js Not Installing
-```powershell
-# Manual install
-winget install OpenJS.NodeJS.LTS
-```
-
-### Playwright Browser Issues
-```powershell
-cd C:\Users\<User>\WSH\tests
-npx playwright install chromium
+docker-compose -f "$env:USERPROFILE\WSH\docker-compose.yml" restart
 ```
 
 ### Port Conflicts
 ```powershell
-# Find process
+# Find process using port 3000
 netstat -ano | findstr :3000
 
 # Kill process
 taskkill /PID <pid> /F
+```
+
+### Installation Issues
+```powershell
+# Check install log
+Get-Content "$env:USERPROFILE\WSH\wsh-install.log"
+
+# Full reset
+.\Install-WSH.ps1 -Uninstall -RemoveData
+.\Install-WSH.ps1 -Force
 ```
 
 ---
@@ -370,18 +277,11 @@ taskkill /PID <pid> /F
 ```
 WSH/
 ├── installer/                 # PowerShell installer
-│   ├── Install-WSH.ps1       # Basic installer
-│   ├── Install-WSH-Extended.ps1  # Full installer with testing
+│   ├── Install-WSH.ps1       # One-click installer
 │   ├── docker-compose.yml    # Docker configuration
-│   ├── .env.example          # Environment template
 │   ├── init-db.sql           # Database init script
-│   ├── tests/                # Playwright test suite
-│   │   ├── package.json
-│   │   ├── playwright.config.js
-│   │   ├── ui-tests.spec.js
-│   │   └── screenshot-runner.js
-│   ├── VERIFICATION.md       # Verification checklist
-│   └── EXAMPLE_OUTPUT.md     # Example output logs
+│   ├── README.md             # Installer documentation
+│   └── VERIFICATION.md       # Verification checklist
 ├── src/                      # Application source
 │   ├── app/                  # Next.js app router
 │   └── lib/                  # Libraries

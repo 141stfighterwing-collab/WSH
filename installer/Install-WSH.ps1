@@ -62,6 +62,9 @@ param (
     [Parameter(ParameterSetName = 'Install')]
     [switch]$Force,
     
+    [Parameter(ParameterSetName = 'Install')]
+    [string]$GeminiApiKey = "",
+    
     [Parameter(ParameterSetName = 'Uninstall')]
     [switch]$Uninstall,
     
@@ -221,18 +224,18 @@ function Write-StepHeader {
     $percentage = [math]::Round((($StepNumber - 1) / $script:Progress.TotalSteps) * 100)
     $barLength = 50
     $filledLength = [math]::Round($barLength * ($percentage / 100))
-    $bar = "█" * $filledLength + "░" * ($barLength - $filledLength)
+    $bar = "=" * $filledLength + "-" * ($barLength - $filledLength)
     
     Write-Host ""
-    Write-Host "┌─────────────────────────────────────────────────────────────────┐" -ForegroundColor DarkGray
-    Write-Host "│  STEP $StepNumber/$($script:Progress.TotalSteps): $StepName".PadRight(63) -ForegroundColor Cyan -NoNewline
-    Write-Host "│" -ForegroundColor DarkGray
-    Write-Host "│                                                                 │" -ForegroundColor DarkGray
-    Write-Host "│  Progress: [$bar] ${percentage}%   │" -ForegroundColor DarkGray
-    Write-Host "└─────────────────────────────────────────────────────────────────┘" -ForegroundColor DarkGray
+    Write-Host "+-----------------------------------------------------------------+" -ForegroundColor DarkGray
+    Write-Host "|  STEP $StepNumber/$($script:Progress.TotalSteps): $StepName".PadRight(64) -ForegroundColor Cyan -NoNewline
+    Write-Host "+" -ForegroundColor DarkGray
+    Write-Host "|                                                                 |" -ForegroundColor DarkGray
+    Write-Host "|  Progress: [$bar] ${percentage}%   |" -ForegroundColor DarkGray
+    Write-Host "+-----------------------------------------------------------------+" -ForegroundColor DarkGray
     Write-Host ""
     
-    Write-Log "Starting Step $StepNumber: $StepName" -Level INFO
+    Write-Log "Starting Step $StepNumber`: $StepName" -Level INFO
 }
 
 function Write-SubStep {
@@ -256,15 +259,15 @@ function Write-SubStep {
     )
     
     $icon = switch ($Status) {
-        'running' { "⏳"; $color = 'Yellow' }
-        'success' { "✓"; $color = 'Green' }
-        'error'   { "✗"; $color = 'Red' }
-        'warning' { "⚠"; $color = 'Yellow' }
-        'skip'    { "○"; $color = 'Gray' }
-        'info'    { "•"; $color = 'Cyan' }
+        'running' { "[...] "; $color = 'Yellow' }
+        'success' { "[OK]  "; $color = 'Green' }
+        'error'   { "[X]   "; $color = 'Red' }
+        'warning' { "[!]   "; $color = 'Yellow' }
+        'skip'    { "[--]  "; $color = 'Gray' }
+        'info'    { "[*]   "; $color = 'Cyan' }
     }
     
-    Write-Host "  $icon $Message" -ForegroundColor $color
+    Write-Host "  $icon$Message" -ForegroundColor $color
 }
 
 function Write-ProgressDetail {
@@ -321,34 +324,34 @@ function Write-FinalSummary {
         Write-Host "================================================================================" -ForegroundColor DarkGray
         Write-Host ""
         Write-Host "  Application Access:" -ForegroundColor Cyan
-        Write-Host "  ────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
-        Write-Host "  🌐 Application URL:     http://localhost:$AppPort" -ForegroundColor White
-        Write-Host "  🗄️  Database Port:       localhost:$DatabasePort" -ForegroundColor White
+        Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
+        Write-Host "  [*] Application URL:     http://localhost:$AppPort" -ForegroundColor White
+        Write-Host "  [*] Database Port:       localhost:$DatabasePort" -ForegroundColor White
         
         if ($EnablePgAdmin) {
-            Write-Host "  🔧 pgAdmin URL:         http://localhost:$PgAdminPort" -ForegroundColor White
+            Write-Host "  [*] pgAdmin URL:         http://localhost:$PgAdminPort" -ForegroundColor White
         }
         
         Write-Host ""
         Write-Host "  Default Credentials (CHANGE IMMEDIATELY!):" -ForegroundColor Yellow
-        Write-Host "  ────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
-        Write-Host "  📧 Email:               $($script:Config.AdminEmail)" -ForegroundColor White
-        Write-Host "  🔑 Password:            $($script:Config.AdminPassword)" -ForegroundColor White
+        Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
+        Write-Host "  [*] Email:               $($script:Config.AdminEmail)" -ForegroundColor White
+        Write-Host "  [*] Password:            $($script:Config.AdminPassword)" -ForegroundColor White
         Write-Host ""
         Write-Host "  Installation Paths:" -ForegroundColor Cyan
-        Write-Host "  ────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
-        Write-Host "  📁 Install Directory:   $InstallPath" -ForegroundColor White
-        Write-Host "  📄 Docker Compose:      $InstallPath\docker-compose.yml" -ForegroundColor White
-        Write-Host "  📄 Environment File:    $InstallPath\.env" -ForegroundColor White
-        Write-Host "  📝 Log File:            $InstallPath\$($script:Config.LogFile)" -ForegroundColor White
+        Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
+        Write-Host "  [*] Install Directory:   $InstallPath" -ForegroundColor White
+        Write-Host "  [*] Docker Compose:      $InstallPath\docker-compose.yml" -ForegroundColor White
+        Write-Host "  [*] Environment File:    $InstallPath\.env" -ForegroundColor White
+        Write-Host "  [*] Log File:            $InstallPath\$($script:Config.LogFile)" -ForegroundColor White
         Write-Host ""
         Write-Host "  Quick Commands:" -ForegroundColor Cyan
-        Write-Host "  ────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
         Write-Host "  Stop application:      docker-compose -f `"$InstallPath\docker-compose.yml`" down" -ForegroundColor White
         Write-Host "  Start application:     docker-compose -f `"$InstallPath\docker-compose.yml`" up -d" -ForegroundColor White
         Write-Host "  View logs:             docker-compose -f `"$InstallPath\docker-compose.yml`" logs -f" -ForegroundColor White
         Write-Host ""
-        Write-Host "  ⚠️  SECURITY WARNING: Change default credentials before production use!" -ForegroundColor Yellow
+        Write-Host "  [!] SECURITY WARNING: Change default credentials before production use!" -ForegroundColor Yellow
     } else {
         Write-Host "                    INSTALLATION FAILED" -ForegroundColor Red
         Write-Host "================================================================================" -ForegroundColor DarkGray
@@ -358,7 +361,7 @@ function Write-FinalSummary {
         }
         Write-Host ""
         Write-Host "  Rollback Instructions:" -ForegroundColor Yellow
-        Write-Host "  ────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
         Write-Host "  1. Stop containers:     docker-compose -f `"$InstallPath\docker-compose.yml`" down" -ForegroundColor White
         Write-Host "  2. Remove volumes:      docker volume rm wsh_postgres_data" -ForegroundColor White
         Write-Host "  3. Clean install:       Remove-Item -Recurse -Force `"$InstallPath`"" -ForegroundColor White
@@ -770,6 +773,12 @@ function New-EnvironmentFile {
             $jwtSecret = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Guid]::NewGuid().ToString() + [System.Guid]::NewGuid().ToString()))
         }
         
+        # Build Gemini API key line if provided
+        $geminiLine = "# GEMINI_API_KEY=`"your-gemini-api-key`""
+        if ($GeminiApiKey -ne "") {
+            $geminiLine = "GEMINI_API_KEY=`"$GeminiApiKey`""
+        }
+        
         $envContent = @"
 # ==============================================================================
 # WSH (Weavenote Self Hosted) - Environment Configuration
@@ -798,7 +807,7 @@ NEXT_PUBLIC_APP_URL="http://localhost:$AppPort"
 
 # Admin Default Credentials
 # -------------------------------
-# ⚠️ SECURITY WARNING: Change these credentials immediately after first login!
+# [!] SECURITY WARNING: Change these credentials immediately after first login!
 ADMIN_EMAIL="$($script:Config.AdminEmail)"
 ADMIN_PASSWORD="$($script:Config.AdminPassword)"
 ADMIN_USERNAME="$($script:Config.AdminUsername)"
@@ -806,7 +815,7 @@ ADMIN_USERNAME="$($script:Config.AdminUsername)"
 # AI Configuration (Optional)
 # -------------------------------
 # Uncomment and add your API key to enable AI features
-# GEMINI_API_KEY="your-gemini-api-key"
+$geminiLine
 
 # ==============================================================================
 # PRODUCTION DEPLOYMENT NOTES:
@@ -864,16 +873,16 @@ services:
     container_name: $($script:Config.PostgresContainer)
     restart: unless-stopped
     environment:
-      POSTGRES_USER: `$`{POSTGRES_USER:-$($script:Config.DbUser)`}
-      POSTGRES_PASSWORD: `$`{POSTGRES_PASSWORD:-$($script:Config.DbPassword)`}
-      POSTGRES_DB: `$`{POSTGRES_DB:-$($script:Config.DbName)`}
+      POSTGRES_USER: `${POSTGRES_USER:-$($script:Config.DbUser)}
+      POSTGRES_PASSWORD: `${POSTGRES_PASSWORD:-$($script:Config.DbPassword)}
+      POSTGRES_DB: `${POSTGRES_DB:-$($script:Config.DbName)}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     ports:
       - "${DatabasePort}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U `$`{POSTGRES_USER:-$($script:Config.DbUser)`} -d `$`{POSTGRES_DB:-$($script:Config.DbName)`}"]
+      test: ["CMD-SHELL", "pg_isready -U `${POSTGRES_USER:-$($script:Config.DbUser)} -d `${POSTGRES_DB:-$($script:Config.DbName)}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -895,13 +904,23 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://$($script:Config.DbUser):$($script:Config.DbPassword)@postgres:5432/$($script:Config.DbName)?schema=public
-      JWT_SECRET: `$`{JWT_SECRET:-$($script:Config.JwtSecret)`}
-      JWT_EXPIRES_IN: `$`{JWT_EXPIRES_IN:-$($script:Config.JwtExpiresIn)`}
-      NEXT_PUBLIC_APP_NAME: `$`{NEXT_PUBLIC_APP_NAME:-$($script:Config.AppName)`}
-      NEXT_PUBLIC_APP_URL: `$`{NEXT_PUBLIC_APP_URL:-http://localhost:$AppPort`}
-      ADMIN_EMAIL: `$`{ADMIN_EMAIL:-$($script:Config.AdminEmail)`}
-      ADMIN_PASSWORD: `$`{ADMIN_PASSWORD:-$($script:Config.AdminPassword)`}
-      ADMIN_USERNAME: `$`{ADMIN_USERNAME:-$($script:Config.AdminUsername)`}
+      JWT_SECRET: `${JWT_SECRET:-$($script:Config.JwtSecret)}
+      JWT_EXPIRES_IN: `${JWT_EXPIRES_IN:-$($script:Config.JwtExpiresIn)}
+      NEXT_PUBLIC_APP_NAME: `${NEXT_PUBLIC_APP_NAME:-$($script:Config.AppName)}
+      NEXT_PUBLIC_APP_URL: `${NEXT_PUBLIC_APP_URL:-http://localhost:$AppPort}
+      ADMIN_EMAIL: `${ADMIN_EMAIL:-$($script:Config.AdminEmail)}
+      ADMIN_PASSWORD: `${ADMIN_PASSWORD:-$($script:Config.AdminPassword)}
+      ADMIN_USERNAME: `${ADMIN_USERNAME:-$($script:Config.AdminUsername)}
+"@
+
+        # Add Gemini API key if provided
+        if ($GeminiApiKey -ne "") {
+            $composeContent += @"
+      GEMINI_API_KEY: `${GEMINI_API_KEY:-$GeminiApiKey}
+"@
+        }
+
+        $composeContent += @"
     ports:
       - "${AppPort}:3000"
     volumes:
@@ -931,8 +950,8 @@ services:
     container_name: $($script:Config.PgAdminContainer)
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: `$`{PGADMIN_EMAIL:-admin@wsh.local`}
-      PGADMIN_DEFAULT_PASSWORD: `$`{PGADMIN_PASSWORD:-admin`}
+      PGADMIN_DEFAULT_EMAIL: `${PGADMIN_EMAIL:-admin@wsh.local}
+      PGADMIN_DEFAULT_PASSWORD: `${PGADMIN_PASSWORD:-admin}
       PGADMIN_LISTEN_PORT: 5050
     ports:
       - "${PgAdminPort}:5050"
@@ -1044,15 +1063,10 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $($script:Config.DbUse
 -- 1. Create additional users with restricted permissions
 -- 2. Set up read replicas
 -- 3. Configure connection pooling
--- 4. Enable additional security extensions
+-- 4. Set up backup schedules
 -- ==============================================================================
-
--- Log initialization
-INSERT INTO audit_logs (action, entity_type, new_values)
-VALUES ('SYSTEM_INIT', 'database', '{"initialized_at": "$(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")", "version": "$($script:Config.AppVersion)"}');
-
 "@
-
+        
         $initContent | Out-File -FilePath $initFile -Encoding UTF8 -Force
         
         Write-SubStep "Database init script created: $initFile" -Status success
@@ -1061,9 +1075,9 @@ VALUES ('SYSTEM_INIT', 'database', '{"initialized_at": "$(Get-Date -Format "yyyy
         return @{ Success = $true; Path = $initFile }
         
     } catch {
-        Write-SubStep "Failed to create database init script: $($_.Exception.Message)" -Status warning
-        Write-Log "Database init script creation warning: $($_.Exception.Message)" -Level WARNING
-        return @{ Success = $true }  # Non-critical, continue installation
+        Write-SubStep "Failed to create database init script: $($_.Exception.Message)" -Status error
+        Write-Log "Failed to create database init script: $($_.Exception.Message)" -Level ERROR
+        return @{ Success = $false; Message = $_.Exception.Message }
     }
 }
 
@@ -1089,423 +1103,236 @@ function Invoke-ConfigurationGeneration {
     }
     
     # Create database init script
-    Write-ProgressDetail -Activity "Generating Configuration" -Status "Creating database scripts..." -PercentComplete 100
+    Write-ProgressDetail -Activity "Generating Configuration" -Status "Creating database init script..." -PercentComplete 100
     $initResult = New-DatabaseInitScript
+    if (-not $initResult.Success) {
+        return $initResult
+    }
     
     Write-Log "Configuration generation completed" -Level SUCCESS
     return @{ Success = $true }
 }
 
 # ============================================================================
-# DATABASE DEPLOYMENT FUNCTIONS
+# DEPLOYMENT FUNCTIONS
 # ============================================================================
 
-function Start-DatabaseContainer {
+function Start-DatabaseDeployment {
     <#
     .SYNOPSIS
-        Starts the PostgreSQL database container
-    #>
-    Write-SubStep "Starting PostgreSQL database container..." -Status running
-    
-    try {
-        $composePath = Join-Path $InstallPath "docker-compose.yml"
-        
-        # Pull the image first
-        Write-SubStep "Pulling PostgreSQL image..." -Status running
-        docker pull $script:Config.PostgresImage 2>&1 | ForEach-Object {
-            if ($_ -match "Pulling|Downloaded|Status") {
-                Write-Host "    $_" -ForegroundColor DarkGray
-            }
-        }
-        
-        # Start only the postgres service
-        docker compose -f $composePath up -d postgres 2>&1 | Out-Null
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-SubStep "Failed to start database container" -Status error
-            Write-Log "Failed to start database container" -Level ERROR
-            return @{ Success = $false; Message = "Failed to start database container" }
-        }
-        
-        Write-SubStep "Database container started" -Status success
-        Write-Log "Database container started successfully" -Level SUCCESS
-        return @{ Success = $true }
-        
-    } catch {
-        Write-SubStep "Database startup failed: $($_.Exception.Message)" -Status error
-        Write-Log "Database startup failed: $($_.Exception.Message)" -Level ERROR
-        return @{ Success = $false; Message = $_.Exception.Message }
-    }
-}
-
-function Wait-DatabaseHealthy {
-    <#
-    .SYNOPSIS
-        Waits for the database to become healthy
-    #>
-    Write-SubStep "Waiting for database to be ready..." -Status running
-    
-    $maxRetries = $script:Config.MaxRetries
-    $delay = $script:Config.RetryDelaySeconds
-    
-    for ($i = 1; $i -le $maxRetries; $i++) {
-        try {
-            $health = docker inspect --format='{{.State.Health.Status}}' $script:Config.PostgresContainer 2>$null
-            
-            $percent = [math]::Round(($i / $maxRetries) * 100)
-            Write-ProgressDetail -Activity "Waiting for Database" -Status "Database status: $health (Attempt $i/$maxRetries)" -PercentComplete $percent
-            
-            if ($health -eq "healthy") {
-                Write-SubStep "Database is healthy and ready!" -Status success
-                Write-Log "Database health check passed after $i attempts" -Level SUCCESS
-                return @{ Success = $true }
-            }
-            
-            Start-Sleep -Seconds $delay
-            
-        } catch {
-            Write-Host "    Attempt $i/$maxRetries - Checking health..." -ForegroundColor DarkGray
-            Start-Sleep -Seconds $delay
-        }
-    }
-    
-    Write-SubStep "Database health check timed out after $maxRetries attempts" -Status error
-    Write-Log "Database health check timed out" -Level ERROR
-    
-    # Show logs for debugging
-    Write-SubStep "Database logs:" -Status info
-    docker logs $script:Config.PostgresContainer --tail 20 2>&1 | ForEach-Object {
-        Write-Host "    $_" -ForegroundColor DarkGray
-    }
-    
-    return @{ Success = $false; Message = "Database health check timed out" }
-}
-
-function Invoke-DatabaseDeployment {
-    <#
-    .SYNOPSIS
-        Deploys and configures the database
+        Deploys the PostgreSQL database
     #>
     Write-StepHeader -StepNumber 4 -StepName "Database Deployment"
     
-    # Start database container
-    Write-ProgressDetail -Activity "Deploying Database" -Status "Starting PostgreSQL container..." -PercentComplete 33
-    $startResult = Start-DatabaseContainer
-    if (-not $startResult.Success) {
-        return $startResult
-    }
-    
-    # Wait for database to be healthy
-    Write-ProgressDetail -Activity "Deploying Database" -Status "Waiting for database to be ready..." -PercentComplete 66
-    $healthResult = Wait-DatabaseHealthy
-    if (-not $healthResult.Success) {
-        return $healthResult
-    }
-    
-    # Verify database connectivity
-    Write-ProgressDetail -Activity "Deploying Database" -Status "Verifying database connectivity..." -PercentComplete 100
-    try {
-        $testResult = docker exec $script:Config.PostgresContainer pg_isready -U $script:Config.DbUser -d $script:Config.DbName 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            Write-SubStep "Database connectivity verified" -Status success
-            Write-Log "Database connectivity verified" -Level SUCCESS
-        }
-    } catch {
-        Write-SubStep "Database connectivity check warning: $($_.Exception.Message)" -Status warning
-    }
-    
-    Write-Log "Database deployment completed successfully" -Level SUCCESS
-    return @{ Success = $true }
-}
-
-# ============================================================================
-# APPLICATION DEPLOYMENT FUNCTIONS
-# ============================================================================
-
-function Start-ApplicationContainer {
-    <#
-    .SYNOPSIS
-        Starts the application container
-    #>
-    Write-SubStep "Starting WSH application container..." -Status running
+    $composePath = Join-Path $InstallPath "docker-compose.yml"
     
     try {
-        $composePath = Join-Path $InstallPath "docker-compose.yml"
+        # Pull PostgreSQL image
+        Write-ProgressDetail -Activity "Deploying Database" -Status "Pulling PostgreSQL image..." -PercentComplete 25
+        Write-SubStep "Pulling PostgreSQL image: $($script:Config.PostgresImage)" -Status running
+        docker pull $script:Config.PostgresImage 2>&1 | Out-Null
+        Write-SubStep "PostgreSQL image pulled successfully" -Status success
         
-        # Pull the application image
-        Write-SubStep "Pulling WSH application image..." -Status running
-        docker pull ghcr.io/141stfighterwing-collab/wsh:latest 2>&1 | ForEach-Object {
-            if ($_ -match "Pulling|Downloaded|Status|Layer") {
-                Write-Host "    $_" -ForegroundColor DarkGray
+        # Start PostgreSQL container
+        Write-ProgressDetail -Activity "Deploying Database" -Status "Starting PostgreSQL container..." -PercentComplete 50
+        Write-SubStep "Starting PostgreSQL container..." -Status running
+        
+        $composeCmd = "docker compose -f `"$composePath`" up -d postgres"
+        Invoke-Expression $composeCmd
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-SubStep "Failed to start PostgreSQL container" -Status error
+            Write-Log "Failed to start PostgreSQL container" -Level ERROR
+            return @{ Success = $false; Message = "Failed to start PostgreSQL container" }
+        }
+        
+        Write-SubStep "PostgreSQL container started" -Status success
+        
+        # Wait for PostgreSQL to be ready
+        Write-ProgressDetail -Activity "Deploying Database" -Status "Waiting for PostgreSQL to be ready..." -PercentComplete 75
+        Write-SubStep "Waiting for PostgreSQL to be ready..." -Status running
+        
+        $retries = 0
+        $maxRetries = $script:Config.MaxRetries
+        $ready = $false
+        
+        while ($retries -lt $maxRetries) {
+            $healthCheck = docker exec $script:Config.PostgresContainer pg_isready -U $script:Config.DbUser -d $script:Config.DbName 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $ready = $true
+                break
             }
+            
+            $retries++
+            Write-ProgressDetail -Activity "Deploying Database" -Status "Waiting for PostgreSQL... ($retries/$maxRetries)" -PercentComplete (75 + ($retries / $maxRetries * 20))
+            Start-Sleep -Seconds $script:Config.RetryDelaySeconds
         }
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-SubStep "Warning: Could not pull pre-built image, will attempt to build from source" -Status warning
-            Write-Log "Pre-built image not available, will build from source" -Level WARNING
+        if (-not $ready) {
+            Write-SubStep "PostgreSQL failed to become ready after $maxRetries attempts" -Status error
+            Write-Log "PostgreSQL failed to become ready after $maxRetries attempts" -Level ERROR
+            return @{ Success = $false; Message = "PostgreSQL failed to become ready" }
         }
         
-        # Start the application service
-        if ($EnablePgAdmin) {
-            docker compose -f $composePath up -d app pgadmin 2>&1 | Out-Null
-        } else {
-            docker compose -f $composePath up -d app 2>&1 | Out-Null
-        }
+        Write-SubStep "PostgreSQL is ready and accepting connections" -Status success
+        Write-Log "PostgreSQL database deployed successfully" -Level SUCCESS
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-SubStep "Failed to start application container" -Status error
-            Write-Log "Failed to start application container" -Level ERROR
-            return @{ Success = $false; Message = "Failed to start application container" }
-        }
-        
-        Write-SubStep "Application container started" -Status success
-        Write-Log "Application container started successfully" -Level SUCCESS
+        Write-ProgressDetail -Activity "Deploying Database" -Status "PostgreSQL ready!" -PercentComplete 100
         return @{ Success = $true }
         
     } catch {
-        Write-SubStep "Application startup failed: $($_.Exception.Message)" -Status error
-        Write-Log "Application startup failed: $($_.Exception.Message)" -Level ERROR
+        Write-SubStep "Database deployment failed: $($_.Exception.Message)" -Status error
+        Write-Log "Database deployment failed: $($_.Exception.Message)" -Level ERROR
         return @{ Success = $false; Message = $_.Exception.Message }
     }
 }
 
-function Wait-ApplicationHealthy {
+function Start-ApplicationDeployment {
     <#
     .SYNOPSIS
-        Waits for the application to become healthy
-    #>
-    Write-SubStep "Waiting for application to be ready..." -Status running
-    
-    $maxRetries = $script:Config.MaxRetries
-    $delay = $script:Config.RetryDelaySeconds
-    
-    for ($i = 1; $i -le $maxRetries; $i++) {
-        try {
-            # Check if container is running
-            $status = docker inspect --format='{{.State.Status}}' $script:Config.AppContainer 2>$null
-            
-            if ($status -eq "running") {
-                # Try to hit the health endpoint
-                try {
-                    $response = docker exec $script:Config.AppContainer wget -qO- http://localhost:3000/api/health 2>$null
-                    if ($response -match "ok|healthy|status") {
-                        $percent = [math]::Round(($i / $maxRetries) * 100)
-                        Write-ProgressDetail -Activity "Waiting for Application" -Status "Application is responding!" -PercentComplete $percent
-                        
-                        Write-SubStep "Application is healthy and responding!" -Status success
-                        Write-Log "Application health check passed after $i attempts" -Level SUCCESS
-                        return @{ Success = $true }
-                    }
-                } catch {
-                    # wget might not be available, try direct port check
-                }
-            }
-            
-            $percent = [math]::Round(($i / $maxRetries) * 100)
-            Write-ProgressDetail -Activity "Waiting for Application" -Status "Container status: $status (Attempt $i/$maxRetries)" -PercentComplete $percent
-            
-            Start-Sleep -Seconds $delay
-            
-        } catch {
-            Write-Host "    Attempt $i/$maxRetries - Waiting for application..." -ForegroundColor DarkGray
-            Start-Sleep -Seconds $delay
-        }
-    }
-    
-    # Final check - if container is running, consider it ready
-    $finalStatus = docker inspect --format='{{.State.Status}}' $script:Config.AppContainer 2>$null
-    if ($finalStatus -eq "running") {
-        Write-SubStep "Application container is running (health check skipped)" -Status success
-        Write-Log "Application container running, health check skipped" -Level SUCCESS
-        return @{ Success = $true }
-    }
-    
-    Write-SubStep "Application health check timed out" -Status error
-    Write-Log "Application health check timed out" -Level ERROR
-    
-    # Show logs for debugging
-    Write-SubStep "Application logs:" -Status info
-    docker logs $script:Config.AppContainer --tail 30 2>&1 | ForEach-Object {
-        Write-Host "    $_" -ForegroundColor DarkGray
-    }
-    
-    return @{ Success = $false; Message = "Application health check timed out" }
-}
-
-function Invoke-ApplicationDeployment {
-    <#
-    .SYNOPSIS
-        Deploys the application
+        Deploys the WSH application
     #>
     Write-StepHeader -StepNumber 5 -StepName "Application Deployment"
     
-    # Start application container
-    Write-ProgressDetail -Activity "Deploying Application" -Status "Starting application container..." -PercentComplete 50
-    $startResult = Start-ApplicationContainer
-    if (-not $startResult.Success) {
-        return $startResult
-    }
+    $composePath = Join-Path $InstallPath "docker-compose.yml"
     
-    # Wait for application to be healthy
-    Write-ProgressDetail -Activity "Deploying Application" -Status "Waiting for application to be ready..." -PercentComplete 100
-    $healthResult = Wait-ApplicationHealthy
-    if (-not $healthResult.Success) {
-        return $healthResult
+    try {
+        # Pull WSH application image
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Pulling WSH application image..." -PercentComplete 25
+        Write-SubStep "Pulling WSH application image..." -Status running
+        docker pull ghcr.io/141stfighterwing-collab/wsh:latest 2>&1 | Out-Null
+        Write-SubStep "WSH application image pulled successfully" -Status success
+        
+        # Start application container
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Starting WSH application..." -PercentComplete 50
+        Write-SubStep "Starting WSH application container..." -Status running
+        
+        $composeCmd = "docker compose -f `"$composePath`" up -d app"
+        Invoke-Expression $composeCmd
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-SubStep "Failed to start WSH application container" -Status error
+            Write-Log "Failed to start WSH application container" -Level ERROR
+            return @{ Success = $false; Message = "Failed to start WSH application container" }
+        }
+        
+        Write-SubStep "WSH application container started" -Status success
+        
+        # Wait for application to be ready
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Waiting for application to start..." -PercentComplete 75
+        Write-SubStep "Waiting for application to start..." -Status running
+        
+        $retries = 0
+        $maxRetries = $script:Config.MaxRetries
+        $ready = $false
+        
+        while ($retries -lt $maxRetries) {
+            try {
+                $response = Invoke-WebRequest -Uri "http://localhost:$AppPort/api/health" -TimeoutSec 5 -ErrorAction SilentlyContinue
+                if ($response.StatusCode -eq 200) {
+                    $ready = $true
+                    break
+                }
+            } catch {
+                # Continue waiting
+            }
+            
+            $retries++
+            Write-ProgressDetail -Activity "Deploying Application" -Status "Waiting for application... ($retries/$maxRetries)" -PercentComplete (75 + ($retries / $maxRetries * 20))
+            Start-Sleep -Seconds $script:Config.RetryDelaySeconds
+        }
+        
+        if (-not $ready) {
+            Write-SubStep "Application failed to become ready after $maxRetries attempts" -Status error
+            Write-Log "Application failed to become ready after $maxRetries attempts" -Level ERROR
+            return @{ Success = $false; Message = "Application failed to become ready" }
+        }
+        
+        Write-SubStep "WSH application is ready!" -Status success
+        Write-Log "WSH application deployed successfully" -Level SUCCESS
+        
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Application ready!" -PercentComplete 100
+        return @{ Success = $true }
+        
+    } catch {
+        Write-SubStep "Application deployment failed: $($_.Exception.Message)" -Status error
+        Write-Log "Application deployment failed: $($_.Exception.Message)" -Level ERROR
+        return @{ Success = $false; Message = $_.Exception.Message }
     }
-    
-    Write-Log "Application deployment completed successfully" -Level SUCCESS
-    return @{ Success = $true }
 }
 
 # ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================
 
-function Test-ContainerStatus {
-    <#
-    .SYNOPSIS
-        Validates that all containers are running properly
-    #>
-    Write-SubStep "Validating container status..." -Status running
-    
-    $containers = @(
-        @{ Name = $script:Config.PostgresContainer; Expected = "running" }
-        @{ Name = $script:Config.AppContainer; Expected = "running" }
-    )
-    
-    if ($EnablePgAdmin) {
-        $containers += @{ Name = $script:Config.PgAdminContainer; Expected = "running" }
-    }
-    
-    $allHealthy = $true
-    
-    foreach ($container in $containers) {
-        try {
-            $status = docker inspect --format='{{.State.Status}}' $container.Name 2>$null
-            
-            if ($status -eq $container.Expected) {
-                Write-SubStep "$($container.Name): $status" -Status success
-            } else {
-                Write-SubStep "$($container.Name): $status (expected: $($container.Expected))" -Status error
-                $allHealthy = $false
-            }
-        } catch {
-            Write-SubStep "$($container.Name): Not found" -Status error
-            $allHealthy = $false
-        }
-    }
-    
-    return @{ Success = $allHealthy }
-}
-
-function Test-HttpEndpoint {
-    <#
-    .SYNOPSIS
-        Tests HTTP endpoint availability
-    #>
-    Write-SubStep "Testing HTTP endpoint availability..." -Status running
-    
-    $endpoints = @(
-        @{ Name = "Application"; Url = "http://localhost:$AppPort" }
-        @{ Name = "Health Check"; Url = "http://localhost:$AppPort/api/health" }
-    )
-    
-    if ($EnablePgAdmin) {
-        $endpoints += @{ Name = "pgAdmin"; Url = "http://localhost:$PgAdminPort" }
-    }
-    
-    $allAccessible = $true
-    
-    foreach ($endpoint in $endpoints) {
-        try {
-            $response = Invoke-WebRequest -Uri $endpoint.Url -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
-            
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
-                Write-SubStep "$($endpoint.Name): HTTP $($response.StatusCode)" -Status success
-            } else {
-                Write-SubStep "$($endpoint.Name): HTTP $($response.StatusCode)" -Status warning
-            }
-        } catch {
-            # Try alternative method using curl if available
-            try {
-                $curlResult = curl -s -o /dev/null -w "%{http_code}" $endpoint.Url 2>$null
-                if ($curlResult -match "200|302|301") {
-                    Write-SubStep "$($endpoint.Name): HTTP $curlResult" -Status success
-                } else {
-                    Write-SubStep "$($endpoint.Name): Connection failed (status: $curlResult)" -Status warning
-                    $allAccessible = $false
-                }
-            } catch {
-                Write-SubStep "$($endpoint.Name): Cannot verify (services may still be starting)" -Status warning
-            }
-        }
-    }
-    
-    return @{ Success = $allAccessible }
-}
-
-function Test-DatabaseConnection {
-    <#
-    .SYNOPSIS
-        Tests database connection from application
-    #>
-    Write-SubStep "Verifying database connectivity..." -Status running
-    
-    try {
-        # Check if the application can connect to the database
-        $dbCheck = docker exec $script:Config.PostgresContainer psql -U $script:Config.DbUser -d $script:Config.DbName -c "SELECT 1;" 2>&1
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-SubStep "Database connection: OK" -Status success
-            Write-Log "Database connection verified" -Level SUCCESS
-            return @{ Success = $true }
-        } else {
-            Write-SubStep "Database connection: Failed" -Status error
-            Write-Log "Database connection failed" -Level ERROR
-            return @{ Success = $false; Message = "Database connection failed" }
-        }
-    } catch {
-        Write-SubStep "Database connection check warning: $($_.Exception.Message)" -Status warning
-        return @{ Success = $true }  # Non-critical
-    }
-}
-
 function Invoke-HealthValidation {
     <#
     .SYNOPSIS
-        Performs comprehensive health validation
+        Validates the health of all services
     #>
     Write-StepHeader -StepNumber 6 -StepName "Health Validation"
     
-    # Validate container status
-    Write-ProgressDetail -Activity "Validating Health" -Status "Checking container status..." -PercentComplete 33
-    $containerResult = Test-ContainerStatus
-    
-    # Test database connection
-    Write-ProgressDetail -Activity "Validating Health" -Status "Testing database connection..." -PercentComplete 50
-    $dbResult = Test-DatabaseConnection
-    
-    # Test HTTP endpoints
-    Write-ProgressDetail -Activity "Validating Health" -Status "Testing HTTP endpoints..." -PercentComplete 66
-    $httpResult = Test-HttpEndpoint
-    
-    # Final status
-    Write-ProgressDetail -Activity "Validating Health" -Status "Finalizing validation..." -PercentComplete 100
-    
-    $overallSuccess = $containerResult.Success -and $dbResult.Success
-    
-    if ($overallSuccess) {
-        Write-Log "Health validation passed" -Level SUCCESS
-    } else {
-        Write-Log "Health validation completed with warnings" -Level WARNING
+    try {
+        # Check database connectivity
+        Write-ProgressDetail -Activity "Validating Health" -Status "Checking database connectivity..." -PercentComplete 25
+        Write-SubStep "Checking database connectivity..." -Status running
+        
+        $dbCheck = docker exec $script:Config.PostgresContainer pg_isready -U $script:Config.DbUser -d $script:Config.DbName 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-SubStep "Database connectivity: OK" -Status success
+        } else {
+            Write-SubStep "Database connectivity: FAILED" -Status error
+            return @{ Success = $false; Message = "Database connectivity check failed" }
+        }
+        
+        # Check application health endpoint
+        Write-ProgressDetail -Activity "Validating Health" -Status "Checking application health endpoint..." -PercentComplete 50
+        Write-SubStep "Checking application health endpoint..." -Status running
+        
+        try {
+            $healthResponse = Invoke-WebRequest -Uri "http://localhost:$AppPort/api/health" -TimeoutSec 10
+            if ($healthResponse.StatusCode -eq 200) {
+                Write-SubStep "Application health endpoint: OK" -Status success
+            } else {
+                Write-SubStep "Application health endpoint returned: $($healthResponse.StatusCode)" -Status warning
+            }
+        } catch {
+            Write-SubStep "Application health endpoint check warning: $($_.Exception.Message)" -Status warning
+        }
+        
+        # Check application is responding
+        Write-ProgressDetail -Activity "Validating Health" -Status "Checking application response..." -PercentComplete 75
+        Write-SubStep "Checking application is responding..." -Status running
+        
+        try {
+            $appResponse = Invoke-WebRequest -Uri "http://localhost:$AppPort" -TimeoutSec 10
+            if ($appResponse.StatusCode -eq 200) {
+                Write-SubStep "Application is responding: OK" -Status success
+            } else {
+                Write-SubStep "Application returned status: $($appResponse.StatusCode)" -Status warning
+            }
+        } catch {
+            Write-SubStep "Application response check warning: $($_.Exception.Message)" -Status warning
+        }
+        
+        # Check container status
+        Write-ProgressDetail -Activity "Validating Health" -Status "Verifying container status..." -PercentComplete 100
+        Write-SubStep "Checking container status..." -Status running
+        
+        $containers = docker ps --filter "name=wsh-" --format "{{.Names}}: {{.Status}}"
+        foreach ($container in $containers) {
+            Write-SubStep "Container: $container" -Status info
+        }
+        
+        Write-Log "Health validation completed" -Level SUCCESS
+        return @{ Success = $true }
+        
+    } catch {
+        Write-SubStep "Health validation failed: $($_.Exception.Message)" -Status error
+        Write-Log "Health validation failed: $($_.Exception.Message)" -Level ERROR
+        return @{ Success = $false; Message = $_.Exception.Message }
     }
-    
-    return @{ Success = $overallSuccess }
 }
-
-# ============================================================================
-# FINALIZATION FUNCTIONS
-# ============================================================================
 
 function Invoke-Finalization {
     <#
@@ -1514,41 +1341,50 @@ function Invoke-Finalization {
     #>
     Write-StepHeader -StepNumber 7 -StepName "Finalization"
     
-    Write-ProgressDetail -Activity "Finalizing Installation" -Status "Creating convenience scripts..." -PercentComplete 50
-    
-    # Create convenience scripts
-    $startScript = Join-Path $InstallPath "start.ps1"
-    $stopScript = Join-Path $InstallPath "stop.ps1"
-    $logsScript = Join-Path $InstallPath "logs.ps1"
-    
-    @"
-# Start WSH Application
-docker compose -f "$InstallPath\docker-compose.yml" up -d
-Write-Host "WSH application started. Access at http://localhost:$AppPort"
-"@ | Out-File -FilePath $startScript -Encoding UTF8 -Force
-
-    @"
-# Stop WSH Application
-docker compose -f "$InstallPath\docker-compose.yml" down
-Write-Host "WSH application stopped."
-"@ | Out-File -FilePath $stopScript -Encoding UTF8 -Force
-
-    @"
-# View WSH Application Logs
-param([string]$Service = "")
-if ($Service) {
-    docker compose -f "$InstallPath\docker-compose.yml" logs -f $Service
-} else {
-    docker compose -f "$InstallPath\docker-compose.yml" logs -f
-}
-"@ | Out-File -FilePath $logsScript -Encoding UTF8 -Force
-
-    Write-SubStep "Created convenience scripts: start.ps1, stop.ps1, logs.ps1" -Status success
-    
-    Write-ProgressDetail -Activity "Finalizing Installation" -Status "Installation complete!" -PercentComplete 100
-    
-    Write-Log "Installation finalized successfully" -Level SUCCESS
-    return @{ Success = $true }
+    try {
+        # Create desktop shortcut (optional)
+        Write-ProgressDetail -Activity "Finalizing" -Status "Creating shortcuts..." -PercentComplete 33
+        Write-SubStep "Creating desktop shortcut..." -Status running
+        
+        $shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "WSH.url"
+        $shortcutContent = @"
+[InternetShortcut]
+URL=http://localhost:$AppPort
+IconFile=C:\Windows\System32\SHELL32.dll
+IconIndex=14
+"@
+        $shortcutContent | Out-File -FilePath $shortcutPath -Encoding ASCII -Force
+        Write-SubStep "Desktop shortcut created" -Status success
+        
+        # Save installation info
+        Write-ProgressDetail -Activity "Finalizing" -Status "Saving installation info..." -PercentComplete 66
+        Write-SubStep "Saving installation information..." -Status running
+        
+        $installInfo = @{
+            InstallDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            InstallPath = $InstallPath
+            AppPort = $AppPort
+            DatabasePort = $DatabasePort
+            Version = $script:Config.AppVersion
+            EnablePgAdmin = $EnablePgAdmin
+            PgAdminPort = $PgAdminPort
+        }
+        
+        $installInfoPath = Join-Path $InstallPath "install-info.json"
+        $installInfo | ConvertTo-Json | Out-File -FilePath $installInfoPath -Encoding UTF8 -Force
+        Write-SubStep "Installation info saved to: $installInfoPath" -Status success
+        
+        # Display final summary
+        Write-ProgressDetail -Activity "Finalizing" -Status "Installation complete!" -PercentComplete 100
+        Write-Log "Installation finalized" -Level SUCCESS
+        
+        return @{ Success = $true }
+        
+    } catch {
+        Write-SubStep "Finalization warning: $($_.Exception.Message)" -Status warning
+        Write-Log "Finalization warning: $($_.Exception.Message)" -Level WARNING
+        return @{ Success = $true }  # Continue even if finalization has minor issues
+    }
 }
 
 # ============================================================================
@@ -1562,188 +1398,119 @@ function Invoke-Uninstall {
     #>
     Write-LogHeader
     
-    Write-Host "Uninstalling WSH (Weavenote Self Hosted)..." -ForegroundColor Yellow
+    Write-Host "                    WSH UNINSTALLER" -ForegroundColor Yellow
+    Write-Host "================================================================================" -ForegroundColor DarkGray
     Write-Host ""
     
-    try {
-        # Stop and remove containers
-        Write-SubStep "Stopping containers..." -Status running
-        $composePath = Join-Path $InstallPath "docker-compose.yml"
-        
-        if (Test-Path $composePath) {
-            docker compose -f $composePath down -v 2>&1 | Out-Null
-            Write-SubStep "Containers stopped and removed" -Status success
-        }
-        
-        # Remove Docker volumes if requested
-        if ($RemoveData) {
-            Write-SubStep "Removing Docker volumes..." -Status running
-            docker volume rm wsh_postgres_data -f 2>&1 | Out-Null
-            Write-SubStep "Docker volumes removed" -Status success
-            
-            # Remove installation directory
-            Write-SubStep "Removing installation directory..." -Status running
-            Remove-Item -Path $InstallPath -Recurse -Force -ErrorAction SilentlyContinue
-            Write-SubStep "Installation directory removed" -Status success
-        }
-        
-        # Remove Docker network
-        Write-SubStep "Removing Docker network..." -Status running
-        docker network rm $script:Config.DockerNetworkName 2>&1 | Out-Null
-        Write-SubStep "Docker network removed" -Status success
-        
-        Write-Host ""
-        Write-Host "WSH has been uninstalled successfully." -ForegroundColor Green
-        
-        if (-not $RemoveData) {
-            Write-Host "Note: Installation directory and volumes preserved. Use -RemoveData to remove all data." -ForegroundColor Yellow
-        }
-        
-    } catch {
-        Write-SubStep "Uninstall error: $($_.Exception.Message)" -Status error
-        Write-Log "Uninstall error: $($_.Exception.Message)" -Level ERROR
+    $composePath = Join-Path $InstallPath "docker-compose.yml"
+    
+    # Check if installation exists
+    if (-not (Test-Path $composePath)) {
+        Write-Host "[!] No installation found at: $InstallPath" -ForegroundColor Yellow
         return
+    }
+    
+    # Stop and remove containers
+    Write-Host "[...] Stopping containers..." -ForegroundColor Yellow
+    docker compose -f $composePath down 2>&1 | Out-Null
+    
+    # Remove volumes if requested
+    if ($RemoveData) {
+        Write-Host "[...] Removing Docker volumes..." -ForegroundColor Yellow
+        docker volume rm wsh_postgres_data 2>&1 | Out-Null
+    }
+    
+    # Remove installation directory
+    Write-Host "[...] Removing installation files..." -ForegroundColor Yellow
+    Remove-Item -Path $InstallPath -Recurse -Force -ErrorAction SilentlyContinue
+    
+    # Remove desktop shortcut
+    $shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "WSH.url"
+    if (Test-Path $shortcutPath) {
+        Remove-Item -Path $shortcutPath -Force -ErrorAction SilentlyContinue
+    }
+    
+    Write-Host ""
+    Write-Host "[OK] WSH has been uninstalled successfully!" -ForegroundColor Green
+    
+    if (-not $RemoveData) {
+        Write-Host "[!] Note: Database volume was preserved. Use -RemoveData to remove all data." -ForegroundColor Yellow
     }
 }
 
 # ============================================================================
-# MAIN INSTALLATION ORCHESTRATION
+# MAIN EXECUTION
 # ============================================================================
 
-function Invoke-Installation {
-    <#
-    .SYNOPSIS
-        Main installation orchestration function
-    #>
+function Main {
     # Display header
     Write-LogHeader
     
-    Write-Host "Installation Path: $InstallPath" -ForegroundColor Cyan
-    Write-Host "Application Port:  $AppPort" -ForegroundColor Cyan
-    Write-Host "Database Port:     $DatabasePort" -ForegroundColor Cyan
-    if ($EnablePgAdmin) {
-        Write-Host "pgAdmin Port:      $PgAdminPort" -ForegroundColor Cyan
-    }
-    Write-Host ""
-    
-    # Track start time
-    $startTime = Get-Date
-    $script:InstallPath = $InstallPath
-    
-    # Step 1: Prerequisites Check
-    $result = Invoke-PrerequisitesCheck
-    if (-not $result.Success) {
-        Write-FinalSummary -Success $false -ErrorMessage "Prerequisites check failed: $($result.Message)"
-        return
-    }
-    
-    # Step 2: Environment Preparation
-    $result = Invoke-EnvironmentPreparation
-    if (-not $result.Success) {
-        Write-FinalSummary -Success $false -ErrorMessage "Environment preparation failed: $($result.Message)"
-        Invoke-Rollback
-        return
-    }
-    
-    # Step 3: Configuration Generation
-    $result = Invoke-ConfigurationGeneration
-    if (-not $result.Success) {
-        Write-FinalSummary -Success $false -ErrorMessage "Configuration generation failed: $($result.Message)"
-        Invoke-Rollback
-        return
-    }
-    
-    # Step 4: Database Deployment
-    $result = Invoke-DatabaseDeployment
-    if (-not $result.Success) {
-        Write-FinalSummary -Success $false -ErrorMessage "Database deployment failed: $($result.Message)"
-        Invoke-Rollback
-        return
-    }
-    
-    # Step 5: Application Deployment
-    $result = Invoke-ApplicationDeployment
-    if (-not $result.Success) {
-        Write-FinalSummary -Success $false -ErrorMessage "Application deployment failed: $($result.Message)"
-        Invoke-Rollback
-        return
-    }
-    
-    # Step 6: Health Validation
-    $result = Invoke-HealthValidation
-    if (-not $result.Success) {
-        Write-FinalSummary -Success $false -ErrorMessage "Health validation failed"
-        return
-    }
-    
-    # Step 7: Finalization
-    $result = Invoke-Finalization
-    
-    # Calculate duration
-    $endTime = Get-Date
-    $duration = $endTime - $startTime
-    
-    # Display success summary
-    Write-FinalSummary -Success $true
-    
-    Write-Host ""
-    Write-Host "Installation completed in $($duration.ToString('mm\:ss'))" -ForegroundColor Green
-    Write-Host ""
-}
-
-function Invoke-Rollback {
-    <#
-    .SYNOPSIS
-        Rolls back a failed installation
-    #>
-    Write-Host ""
-    Write-Host "Initiating rollback..." -ForegroundColor Yellow
-    
-    try {
-        # Stop any running containers
-        $composePath = Join-Path $InstallPath "docker-compose.yml"
-        if (Test-Path $composePath) {
-            Write-Host "  Stopping containers..." -ForegroundColor Gray
-            docker compose -f $composePath down 2>&1 | Out-Null
-        }
-        
-        # Stop individual containers if they exist
-        $containers = @($script:Config.PostgresContainer, $script:Config.AppContainer, $script:Config.PgAdminContainer)
-        foreach ($container in $containers) {
-            $exists = docker ps -a --filter "name=$container" --format "{{.Names}}" 2>$null
-            if ($exists) {
-                docker rm -f $container 2>&1 | Out-Null
-            }
-        }
-        
-        Write-Host "  Rollback completed. You may need to manually clean up:" -ForegroundColor Gray
-        Write-Host "    - Remove-Item -Recurse -Force `"$InstallPath`"" -ForegroundColor Gray
-        Write-Host "    - docker volume rm wsh_postgres_data" -ForegroundColor Gray
-        
-    } catch {
-        Write-Host "  Rollback encountered errors: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-# ============================================================================
-# ENTRY POINT
-# ============================================================================
-
-# Handle Ctrl+C gracefully
-[Console]::TreatControlCAsInput = $false
-
-try {
+    # Handle uninstall mode
     if ($Uninstall) {
         Invoke-Uninstall
-    } else {
-        Invoke-Installation
+        return
     }
-} catch {
-    Write-Host ""
-    Write-Host "Installation interrupted or failed: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Check the log file for details: $InstallPath\$($script:Config.LogFile)" -ForegroundColor Yellow
-    Invoke-Rollback
+    
+    # Store install path for logging
+    $script:InstallPath = $InstallPath
+    
+    Write-Log "Starting WSH installation" -Level INFO
+    Write-Log "Install path: $InstallPath" -Level INFO
+    Write-Log "App port: $AppPort" -Level INFO
+    Write-Log "Database port: $DatabasePort" -Level INFO
+    
+    # Execute installation phases
+    $prereqResult = Invoke-PrerequisitesCheck
+    if (-not $prereqResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Prerequisites check failed: $($prereqResult.Message)"
+        exit 1
+    }
+    
+    $envResult = Invoke-EnvironmentPreparation
+    if (-not $envResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Environment preparation failed: $($envResult.Message)"
+        exit 1
+    }
+    
+    $configResult = Invoke-ConfigurationGeneration
+    if (-not $configResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Configuration generation failed: $($configResult.Message)"
+        exit 1
+    }
+    
+    $dbResult = Start-DatabaseDeployment
+    if (-not $dbResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Database deployment failed: $($dbResult.Message)"
+        exit 1
+    }
+    
+    $appResult = Start-ApplicationDeployment
+    if (-not $appResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Application deployment failed: $($appResult.Message)"
+        exit 1
+    }
+    
+    $healthResult = Invoke-HealthValidation
+    if (-not $healthResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Health validation failed: $($healthResult.Message)"
+        exit 1
+    }
+    
+    $finalResult = Invoke-Finalization
+    if (-not $finalResult.Success) {
+        Write-FinalSummary -Success $false -ErrorMessage "Finalization failed: $($finalResult.Message)"
+        exit 1
+    }
+    
+    # Success!
+    Write-FinalSummary -Success $true
+    Write-Log "Installation completed successfully" -Level SUCCESS
+    
+    # Open browser
+    Start-Sleep -Seconds 2
+    Start-Process "http://localhost:$AppPort"
 }
 
-# Complete progress bar
-Write-Progress -Activity "WSH Installation" -Completed
+# Run main function
+Main
