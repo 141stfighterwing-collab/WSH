@@ -454,6 +454,32 @@ function Test-DockerCompose {
     }
 }
 
+function Test-Git {
+    <#
+    .SYNOPSIS
+        Verifies Git is installed for cloning repository
+    #>
+    Write-SubStep "Checking Git installation..." -Status running
+    
+    try {
+        $gitVersion = git --version 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-SubStep "Git is available: $gitVersion".Trim() -Status success
+            Write-Log "Git verified: $gitVersion".Trim() -Level SUCCESS
+            return @{ Success = $true; Version = $gitVersion.Trim() }
+        }
+        
+        Write-SubStep "Git not found" -Status error
+        Write-Log "Git is not installed" -Level ERROR
+        return @{ Success = $false; Message = "Git is not installed. Please install Git from https://git-scm.com/downloads" }
+        
+    } catch {
+        Write-SubStep "Git check failed: $($_.Exception.Message)" -Status error
+        Write-Log "Git check failed: $($_.Exception.Message)" -Level ERROR
+        return @{ Success = $false; Message = $_.Exception.Message }
+    }
+}
+
 function Test-ExecutionPolicy {
     <#
     .SYNOPSIS
@@ -600,27 +626,35 @@ function Invoke-PrerequisitesCheck {
     $results = @{
         DockerDesktop   = $null
         DockerCompose   = $null
+        Git             = $null
         ExecutionPolicy = $null
         Ports           = $null
         WorkingDir      = $null
     }
     
     # Check Docker Desktop
-    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Docker Desktop..." -PercentComplete 20
+    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Docker Desktop..." -PercentComplete 16
     $results.DockerDesktop = Test-DockerDesktop
     if (-not $results.DockerDesktop.Success) {
         return @{ Success = $false; Step = "Docker Desktop"; Results = $results; Message = $results.DockerDesktop.Message }
     }
     
     # Check Docker Compose
-    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Docker Compose..." -PercentComplete 40
+    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Docker Compose..." -PercentComplete 32
     $results.DockerCompose = Test-DockerCompose
     if (-not $results.DockerCompose.Success) {
         return @{ Success = $false; Step = "Docker Compose"; Results = $results; Message = $results.DockerCompose.Message }
     }
     
+    # Check Git
+    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Git..." -PercentComplete 48
+    $results.Git = Test-Git
+    if (-not $results.Git.Success) {
+        return @{ Success = $false; Step = "Git"; Results = $results; Message = $results.Git.Message }
+    }
+    
     # Check Execution Policy
-    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Execution Policy..." -PercentComplete 60
+    Write-ProgressDetail -Activity "Checking Prerequisites" -Status "Verifying Execution Policy..." -PercentComplete 64
     $results.ExecutionPolicy = Test-ExecutionPolicy
     
     # Check Ports
@@ -1183,11 +1217,46 @@ function Start-ApplicationDeployment {
     $composePath = Join-Path $InstallPath "docker-compose.yml"
     
     try {
-        # Pull WSH application image
-        Write-ProgressDetail -Activity "Deploying Application" -Status "Pulling WSH application image..." -PercentComplete 25
-        Write-SubStep "Pulling WSH application image..." -Status running
-        docker pull ghcr.io/141stfighterwing-collab/wsh:latest 2>&1 | Out-Null
-        Write-SubStep "WSH application image pulled successfully" -Status success
+        # Clone repository and build locally (registry image may not be available)
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Cloning WSH repository..." -PercentComplete 10
+        Write-SubStep "Cloning WSH repository for local build..." -Status running
+        
+        $repoPath = Join-Path $InstallPath "wsh-source"
+        if (Test-Path $repoPath) {
+            Remove-Item -Path $repoPath -Recurse -Force
+        }
+        
+        git clone https://github.com/141stfighterwing-collab/WSH.git $repoPath 2>&1 | Out-Null
+        
+        if (-not (Test-Path $repoPath)) {
+            Write-SubStep "Failed to clone repository" -Status error
+            Write-Log "Failed to clone WSH repository" -Level ERROR
+            return @{ Success = $false; Message = "Failed to clone WSH repository" }
+        }
+        
+        Write-SubStep "Repository cloned successfully" -Status success
+        
+        # Build Docker image locally
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Building WSH Docker image (this may take a few minutes)..." -PercentComplete 30
+        Write-SubStep "Building WSH Docker image locally..." -Status running
+        
+        Push-Location $repoPath
+        docker build -t wsh-app:latest . 2>&1 | Out-Null
+        Pop-Location
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-SubStep "Failed to build Docker image" -Status error
+            Write-Log "Failed to build WSH Docker image" -Level ERROR
+            return @{ Success = $false; Message = "Failed to build WSH Docker image" }
+        }
+        
+        Write-SubStep "WSH Docker image built successfully" -Status success
+        
+        # Update docker-compose to use local image
+        Write-ProgressDetail -Activity "Deploying Application" -Status "Updating configuration..." -PercentComplete 40
+        $composeContent = Get-Content $composePath -Raw
+        $composeContent = $composeContent -replace 'image: ghcr\.io/141stfighterwing-collab/wsh:latest', 'image: wsh-app:latest'
+        [System.IO.File]::WriteAllText($composePath, $composeContent)
         
         # Start application container
         Write-ProgressDetail -Activity "Deploying Application" -Status "Starting WSH application..." -PercentComplete 50
