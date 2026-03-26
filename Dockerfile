@@ -135,10 +135,12 @@ COPY scripts/start.ps1 /app/start.ps1
 COPY scripts/healthcheck.ps1 /app/healthcheck.ps1
 COPY scripts/db-diagnostic.ps1 /scripts/db-diagnostic.ps1
 COPY scripts/db-inject-schema.ps1 /scripts/db-inject-schema.ps1
+COPY scripts/db-fix-tool.ps1 /scripts/db-fix-tool.ps1
+COPY scripts/db-viewer.js /app/db-viewer.js
 
 # Set permissions
 RUN chmod -R 755 /modules /app/pwsh /scripts /logs /output /config /data /app && \
-    chmod +x /app/start.ps1 /app/healthcheck.ps1 /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 && \
+    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 /scripts/db-fix-tool.ps1 && \
     chown -R nextjs:nodejs /app /logs /output /config /scripts /data
 
 # Health check configuration

@@ -262,7 +262,27 @@ main().catch(e => { console.error('Fatal:', e); process.exit(1); }).finally(() =
 switch ($Mode) {
     "app" {
         Write-Host ""
+        
+        # Start Database Viewer in background
+        Write-Host "Starting Database Viewer on port 5682..." -ForegroundColor Green
+        if (Test-Path "/app/db-viewer.js") {
+            Start-Process -FilePath "node" -ArgumentList "/app/db-viewer.js" -NoNewWindow
+            Write-Host "  Database Viewer: http://localhost:5682" -ForegroundColor Gray
+        }
+        
         Write-Host "Starting WSH Application on port 3000..." -ForegroundColor Green
+        Write-Host ""
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "AVAILABLE SERVICES:" -ForegroundColor Cyan
+        Write-Host "  App:         http://localhost:3000" -ForegroundColor White
+        Write-Host "  DB Viewer:   http://localhost:5682" -ForegroundColor White
+        Write-Host "  Health:      http://localhost:8080" -ForegroundColor White
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "TO FIX DATABASE ISSUES:" -ForegroundColor Yellow
+        Write-Host "  docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1" -ForegroundColor Gray
+        Write-Host ""
+        
         Push-Location /app
         & node server.js
     }
