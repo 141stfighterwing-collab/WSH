@@ -89,6 +89,9 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Ensure public directory exists for Next.js standalone
+RUN mkdir -p public
+
 # Build and verify
 RUN npm run build && \
     ls -la .next/standalone/ && \
