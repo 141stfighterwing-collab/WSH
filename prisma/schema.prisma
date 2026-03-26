@@ -94,3 +94,42 @@ model SystemConfig {
 
   @@map("system_config")
 }
+
+// PowerShell Execution Logs
+model ScriptExecution {
+  id             String   @id @default(uuid())
+  scriptName     String
+  scriptPath     String
+  parameters     Json?
+  status         String   @default("pending") // pending, running, success, failed
+  startTime      DateTime @default(now())
+  endTime        DateTime?
+  duration       Int?     // Duration in milliseconds
+  output         String?  @db.Text
+  error          String?  @db.Text
+  exitCode       Int?
+  retryCount     Int      @default(0)
+  triggeredBy    String?  // manual, scheduled, api
+  userId         String?
+  metadata       Json?
+
+  @@index([status])
+  @@index([startTime])
+  @@map("script_executions")
+}
+
+// Scheduled Tasks
+model ScheduledTask {
+  id          String   @id @default(uuid())
+  name        String
+  scriptPath  String
+  cron        String   // Cron expression
+  enabled     Boolean  @default(true)
+  lastRun     DateTime?
+  nextRun     DateTime?
+  lastStatus  String?
+  parameters  Json?
+  userId      String?
+
+  @@map("scheduled_tasks")
+}

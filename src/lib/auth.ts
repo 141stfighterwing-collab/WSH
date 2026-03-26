@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from './db';
 import { cookies } from 'next/headers';
 
@@ -23,7 +23,10 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 export function generateToken(payload: UserPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const options: SignOptions = { 
+    expiresIn: '7d'  // 7 days
+  };
+  return jwt.sign(payload, JWT_SECRET, options);
 }
 
 export function verifyToken(token: string): UserPayload | null {
