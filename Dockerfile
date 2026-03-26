@@ -121,6 +121,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Copy PowerShell modules and scripts
 COPY --from=builder /modules/ /modules/
@@ -174,67 +175,38 @@ param(\n\
     [string]$Mode = "app"\n\
 )\n\
 \n\
-Set-StrictMode -Version Latest\n\
-$ErrorActionPreference = "Stop"\n\
-\n\
-# Import PowerShell modules if available\n\
-$modules = @("LoggingEngine", "SafeExecutor", "ConfigManager", "HealthCheck")\n\
-foreach ($moduleName in $modules) {\n\
-    $modulePath = "/modules/$moduleName"\n\
-    if (Test-Path $modulePath) {\n\
-        try {\n\
-            Import-Module -Name $modulePath -Force -ErrorAction SilentlyContinue\n\
-            Write-Host "Loaded module: $moduleName" -ForegroundColor Green\n\
-        } catch {\n\
-            Write-Warning "Could not load module: $moduleName"\n\
-        }\n\
-    }\n\
-}\n\
-\n\
 Write-Host "========================================" -ForegroundColor Cyan\n\
 Write-Host "WSH - Weavenote Self Hosted" -ForegroundColor Cyan\n\
-Write-Host "PowerShell Executor v$env:POWERSHELL_EXECUTOR_VERSION" -ForegroundColor Cyan\n\
 Write-Host "Mode: $Mode" -ForegroundColor Cyan\n\
 Write-Host "========================================" -ForegroundColor Cyan\n\
 \n\
-# Wait for database to be ready\n\
-Write-Host "Waiting for database to be ready..." -ForegroundColor Yellow\n\
-$maxRetries = 30\n\
-$retry = 0\n\
-$dbReady = $false\n\
-while ($retry -lt $maxRetries) {\n\
+# Set database URL\n\
+$env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"\n\
+\n\
+# Run database schema push with retry\n\
+$schemaPushed = $false\n\
+for ($i = 1; $i -le 5; $i++) {\n\
+    Write-Host "Attempting database schema push ($i/5)..." -ForegroundColor Yellow\n\
     try {\n\
-        $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"\n\
-        $result = npx prisma db pull 2>&1\n\
+        $result = npx prisma db push --accept-data-loss --skip-generate 2>&1\n\
         if ($LASTEXITCODE -eq 0) {\n\
-            $dbReady = $true\n\
+            $schemaPushed = $true\n\
+            Write-Host "Database schema ready!" -ForegroundColor Green\n\
             break\n\
         }\n\
-    } catch {}\n\
-    $retry++\n\
-    Write-Host "Database not ready, waiting... ($retry/$maxRetries)" -ForegroundColor Gray\n\
-    Start-Sleep -Seconds 2\n\
+    } catch {\n\
+        Write-Host "Schema push attempt $i failed, retrying..." -ForegroundColor Yellow\n\
+    }\n\
+    Start-Sleep -Seconds 3\n\
 }\n\
 \n\
-if (-not $dbReady) {\n\
-    Write-Warning "Database connection timeout, proceeding anyway..."\n\
-}\n\
-\n\
-# Run database schema push\n\
-try {\n\
-    Push-Location /app\n\
-    Write-Host "Running database schema push..." -ForegroundColor Yellow\n\
-    $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"\n\
-    npx prisma db push --accept-data-loss 2>&1\n\
-    Pop-Location\n\
-    Write-Host "Database schema push completed" -ForegroundColor Green\n\
-} catch {\n\
-    Write-Warning "Database schema push error: $($_.Exception.Message)"\n\
+if (-not $schemaPushed) {\n\
+    Write-Warning "Database schema push had issues, starting anyway..."\n\
 }\n\
 \n\
 switch ($Mode) {\n\
     "app" {\n\
-        Write-Host "Starting WSH Application..." -ForegroundColor Green\n\
+        Write-Host "Starting WSH Application on port 3000..." -ForegroundColor Green\n\
         & node server.js\n\
     }\n\
     "script" {\n\
