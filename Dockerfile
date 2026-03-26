@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
 # Unified Dockerfile with Node.js + PowerShell support
-# Version: 2.2.0 - Fixed Database Schema Push
+# Version: 2.3.0 - Database Viewer & Fix Tools
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.2.0"
+LABEL version="2.3.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="2.2.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="2.3.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -105,7 +105,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.2.0"
+    POWERSHELL_EXECUTOR_VERSION="2.3.0"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \

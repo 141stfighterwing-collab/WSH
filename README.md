@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted
 
-> **Version 2.1.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
+> **Version 2.3.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)](https://www.postgresql.org/)
@@ -12,12 +12,33 @@
 
 ---
 
+## 🆕 What's New in v2.3.0
+
+### Database Viewer Web UI (Port 5682)
+- **Read-only web interface** to view database tables
+- View table schemas and column definitions
+- Run SQL SELECT queries directly
+- No authentication required for viewing
+
+### Interactive Database Fix Tool
+- **Menu-driven tool** to fix database issues
+- Option to create all tables manually
+- Option to open PSQL shell
+- Option to restart database with fresh schema
+
+### Improved Schema Push
+- Automatic fallback to inline SQL when Prisma fails
+- Detailed error output for debugging
+- Table verification after creation
+
+---
+
 ## 🚀 Quick Start (Windows)
 
 ### Prerequisites
 
 - **Docker Desktop** for Windows (with WSL2 backend)
-- **PowerShell 7+** (for local scripts)
+- **PowerShell 5.1+** (for local scripts)
 - **8GB+ RAM** recommended
 - **10GB+ free disk space**
 
@@ -28,10 +49,7 @@
 git clone https://github.com/141stfighterwing-collab/WSH.git
 cd WSH
 
-# Run the Windows installer (forced installation)
-.\installer\Install-WSH-Windows.ps1 -Force -Benchmark
-
-# Or use Docker Compose directly
+# Run Docker Compose directly
 docker-compose up -d --build
 ```
 
@@ -40,6 +58,7 @@ docker-compose up -d --build
 | Service | URL | Description |
 |---------|-----|-------------|
 | Web UI | http://localhost:3000 | Main application |
+| **Database Viewer** | http://localhost:5682 | **NEW: View tables & run queries** |
 | Health API | http://localhost:3000/api/health | Health check endpoint |
 | PowerShell Health | http://localhost:8080/health | PowerShell executor status |
 | pgAdmin | http://localhost:5050 | Database management (optional) |
@@ -49,6 +68,48 @@ docker-compose up -d --build
 ```
 Email: admin@wsh.local
 Password: admin123
+```
+
+---
+
+## 🔧 Database Fix Tools
+
+### Option 1: Web UI Database Viewer
+
+Open **http://localhost:5682** in your browser to:
+- View all database tables
+- Check table schemas
+- Run SELECT queries
+- View row counts
+
+### Option 2: Interactive Fix Tool
+
+```powershell
+# Run inside the container
+docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1
+```
+
+**Menu Options:**
+1. List all tables
+2. Show table schema (users/notes/etc)
+3. **CREATE ALL TABLES** - Manual schema creation
+4. Open PSQL shell
+5. Restart database
+6. Show status
+
+### Option 3: Direct PSQL Access
+
+```powershell
+# Connect directly to PostgreSQL
+docker exec -it wsh-postgres psql -U wsh -d wsh_db
+```
+
+### Option 4: Create Tables Manually
+
+If the automatic schema creation fails, run:
+
+```powershell
+docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
 ```
 
 ---
@@ -75,16 +136,6 @@ Password: admin123
 | Script Execution Overhead | < 500ms | 100-300ms | PowerShell module load |
 | Memory Usage (idle) | < 512MB | 200-400MB | All containers |
 | Memory Usage (active) | < 2GB | 500MB-1.5GB | Under normal load |
-
-### Running Benchmarks
-
-```powershell
-# Run full benchmark suite
-.\installer\Install-WSH-Windows.ps1 -Force -Benchmark
-
-# Or use the included benchmark scripts
-node benchmarks/benchmark.js
-```
 
 ---
 
@@ -119,40 +170,6 @@ node benchmarks/benchmark.js
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Error Response Codes
-
-| Code | Category | Description | Recovery Action |
-|------|----------|-------------|-----------------|
-| 400 | Client Error | Invalid request data | Check request format |
-| 401 | Auth Error | Authentication required | Login again |
-| 403 | Auth Error | Insufficient permissions | Contact admin |
-| 404 | Not Found | Resource not found | Check resource ID |
-| 429 | Rate Limit | Too many requests | Wait and retry |
-| 500 | Server Error | Internal server error | Check logs, retry |
-| 502 | Gateway Error | Service unavailable | Check container status |
-| 503 | Service Error | Database unavailable | Check PostgreSQL |
-
-### Retry Configuration
-
-```env
-# .env configuration for retry behavior
-MAX_RETRIES=3              # Maximum retry attempts
-RETRY_DELAY=5              # Initial delay in seconds
-RETRY_BACKOFF_MULTIPLIER=2 # Exponential backoff multiplier
-MAX_RETRY_DELAY=60         # Maximum delay cap in seconds
-DEFAULT_TIMEOUT=3600       # Default script timeout in seconds
-```
-
-### Transient Error Detection
-
-The system automatically detects and retries these transient errors:
-
-- Network timeout / connection reset
-- Service temporarily unavailable
-- Rate limiting responses
-- Deadlock / lock timeout
-- DNS resolution failures
-
 ---
 
 ## 🏥 Health Monitoring
@@ -168,36 +185,9 @@ Invoke-WebRequest http://localhost:8080/health
 
 # Database health
 docker exec wsh-postgres pg_isready -U wsh -d wsh_db
-```
 
-### Health Check Response Format
-
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "version": "2.1.0",
-  "components": {
-    "database": "connected",
-    "cache": "available",
-    "storage": "available"
-  },
-  "metrics": {
-    "uptime": 86400,
-    "memoryUsage": "256MB",
-    "cpuUsage": "5%"
-  }
-}
-```
-
-### Container Health Status
-
-```powershell
-# Check all container health
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.State}}"
-
-# Detailed health inspection
-docker inspect --format='{{json .State.Health}}' wsh-app | ConvertFrom-Json
+# View database tables
+Start-Process "http://localhost:5682"
 ```
 
 ---
@@ -233,7 +223,7 @@ ERROR_ACTION="Stop"
 | Service | Description | Ports | Resources |
 |---------|-------------|-------|-----------|
 | `postgres` | PostgreSQL 16 database | 5432 | 512MB-2GB |
-| `app` | Main WSH application | 3000, 8080 | 512MB-2GB |
+| `app` | Main WSH application | 3000, 8080, 5682 | 512MB-2GB |
 | `scheduler` | Optional script scheduler | - | 256MB-1GB |
 | `pgadmin` | Optional database UI | 5050 | 256MB |
 
@@ -267,15 +257,22 @@ WSH/
 │   │   └── ConfigManager/   # Configuration management
 │   ├── scripts/             # Example scripts
 │   └── app/                 # Entry points
+├── scripts/
+│   ├── db-fix-tool.ps1      # Interactive database fix tool
+│   ├── db-inject-schema.ps1 # Manual schema injection
+│   ├── db-diagnostic.ps1    # Database diagnostics
+│   ├── db-viewer.js         # Web UI database viewer
+│   ├── start.ps1            # Container startup script
+│   └── healthcheck.ps1      # Health check script
 ├── installer/
 │   └── Install-WSH-Windows.ps1  # Windows installer
 ├── docs/
 │   └── WSH_Testing_Report.docx  # Comprehensive testing report
-├── benchmarks/              # Performance benchmarks
 ├── Dockerfile               # Multi-stage Docker build
 ├── docker-compose.yml       # Service orchestration
 ├── next.config.js           # Next.js configuration
 ├── tsconfig.json            # TypeScript configuration
+├── CHANGELOG.md             # Version history
 └── .env.example             # Environment template
 ```
 
@@ -283,9 +280,23 @@ WSH/
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Database Tables Not Created
 
-#### 1. Docker Build Fails
+If you see "relation public.users does not exist":
+
+```powershell
+# Option 1: Use the interactive fix tool
+docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1
+# Then select option 2 to create tables
+
+# Option 2: Run schema injection directly
+docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
+
+# Option 3: Connect to PSQL and create manually
+docker exec -it wsh-postgres psql -U wsh -d wsh_db
+```
+
+### Docker Build Fails
 
 ```powershell
 # Clean Docker cache and rebuild
@@ -294,15 +305,7 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-#### 2. TypeScript Module Resolution Errors
-
-```powershell
-# Ensure tsconfig.json has correct paths
-# Check that "@/*" maps to "./src/*"
-npm run build
-```
-
-#### 3. Database Connection Errors
+### Database Connection Errors
 
 ```powershell
 # Check PostgreSQL container status
@@ -310,19 +313,12 @@ docker logs wsh-postgres
 
 # Verify database credentials
 docker exec -it wsh-postgres psql -U wsh -d wsh_db -c "SELECT 1"
+
+# Restart containers
+docker-compose restart
 ```
 
-#### 4. PowerShell Module Import Errors
-
-```powershell
-# Check module paths in container
-docker exec wsh-app pwsh -c "Get-ChildItem /modules"
-
-# Test module import
-docker exec wsh-app pwsh -c "Import-Module /modules/LoggingEngine -Force"
-```
-
-#### 5. Health Check Failures
+### Container Health Check Failures
 
 ```powershell
 # Inspect container health
@@ -330,20 +326,6 @@ docker inspect wsh-app --format='{{json .State.Health}}' | ConvertFrom-Json
 
 # Manual health check
 docker exec wsh-app pwsh -File /app/healthcheck.ps1
-```
-
-### Log Collection
-
-```powershell
-# Collect all logs
-docker-compose logs > logs/all-logs.txt
-
-# Follow logs in real-time
-docker-compose logs -f
-
-# Container-specific logs
-docker logs wsh-app > logs/app.log
-docker logs wsh-postgres > logs/postgres.log
 ```
 
 ---
@@ -360,16 +342,6 @@ docker logs wsh-postgres > logs/postgres.log
 - [ ] Enable audit logging
 - [ ] Review CORS settings
 - [ ] Update all dependencies
-
-### Network Security
-
-```yaml
-# docker-compose.yml network isolation
-networks:
-  wsh-network:
-    driver: bridge
-    internal: false  # Set to true for complete isolation
-```
 
 ---
 
@@ -414,22 +386,6 @@ Content-Type: application/json
   "type": "quick",
   "folderId": null,
   "tags": ["tag1", "tag2"]
-}
-```
-
-### PowerShell Execution
-
-```http
-POST /api/executor/execute
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "scriptPath": "/scripts/example.ps1",
-  "parameters": {
-    "param1": "value1"
-  },
-  "timeout": 300
 }
 ```
 

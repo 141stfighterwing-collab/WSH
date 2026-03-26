@@ -1,7 +1,7 @@
 {
   "name": "wsh-weavenote-self-hosted",
-  "version": "1.0.0",
-  "description": "Weavenote Self Hosted - A fully self-hosted notes application with PostgreSQL",
+  "version": "2.3.0",
+  "description": "WSH (Weavenote Self Hosted) - A fully self-hosted notes application with PostgreSQL and PowerShell executor",
   "private": true,
   "scripts": {
     "dev": "next dev",
