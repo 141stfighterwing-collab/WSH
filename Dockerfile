@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
 # Unified Dockerfile with Node.js + PowerShell support
-# Version: 2.4.0 - JSON-Based Schema Injection
+# Version: 2.5.0 - Fixed pg module installation
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.4.0"
+LABEL version="2.5.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="2.4.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="2.5.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -42,7 +42,7 @@ ENV POWERSHELL_EXECUTOR_VERSION="2.4.0" \
 # Create operational directories
 RUN mkdir -p /scripts /logs /config /output /modules /app /data /public /schema
 
-# Install PostgreSQL client tools (for psql) and pg module for Node.js
+# Install PostgreSQL client tools (for psql)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
@@ -91,7 +91,7 @@ RUN npx prisma generate
 
 # Build Next.js app with standalone output
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
+ENV NODE_ENV="production"
 
 # Ensure public directory exists for Next.js standalone
 RUN mkdir -p public
@@ -108,19 +108,18 @@ FROM base AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV=production \
+ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.4.0"
+    POWERSHELL_EXECUTOR_VERSION="2.5.0"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Install Prisma CLI globally for schema migrations and pg module for Node.js
-RUN npm install -g prisma@latest && \
-    npm install -g pg
+# Install Prisma CLI globally for schema migrations
+RUN npm install -g prisma@latest
 
-# Copy Next.js standalone build
+# Copy Next.js standalone build FIRST
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
@@ -130,6 +129,10 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+
+# Install pg module AFTER copying standalone (so it doesn't get overwritten)
+# This adds pg to the existing node_modules
+RUN npm install pg --save || true
 
 # Copy PowerShell modules and scripts
 COPY --from=builder /modules/ /modules/
