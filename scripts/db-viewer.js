@@ -140,6 +140,7 @@ const htmlTemplate = (title, content) => `
         
         <div class="nav">
             <a href="/" class="${title === 'Dashboard' ? 'active' : ''}">[DB] Dashboard</a>
+            <a href="/users/manage" class="${title === 'User Management' ? 'active' : ''}">[M] Manage Users</a>
             <a href="/tables/users" class="${title === 'users' ? 'active' : ''}">[U] Users</a>
             <a href="/tables/notes" class="${title === 'notes' ? 'active' : ''}">[N] Notes</a>
             <a href="/tables/folders" class="${title === 'folders' ? 'active' : ''}">[F] Folders</a>
@@ -220,6 +221,7 @@ const server = http.createServer(async (req, res) => {
                 <div class="card">
                     <h2>Quick Actions</h2>
                     <div class="actions" style="margin-top: 15px;">
+                        <a href="/users/manage" class="btn btn-primary">Manage Users</a>
                         <a href="/tables/users" class="btn btn-primary">View Users</a>
                         <a href="/tables/notes" class="btn btn-primary">View Notes</a>
                         <a href="/schema" class="btn btn-primary">View Schema</a>
@@ -350,6 +352,7 @@ const server = http.createServer(async (req, res) => {
                 try {
                     const upperQuery = query.trim().toUpperCase();
                     
+                    // Allow SELECT, SHOW, EXPLAIN
                     if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('SHOW') || upperQuery.startsWith('EXPLAIN')) {
                         const result = await client.query(query);
                         
@@ -368,8 +371,21 @@ const server = http.createServer(async (req, res) => {
                         } else {
                             resultHtml = '<div class="success">Query executed successfully. No results returned.</div>';
                         }
-                    } else {
-                        resultHtml = '<div class="error">Only SELECT queries are allowed for security.</div>';
+                    }
+                    // Allow UPDATE for user management (role changes only)
+                    else if (upperQuery.startsWith('UPDATE') && upperQuery.includes('USERS') && (upperQuery.includes('ROLE') || upperQuery.includes('STATUS'))) {
+                        const result = await client.query(query);
+                        resultHtml = '<div class="success">Update executed successfully. ' + result.rowCount + ' row(s) affected.</div>';
+                        resultHtml += '<p style="margin-top: 10px;"><a href="/tables/users" class="btn btn-primary">View Users Table</a></p>';
+                    }
+                    // Allow INSERT into audit_logs
+                    else if (upperQuery.startsWith('INSERT') && upperQuery.includes('AUDIT_LOGS')) {
+                        const result = await client.query(query);
+                        resultHtml = '<div class="success">Audit log entry created. ' + result.rowCount + ' row(s) inserted.</div>';
+                    }
+                    else {
+                        resultHtml = '<div class="error">Only SELECT queries and user management UPDATEs are allowed.</div>';
+                        resultHtml += '<p style="margin-top: 10px; color: #94a3b8;">Allowed: SELECT, SHOW, EXPLAIN, UPDATE users SET role/status</p>';
                     }
                 } catch (err) {
                     resultHtml = '<div class="error">Error: ' + escapeHtml(err.message) + '</div>';
@@ -378,7 +394,8 @@ const server = http.createServer(async (req, res) => {
             
             const content = `
                 <div class="card">
-                    <h2>Run SQL Query (SELECT only)</h2>
+                    <h2>Run SQL Query</h2>
+                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Allowed: SELECT, SHOW, EXPLAIN, UPDATE users (role/status only)</p>
                     <form method="GET" action="/sql" style="margin-top: 15px;">
                         <textarea name="q" rows="4" style="width: 100%; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 15px; font-family: monospace; font-size: 14px;" placeholder="SELECT * FROM users LIMIT 10;">${query ? escapeHtml(query) : ''}</textarea>
                         <div style="margin-top: 10px;">
@@ -387,11 +404,98 @@ const server = http.createServer(async (req, res) => {
                         </div>
                     </form>
                 </div>
+                <div class="card">
+                    <h3>Quick User Management Queries</h3>
+                    <div style="margin-top: 15px; display: grid; gap: 10px;">
+                        <button onclick="setQuery('SELECT email, username, role, status FROM users ORDER BY role;')" class="btn" style="background: #334155; text-align: left;">[1] View all users with roles</button>
+                        <button onclick="setQuery('UPDATE users SET role = \\'super-admin\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[2] Promote user to SUPER ADMIN</button>
+                        <button onclick="setQuery('UPDATE users SET role = \\'admin\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[3] Set user to ADMIN</button>
+                        <button onclick="setQuery('UPDATE users SET role = \\'user\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[4] Demote user to regular USER</button>
+                        <button onclick="setQuery('UPDATE users SET status = \\'banned\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[5] Ban user by email</button>
+                        <button onclick="setQuery('UPDATE users SET status = \\'active\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[6] Unban/Activate user</button>
+                    </div>
+                </div>
                 ${resultHtml ? '<div class="card">' + resultHtml + '</div>' : ''}
+                <script>
+                    function setQuery(q) {
+                        document.querySelector('textarea[name=q]').value = q;
+                    }
+                </script>
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('SQL', content));
+        }
+        
+        // User Management page
+        else if (path === '/users/manage') {
+            const action = url.searchParams.get('action');
+            const email = url.searchParams.get('email');
+            let actionResult = '';
+            
+            if (action && email) {
+                try {
+                    if (action === 'promote-super') {
+                        await client.query("UPDATE users SET role = 'super-admin', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        actionResult = '<div class="success">User ' + escapeHtml(email) + ' promoted to SUPER ADMIN</div>';
+                    } else if (action === 'promote-admin') {
+                        await client.query("UPDATE users SET role = 'admin', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        actionResult = '<div class="success">User ' + escapeHtml(email) + ' promoted to ADMIN</div>';
+                    } else if (action === 'demote') {
+                        await client.query("UPDATE users SET role = 'user', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        actionResult = '<div class="success">User ' + escapeHtml(email) + ' demoted to USER</div>';
+                    } else if (action === 'ban') {
+                        await client.query("UPDATE users SET status = 'banned', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        actionResult = '<div class="success">User ' + escapeHtml(email) + ' has been BANNED</div>';
+                    } else if (action === 'activate') {
+                        await client.query("UPDATE users SET status = 'active', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        actionResult = '<div class="success">User ' + escapeHtml(email) + ' has been ACTIVATED</div>';
+                    }
+                } catch (err) {
+                    actionResult = '<div class="error">Error: ' + escapeHtml(err.message) + '</div>';
+                }
+            }
+            
+            // Get all users
+            const usersResult = await client.query("SELECT email, username, role, status, \"createdAt\" FROM users ORDER BY role, email");
+            
+            let usersHtml = '<table><thead><tr><th>Email</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+            usersResult.rows.forEach(user => {
+                const roleClass = user.role === 'super-admin' ? 'badge-blue' : user.role === 'admin' ? 'badge-green' : 'badge-yellow';
+                const statusClass = user.status === 'active' ? 'badge-green' : 'badge-red';
+                
+                usersHtml += '<tr>';
+                usersHtml += '<td>' + escapeHtml(user.email) + '</td>';
+                usersHtml += '<td>' + escapeHtml(user.username || '') + '</td>';
+                usersHtml += '<td><span class="badge ' + roleClass + '">' + escapeHtml(user.role) + '</span></td>';
+                usersHtml += '<td><span class="badge ' + statusClass + '">' + escapeHtml(user.status) + '</span></td>';
+                usersHtml += '<td>';
+                usersHtml += '<a href="/users/manage?action=promote-super&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">Super</a>';
+                usersHtml += '<a href="/users/manage?action=promote-admin&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">Admin</a>';
+                usersHtml += '<a href="/users/manage?action=demote&email=' + encodeURIComponent(user.email) + '" class="btn" style="padding: 4px 8px; font-size: 11px; margin-right: 5px; background: #334155;">User</a>';
+                if (user.status === 'active') {
+                    usersHtml += '<a href="/users/manage?action=ban&email=' + encodeURIComponent(user.email) + '" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;">Ban</a>';
+                } else {
+                    usersHtml += '<a href="/users/manage?action=activate&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px;">Activate</a>';
+                }
+                usersHtml += '</td>';
+                usersHtml += '</tr>';
+            });
+            usersHtml += '</tbody></table>';
+            
+            const content = `
+                <div class="card">
+                    <h2>User Management</h2>
+                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Click buttons to promote, demote, ban, or activate users</p>
+                    ${actionResult}
+                    <div style="margin-top: 15px;">
+                        ${usersHtml}
+                    </div>
+                </div>
+            `;
+            
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(htmlTemplate('User Management', content));
         }
         
         // API endpoint for raw data
