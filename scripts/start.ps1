@@ -15,12 +15,39 @@ if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"
 }
 
-# Parse database connection info
+# Parse database connection info from DATABASE_URL environment variable
+# Format: postgresql://user:password@host:port/database?schema=public
 $DbHost = "postgres"
 $DbPort = 5432
 $DbName = "wsh_db"
 $DbUser = "wsh"
 $DbPassword = "wsh_secure_password"
+
+# Try to parse DATABASE_URL for actual credentials
+if ($env:DATABASE_URL) {
+    try {
+        # Parse the connection string
+        $dbUrl = $env:DATABASE_URL
+        # Extract components using regex
+        if ($dbUrl -match 'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)') {
+            $DbUser = $matches[1]
+            $DbPassword = $matches[2]
+            $DbHost = $matches[3]
+            $DbPort = [int]$matches[4]
+            $DbName = $matches[5]
+            Write-Host "Parsed DATABASE_URL - Host: $DbHost, Port: $DbPort, DB: $DbName, User: $DbUser" -ForegroundColor Gray
+        } elseif ($dbUrl -match 'postgresql://([^:]+):([^@]+)@([^/]+)/(.+)') {
+            # Handle URLs without explicit port
+            $DbUser = $matches[1]
+            $DbPassword = $matches[2]
+            $DbHost = $matches[3]
+            $DbName = $matches[4]
+            Write-Host "Parsed DATABASE_URL (no port) - Host: $DbHost, DB: $DbName, User: $DbUser" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Host "Warning: Could not parse DATABASE_URL, using defaults" -ForegroundColor Yellow
+    }
+}
 
 Write-Host "Database URL: $($env:DATABASE_URL -replace 'password[^@]*', 'password=****')" -ForegroundColor Gray
 
