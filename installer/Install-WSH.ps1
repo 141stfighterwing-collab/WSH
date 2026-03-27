@@ -326,6 +326,7 @@ function Write-FinalSummary {
         Write-Host "  Application Access:" -ForegroundColor Cyan
         Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
         Write-Host "  [*] Application URL:     http://localhost:$AppPort" -ForegroundColor White
+        Write-Host "  [*] Database Viewer:     http://localhost:5682" -ForegroundColor White
         Write-Host "  [*] Database Port:       localhost:$DatabasePort" -ForegroundColor White
         
         if ($EnablePgAdmin) {
