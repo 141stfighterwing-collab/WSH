@@ -50,7 +50,7 @@ services:
       
       # Admin
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wsh.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-123456}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
       
       # PowerShell Executor Settings

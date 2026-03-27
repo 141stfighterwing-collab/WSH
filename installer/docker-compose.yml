@@ -2,14 +2,14 @@
 # WSH (Weavenote Self Hosted) - Docker Compose Configuration
 # ==============================================================================
 # Standalone Docker Compose file for WSH deployment
-# Generated for version 2.5.0
+# Version 2.5.1 - Fixed for local build
 # ==============================================================================
 #
 # Usage:
-#   docker-compose up -d              # Start all services
-#   docker-compose down               # Stop all services
-#   docker-compose logs -f            # View logs
-#   docker-compose --profile admin up -d  # Start with pgAdmin
+#   docker compose up -d              # Start all services
+#   docker compose down               # Stop all services
+#   docker compose logs -f            # View logs
+#   docker compose --profile admin up -d  # Start with pgAdmin
 #
 # Prerequisites:
 #   - Docker Desktop installed and running
@@ -51,10 +51,13 @@ services:
       - wsh-network
 
   # ============================================================================
-  # WSH Application
+  # WSH Application - Build locally
   # ============================================================================
   app:
-    image: ghcr.io/141stfighterwing-collab/wsh:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: wsh-app:latest
     container_name: wsh-app
     restart: unless-stopped
     
@@ -82,14 +85,20 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wsh.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-123456}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      
+      # Health Check Settings
+      HEALTH_CHECK_ENABLED: ${HEALTH_CHECK_ENABLED:-true}
+      HEALTH_CHECK_PORT: ${HEALTH_CHECK_PORT:-8080}
     
     ports:
       - "${APP_PORT:-3000}:3000"
       - "5682:5682"  # Database Viewer Web UI
+      - "8080:8080"  # Health Check Port
     
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ./output:/output
     
     healthcheck:
       test: ["CMD", "pwsh", "-NoProfile", "-Command", "& /app/healthcheck.ps1"]

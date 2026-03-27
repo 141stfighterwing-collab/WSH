@@ -41,6 +41,24 @@ The WSH application was experiencing a critical issue where the Docker container
 
 **Impact:** If Prisma schema push failed due to timing issues, the application would continue without proper database initialization.
 
+### Issue 4: Missing GitHub Container Registry Image
+
+**Location:** `installer/docker-compose.yml`
+**Symptom:** Docker fails to pull image with "denied" error
+**Evidence:** Line 57: `image: ghcr.io/141stfighterwing-collab/wsh:latest`
+**Root Cause:** The installer was configured to pull from GitHub Container Registry, but the image doesn't exist there
+
+**Impact:** Installer fails immediately with "denied" error, preventing deployment.
+
+### Issue 5: Admin Password Mismatch
+
+**Location:** `docker-compose.yml` vs `scripts/start.ps1`
+**Symptom:** Login fails with default credentials
+**Evidence:** docker-compose.yml default was `admin123`, but seed script uses `123456`
+**Root Cause:** Inconsistent default password between configuration and seed script
+
+**Impact:** Users couldn't login with the documented default password.
+
 ## Fixes Applied
 
 ### Fix 1: Proper Healthcheck Implementation
@@ -137,35 +155,67 @@ while ($schemaRetry -lt $maxSchemaRetries) {
 }
 ```
 
+### Fix 4: Local Build Configuration
+
+**File:** `installer/docker-compose.yml`
+
+**Changes:**
+1. Changed from pulling image to building locally
+2. Set build context to parent directory (`..`)
+3. Tag the built image as `wsh-app:latest`
+
+**Code Highlights:**
+```yaml
+app:
+  build:
+    context: ..
+    dockerfile: Dockerfile
+  image: wsh-app:latest
+```
+
+### Fix 5: Consistent Admin Password
+
+**File:** `docker-compose.yml`
+
+**Changes:**
+1. Updated ADMIN_PASSWORD default from `admin123` to `123456`
+2. Now matches the password hash in the seed script
+
 ## Validation Steps
 
 After applying these fixes, the following validation should be performed:
 
-1. **Build and Deploy:**
+1. **Pull Latest Changes:**
    ```bash
+   git pull
+   ```
+
+2. **Clean and Rebuild:**
+   ```powershell
+   # From the installer directory (C:\Users\admin\WSH\installer)
    docker compose down -v
    docker compose up -d --build
    ```
 
-2. **Check Container Health:**
-   ```bash
+3. **Check Container Health:**
+   ```powershell
    docker ps
    # Should show wsh-app as "healthy" after startup
    ```
 
-3. **Verify API Health:**
-   ```bash
-   curl http://localhost:3000/api/health
+4. **Verify API Health:**
+   ```powershell
+   Invoke-WebRequest -Uri "http://localhost:3000/api/health" -UseBasicParsing
    # Should return 200 with database: connected
    ```
 
-4. **Verify DB Viewer:**
-   ```bash
-   curl http://localhost:5682/health
+5. **Verify DB Viewer:**
+   ```powershell
+   Invoke-WebRequest -Uri "http://localhost:5682/health" -UseBasicParsing
    # Should return 200 with status: healthy or degraded
    ```
 
-5. **Test Login:**
+6. **Test Login:**
    - Open http://localhost:3000
    - Login with admin@wsh.local / 123456
    - Should succeed with proper session
@@ -196,6 +246,8 @@ After applying these fixes, the following validation should be performed:
 | `scripts/healthcheck.ps1` | Completely rewritten |
 | `scripts/db-viewer.js` | Major update with retry logic |
 | `scripts/start.ps1` | Enhanced with better error handling |
+| `installer/docker-compose.yml` | Fixed to build locally instead of pulling from ghcr.io |
+| `docker-compose.yml` | Fixed admin password default to match seed script |
 | `FIX-REPORT.md` | New file - this report |
 
 ## Compatibility Notes
