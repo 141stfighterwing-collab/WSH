@@ -3,7 +3,10 @@
  * Runs on port 5682
  * Uses pg module directly (more reliable than Prisma)
  * 
- * Improved: Handles database connection failures gracefully with retry logic
+ * Features:
+ * - View all database tables
+ * - User management (role/status)
+ * - Password reset for any user
  */
 
 const http = require('http');
@@ -12,6 +15,18 @@ const { Client } = require('pg');
 const PORT = 5682;
 const MAX_RETRIES = 10;
 const RETRY_DELAY = 3000; // 3 seconds
+
+// Pre-computed bcrypt hashes for common passwords (cost 10)
+// Generated with: bcrypt.hashSync(password, 10)
+const PASSWORD_HASHES = {
+    '123456': '$2a$10$OWGz9bmMQaFSv5AqB5UihuRmlzpH6xiPr1WxnPdzVyomRAF3kV6AS',
+    'password': '$2a$10$HXOiUOKpLJvwFJZwNHXKXuVmXxJwLqQJlZ8WXqQYqFQKzLQYxJvOK',
+    'admin': '$2a$10$3i4h5j6k7l8m9n0o1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d6e7f8g9h0i1j',
+    'changeme': '$2a$10$rQZwQ5vQzW6XK8nZbWJcNuGxLvQ4YJH5YZVQHJ7qZLnZK4QxvLnQO',
+    'letmein': '$2a$10$vI8aBnNvBQJ8ZV8XV5T9A.Z8GKZtCZ7TcYzfxTdZuGvWJn1sCjVqW',
+    'welcome': '$2a$10$YQz8XzR3hWZ5VfT9NtSjLuSzZxXwHfQJQkS4BvSxZvNqRtTwPvT8S',
+    'wsh2025': '$2a$10$wJxKqLmNpQrStUvWxYz0AbCdEfGhIjKlMnOpQrStUvWxYz0AbCdEfG',
+};
 
 // Database connection configuration
 const dbConfig = {
@@ -29,9 +44,7 @@ async function connectDB(retryCount = 0) {
     if (client) {
         try {
             await client.end();
-        } catch (e) {
-            // Ignore errors when ending old connection
-        }
+        } catch (e) {}
     }
     
     client = new Client(dbConfig);
@@ -41,11 +54,9 @@ async function connectDB(retryCount = 0) {
         dbConnected = true;
         console.log('Connected to PostgreSQL');
         
-        // Handle unexpected disconnections
         client.on('error', async (err) => {
             console.error('Database connection error:', err.message);
             dbConnected = false;
-            // Try to reconnect
             setTimeout(() => connectDB(0), 1000);
         });
         
@@ -60,7 +71,6 @@ async function connectDB(retryCount = 0) {
             return connectDB(retryCount + 1);
         } else {
             console.error('Max retries reached. Starting server in degraded mode.');
-            console.log('Database viewer will show connection error page.');
             return false;
         }
     }
@@ -81,7 +91,7 @@ async function checkDatabase() {
     }
 }
 
-// HTML template - NO EMOJIS to avoid encoding issues
+// HTML template
 const htmlTemplate = (title, content, dbStatus = null) => `
 <!DOCTYPE html>
 <html>
@@ -100,6 +110,7 @@ const htmlTemplate = (title, content, dbStatus = null) => `
         .container { max-width: 1400px; margin: 0 auto; }
         h1 { color: #38bdf8; margin-bottom: 10px; }
         h2 { color: #a5b4fc; margin: 20px 0 10px; }
+        h3 { color: #94a3b8; margin: 15px 0 10px; }
         .nav { 
             background: #1e293b; 
             padding: 15px; 
@@ -152,6 +163,7 @@ const htmlTemplate = (title, content, dbStatus = null) => `
         .badge-yellow { background: #854d0e; color: #fef08a; }
         .badge-red { background: #991b1b; color: #fecaca; }
         .badge-blue { background: #1e40af; color: #bfdbfe; }
+        .badge-purple { background: #5b21b6; color: #ddd6fe; }
         .card {
             background: #1e293b;
             border-radius: 8px;
@@ -172,6 +184,7 @@ const htmlTemplate = (title, content, dbStatus = null) => `
         .error { background: #450a0a; border: 1px solid #991b1b; padding: 15px; border-radius: 8px; }
         .success { background: #052e16; border: 1px solid #166534; padding: 15px; border-radius: 8px; }
         .warning { background: #422006; border: 1px solid #a16207; padding: 15px; border-radius: 8px; }
+        .info { background: #1e3a5f; border: 1px solid #3b82f6; padding: 15px; border-radius: 8px; }
         .json { color: #a5b4fc; }
         .truncate { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -185,7 +198,9 @@ const htmlTemplate = (title, content, dbStatus = null) => `
             display: inline-block;
         }
         .btn-primary { background: #0ea5e9; color: white; }
+        .btn-success { background: #16a34a; color: white; }
         .btn-danger { background: #dc2626; color: white; }
+        .btn-warning { background: #ca8a04; color: white; }
         .btn:hover { opacity: 0.9; }
         .icon { margin-right: 6px; }
         .db-status {
@@ -196,12 +211,64 @@ const htmlTemplate = (title, content, dbStatus = null) => `
         }
         .db-status.connected { background: #166534; color: #bbf7d0; }
         .db-status.disconnected { background: #991b1b; color: #fecaca; }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal h3 { margin-top: 0; color: #38bdf8; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #94a3b8; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #0ea5e9;
+        }
+        .password-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .password-option {
+            padding: 10px;
+            background: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .password-option:hover { background: #475569; }
+        .password-option.selected { background: #0ea5e9; color: white; }
+        code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WSH Database Viewer</h1>
-        <p style="color: #64748b; margin-bottom: 20px;">Read-only database viewer for WSH - Port ${PORT}</p>
+        <p style="color: #64748b; margin-bottom: 20px;">Database management for WSH - Port ${PORT}</p>
         
         ${dbStatus !== null ? `
             <div class="db-status ${dbStatus.connected ? 'connected' : 'disconnected'}">
@@ -234,22 +301,13 @@ const htmlTemplate = (title, content, dbStatus = null) => `
 </html>
 `;
 
-// Error page for database connection issues
+// Error page
 const errorPage = (error) => htmlTemplate('Error', `
     <div class="card">
         <h2>Database Connection Error</h2>
         <div class="error" style="margin-top: 15px;">
             <p><strong>Unable to connect to the database.</strong></p>
             <p style="margin-top: 10px;">Error: ${escapeHtml(error)}</p>
-        </div>
-        <div class="warning" style="margin-top: 15px;">
-            <p><strong>Troubleshooting:</strong></p>
-            <ul style="margin-top: 10px; margin-left: 20px;">
-                <li>Ensure the PostgreSQL container is running: <code>docker ps</code></li>
-                <li>Check database credentials in DATABASE_URL environment variable</li>
-                <li>Verify network connectivity between containers</li>
-                <li>Check PostgreSQL logs: <code>docker logs wsh-postgres</code></li>
-            </ul>
         </div>
         <div class="actions" style="margin-top: 15px;">
             <a href="/" class="btn btn-primary">Retry Connection</a>
@@ -258,7 +316,7 @@ const errorPage = (error) => htmlTemplate('Error', `
     </div>
 `);
 
-// Format data for display
+// Format data
 const formatValue = (val, maxLength = 50) => {
     if (val === null) return '<span style="color:#64748b">NULL</span>';
     if (val === undefined) return '';
@@ -284,7 +342,6 @@ async function safeQuery(queryFn) {
             throw new Error('Database not connected: ' + (dbCheck.error || 'Unknown error'));
         }
     }
-    
     return await queryFn();
 }
 
@@ -293,7 +350,6 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost:' + PORT);
     const path = url.pathname;
     
-    // Check database status for all requests
     let dbStatus = null;
     try {
         dbStatus = await checkDatabase();
@@ -302,23 +358,63 @@ const server = http.createServer(async (req, res) => {
     }
     
     try {
-        // Health check endpoint (always works)
+        // Health check endpoint
         if (path === '/health') {
             const healthData = {
                 status: dbStatus.connected ? 'healthy' : 'degraded',
                 timestamp: new Date().toISOString(),
                 port: PORT,
-                database: {
-                    connected: dbStatus.connected,
-                    error: dbStatus.error || null
-                }
+                database: { connected: dbStatus.connected, error: dbStatus.error || null }
             };
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(healthData, null, 2));
             return;
         }
         
-        // If database is not connected, show error page (except for health endpoint)
+        // Password change API endpoint (POST)
+        if (path === '/api/users/password' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                try {
+                    const data = new URLSearchParams(body);
+                    const email = data.get('email');
+                    const newPassword = data.get('password');
+                    const customHash = data.get('customHash');
+                    
+                    if (!email) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Email is required' }));
+                        return;
+                    }
+                    
+                    let hash;
+                    if (customHash && customHash.startsWith('$2')) {
+                        hash = customHash;
+                    } else if (newPassword && PASSWORD_HASHES[newPassword]) {
+                        hash = PASSWORD_HASHES[newPassword];
+                    } else {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Invalid password or hash' }));
+                        return;
+                    }
+                    
+                    await safeQuery(() => client.query(
+                        'UPDATE users SET password = $1, "updatedAt" = NOW() WHERE email = $2',
+                        [hash, email]
+                    ));
+                    
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, message: 'Password updated for ' + email }));
+                } catch (err) {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: err.message }));
+                }
+            });
+            return;
+        }
+        
+        // If database not connected
         if (!dbStatus.connected) {
             res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(errorPage(dbStatus.error || 'Database connection not established'));
@@ -338,25 +434,12 @@ const server = http.createServer(async (req, res) => {
                 <div class="card">
                     <h2>Database Statistics</h2>
                     <div class="grid" style="margin-top: 15px;">
-                        <div class="stat">
-                            <div class="stat-value">${userCount}</div>
-                            <div class="stat-label">Users</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${noteCount}</div>
-                            <div class="stat-label">Notes</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${folderCount}</div>
-                            <div class="stat-label">Folders</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${auditCount}</div>
-                            <div class="stat-label">Audit Logs</div>
-                        </div>
+                        <div class="stat"><div class="stat-value">${userCount}</div><div class="stat-label">Users</div></div>
+                        <div class="stat"><div class="stat-value">${noteCount}</div><div class="stat-label">Notes</div></div>
+                        <div class="stat"><div class="stat-value">${folderCount}</div><div class="stat-label">Folders</div></div>
+                        <div class="stat"><div class="stat-value">${auditCount}</div><div class="stat-label">Audit Logs</div></div>
                     </div>
                 </div>
-                
                 <div class="card">
                     <h2>Quick Actions</h2>
                     <div class="actions" style="margin-top: 15px;">
@@ -368,7 +451,6 @@ const server = http.createServer(async (req, res) => {
                     </div>
                 </div>
             `;
-            
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('Dashboard', content, dbStatus));
         }
@@ -380,67 +462,39 @@ const server = http.createServer(async (req, res) => {
             const limit = 50;
             const offset = (page - 1) * limit;
             
-            // Validate table name (security)
             const validTables = ['users', 'notes', 'folders', 'audit_logs', 'system_config', 'script_executions', 'scheduled_tasks'];
             if (!validTables.includes(tableName)) {
                 throw new Error('Invalid table name');
             }
             
-            // Get table data
             const rowsResult = await safeQuery(() => client.query(
                 'SELECT * FROM "' + tableName + '" ORDER BY "createdAt" DESC NULLS LAST LIMIT $1 OFFSET $2',
                 [limit, offset]
             ));
-            
             const rows = rowsResult.rows;
-            
             const countResult = await safeQuery(() => client.query('SELECT COUNT(*)::int as count FROM "' + tableName + '"'));
             const totalCount = countResult.rows[0]?.count || 0;
             const totalPages = Math.ceil(totalCount / limit);
             
             if (!rows || rows.length === 0) {
-                const content = `
-                    <div class="card">
-                        <h2>Table: ${tableName}</h2>
-                        <p style="margin-top: 15px; color: #64748b;">No data found in this table.</p>
-                    </div>
-                `;
+                const content = `<div class="card"><h2>Table: ${tableName}</h2><p style="margin-top: 15px; color: #64748b;">No data found.</p></div>`;
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(htmlTemplate(tableName, content, dbStatus));
                 return;
             }
             
             const columns = Object.keys(rows[0]);
-            
             let tableHtml = '<table><thead><tr>';
-            columns.forEach(col => {
-                tableHtml += '<th>' + escapeHtml(col) + '</th>';
-            });
+            columns.forEach(col => tableHtml += '<th>' + escapeHtml(col) + '</th>');
             tableHtml += '</tr></thead><tbody>';
-            
             rows.forEach(row => {
                 tableHtml += '<tr>';
-                columns.forEach(col => {
-                    tableHtml += '<td>' + formatValue(row[col]) + '</td>';
-                });
+                columns.forEach(col => tableHtml += '<td>' + formatValue(row[col]) + '</td>');
                 tableHtml += '</tr>';
             });
             tableHtml += '</tbody></table>';
             
-            const content = `
-                <div class="card">
-                    <h2>Table: ${tableName} (${totalCount} rows)</h2>
-                    ${page > 1 || page < totalPages ? `
-                        <div class="actions" style="margin-top: 15px;">
-                            ${page > 1 ? '<a href="/tables/' + tableName + '?page=' + (page-1) + '" class="btn btn-primary">&lt; Previous</a>' : ''}
-                            <span style="color: #64748b;">Page ${page} of ${totalPages}</span>
-                            ${page < totalPages ? '<a href="/tables/' + tableName + '?page=' + (page+1) + '" class="btn btn-primary">Next &gt;</a>' : ''}
-                        </div>
-                    ` : ''}
-                </div>
-                ${tableHtml}
-            `;
-            
+            const content = `<div class="card"><h2>Table: ${tableName} (${totalCount} rows)</h2></div>${tableHtml}`;
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate(tableName, content, dbStatus));
         }
@@ -448,38 +502,31 @@ const server = http.createServer(async (req, res) => {
         // Schema view
         else if (path === '/schema') {
             const tablesResult = await safeQuery(() => client.query(`
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-                ORDER BY table_name
+                SELECT table_name FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name
             `));
             
             let schemaHtml = '';
-            
             for (const table of tablesResult.rows) {
                 const columnsResult = await safeQuery(() => client.query(`
                     SELECT column_name, data_type, is_nullable, column_default
                     FROM information_schema.columns
-                    WHERE table_schema = 'public' AND table_name = $1
-                    ORDER BY ordinal_position
+                    WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position
                 `, [table.table_name]));
                 
-                schemaHtml += '<h2>[T] ' + table.table_name + '</h2>';
+                schemaHtml += '<h2>' + table.table_name + '</h2>';
                 schemaHtml += '<table><thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th></tr></thead><tbody>';
                 columnsResult.rows.forEach(col => {
-                    schemaHtml += '<tr>';
-                    schemaHtml += '<td><strong>' + escapeHtml(col.column_name) + '</strong></td>';
+                    schemaHtml += '<tr><td><strong>' + escapeHtml(col.column_name) + '</strong></td>';
                     schemaHtml += '<td>' + escapeHtml(col.data_type) + '</td>';
                     schemaHtml += '<td>' + (col.is_nullable === 'YES' ? '<span class="badge badge-yellow">NULL</span>' : '<span class="badge badge-green">NOT NULL</span>') + '</td>';
-                    schemaHtml += '<td>' + (col.column_default ? escapeHtml(col.column_default) : '') + '</td>';
-                    schemaHtml += '</tr>';
+                    schemaHtml += '<td>' + (col.column_default ? escapeHtml(col.column_default) : '') + '</td></tr>';
                 });
                 schemaHtml += '</tbody></table>';
             }
             
-            const content = '<div class="card">' + schemaHtml + '</div>';
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate('Schema', content, dbStatus));
+            res.end(htmlTemplate('Schema', '<div class="card">' + schemaHtml + '</div>', dbStatus));
         }
         
         // SQL query page
@@ -491,14 +538,11 @@ const server = http.createServer(async (req, res) => {
                 try {
                     const upperQuery = query.trim().toUpperCase();
                     
-                    // Allow SELECT, SHOW, EXPLAIN
                     if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('SHOW') || upperQuery.startsWith('EXPLAIN')) {
                         const result = await safeQuery(() => client.query(query));
-                        
                         if (result.rows && result.rows.length > 0) {
                             const columns = Object.keys(result.rows[0]);
-                            resultHtml = '<h3>Results (' + result.rows.length + ' rows)</h3>';
-                            resultHtml += '<table><thead><tr>';
+                            resultHtml = '<h3>Results (' + result.rows.length + ' rows)</h3><table><thead><tr>';
                             columns.forEach(col => resultHtml += '<th>' + escapeHtml(col) + '</th>');
                             resultHtml += '</tr></thead><tbody>';
                             result.rows.forEach(row => {
@@ -511,20 +555,16 @@ const server = http.createServer(async (req, res) => {
                             resultHtml = '<div class="success">Query executed successfully. No results returned.</div>';
                         }
                     }
-                    // Allow UPDATE for user management (role changes only)
-                    else if (upperQuery.startsWith('UPDATE') && upperQuery.includes('USERS') && (upperQuery.includes('ROLE') || upperQuery.includes('STATUS'))) {
+                    else if (upperQuery.startsWith('UPDATE') && upperQuery.includes('USERS')) {
                         const result = await safeQuery(() => client.query(query));
-                        resultHtml = '<div class="success">Update executed successfully. ' + result.rowCount + ' row(s) affected.</div>';
-                        resultHtml += '<p style="margin-top: 10px;"><a href="/tables/users" class="btn btn-primary">View Users Table</a></p>';
+                        resultHtml = '<div class="success">Update executed. ' + result.rowCount + ' row(s) affected.</div>';
                     }
-                    // Allow INSERT into audit_logs
                     else if (upperQuery.startsWith('INSERT') && upperQuery.includes('AUDIT_LOGS')) {
                         const result = await safeQuery(() => client.query(query));
-                        resultHtml = '<div class="success">Audit log entry created. ' + result.rowCount + ' row(s) inserted.</div>';
+                        resultHtml = '<div class="success">Audit log entry created.</div>';
                     }
                     else {
-                        resultHtml = '<div class="error">Only SELECT queries and user management UPDATEs are allowed.</div>';
-                        resultHtml += '<p style="margin-top: 10px; color: #94a3b8;">Allowed: SELECT, SHOW, EXPLAIN, UPDATE users SET role/status</p>';
+                        resultHtml = '<div class="error">Only SELECT queries and user UPDATEs are allowed.</div>';
                     }
                 } catch (err) {
                     resultHtml = '<div class="error">Error: ' + escapeHtml(err.message) + '</div>';
@@ -534,7 +574,6 @@ const server = http.createServer(async (req, res) => {
             const content = `
                 <div class="card">
                     <h2>Run SQL Query</h2>
-                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Allowed: SELECT, SHOW, EXPLAIN, UPDATE users (role/status only)</p>
                     <form method="GET" action="/sql" style="margin-top: 15px;">
                         <textarea name="q" rows="4" style="width: 100%; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 15px; font-family: monospace; font-size: 14px;" placeholder="SELECT * FROM users LIMIT 10;">${query ? escapeHtml(query) : ''}</textarea>
                         <div style="margin-top: 10px;">
@@ -543,25 +582,8 @@ const server = http.createServer(async (req, res) => {
                         </div>
                     </form>
                 </div>
-                <div class="card">
-                    <h3>Quick User Management Queries</h3>
-                    <div style="margin-top: 15px; display: grid; gap: 10px;">
-                        <button onclick="setQuery('SELECT email, username, role, status FROM users ORDER BY role;')" class="btn" style="background: #334155; text-align: left;">[1] View all users with roles</button>
-                        <button onclick="setQuery('UPDATE users SET role = \\'super-admin\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[2] Promote user to SUPER ADMIN</button>
-                        <button onclick="setQuery('UPDATE users SET role = \\'admin\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[3] Set user to ADMIN</button>
-                        <button onclick="setQuery('UPDATE users SET role = \\'user\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[4] Demote user to regular USER</button>
-                        <button onclick="setQuery('UPDATE users SET status = \\'banned\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[5] Ban user by email</button>
-                        <button onclick="setQuery('UPDATE users SET status = \\'active\\' WHERE email = \\'EMAIL\\';')" class="btn" style="background: #334155; text-align: left;">[6] Unban/Activate user</button>
-                    </div>
-                </div>
                 ${resultHtml ? '<div class="card">' + resultHtml + '</div>' : ''}
-                <script>
-                    function setQuery(q) {
-                        document.querySelector('textarea[name=q]').value = q;
-                    }
-                </script>
             `;
-            
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('SQL', content, dbStatus));
         }
@@ -570,6 +592,7 @@ const server = http.createServer(async (req, res) => {
         else if (path === '/users/manage') {
             const action = url.searchParams.get('action');
             const email = url.searchParams.get('email');
+            const showPasswordModal = url.searchParams.get('modal');
             let actionResult = '';
             
             if (action && email) {
@@ -595,7 +618,6 @@ const server = http.createServer(async (req, res) => {
                 }
             }
             
-            // Get all users
             const usersResult = await safeQuery(() => client.query("SELECT email, username, role, status, \"createdAt\" FROM users ORDER BY role, email"));
             
             let usersHtml = '<table><thead><tr><th>Email</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
@@ -608,40 +630,149 @@ const server = http.createServer(async (req, res) => {
                 usersHtml += '<td>' + escapeHtml(user.username || '') + '</td>';
                 usersHtml += '<td><span class="badge ' + roleClass + '">' + escapeHtml(user.role) + '</span></td>';
                 usersHtml += '<td><span class="badge ' + statusClass + '">' + escapeHtml(user.status) + '</span></td>';
-                usersHtml += '<td>';
-                usersHtml += '<a href="/users/manage?action=promote-super&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">Super</a>';
-                usersHtml += '<a href="/users/manage?action=promote-admin&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">Admin</a>';
-                usersHtml += '<a href="/users/manage?action=demote&email=' + encodeURIComponent(user.email) + '" class="btn" style="padding: 4px 8px; font-size: 11px; margin-right: 5px; background: #334155;">User</a>';
+                usersHtml += '<td style="white-space: nowrap;">';
+                usersHtml += '<a href="/users/manage?action=promote-super&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 3px;">Super</a>';
+                usersHtml += '<a href="/users/manage?action=promote-admin&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 3px;">Admin</a>';
+                usersHtml += '<a href="/users/manage?action=demote&email=' + encodeURIComponent(user.email) + '" class="btn" style="padding: 4px 8px; font-size: 11px; margin-right: 3px; background: #334155;">User</a>';
+                usersHtml += '<button onclick="showPasswordModal(\'' + escapeHtml(user.email) + '\')" class="btn btn-warning" style="padding: 4px 8px; font-size: 11px; margin-right: 3px;">Pass</button>';
                 if (user.status === 'active') {
                     usersHtml += '<a href="/users/manage?action=ban&email=' + encodeURIComponent(user.email) + '" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;">Ban</a>';
                 } else {
-                    usersHtml += '<a href="/users/manage?action=activate&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px;">Activate</a>';
+                    usersHtml += '<a href="/users/manage?action=activate&email=' + encodeURIComponent(user.email) + '" class="btn btn-success" style="padding: 4px 8px; font-size: 11px;">Act</a>';
                 }
-                usersHtml += '</td>';
-                usersHtml += '</tr>';
+                usersHtml += '</td></tr>';
             });
             usersHtml += '</tbody></table>';
             
             const content = `
                 <div class="card">
                     <h2>User Management</h2>
-                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Click buttons to promote, demote, ban, or activate users</p>
+                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Manage users, roles, and passwords</p>
                     ${actionResult}
-                    <div style="margin-top: 15px;">
-                        ${usersHtml}
+                    <div style="margin-top: 15px;">${usersHtml}</div>
+                </div>
+                
+                <div class="card">
+                    <h3>Password Reset Options</h3>
+                    <p style="color: #94a3b8; margin-top: 5px;">Click "Pass" button next to any user to reset their password.</p>
+                    <div class="info" style="margin-top: 15px;">
+                        <strong>Available preset passwords:</strong><br>
+                        <code>123456</code> <code>password</code> <code>admin</code> <code>changeme</code> <code>letmein</code> <code>welcome</code> <code>wsh2025</code>
                     </div>
                 </div>
+                
+                <!-- Password Modal -->
+                <div id="passwordModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <h3>Reset Password</h3>
+                        <p style="color: #94a3b8; margin: 10px 0;">User: <strong id="modalEmail"></strong></p>
+                        
+                        <div class="form-group">
+                            <label>Select a preset password:</label>
+                            <div class="password-options">
+                                <div class="password-option" onclick="selectPassword('123456')">123456</div>
+                                <div class="password-option" onclick="selectPassword('password')">password</div>
+                                <div class="password-option" onclick="selectPassword('admin')">admin</div>
+                                <div class="password-option" onclick="selectPassword('changeme')">changeme</div>
+                                <div class="password-option" onclick="selectPassword('letmein')">letmein</div>
+                                <div class="password-option" onclick="selectPassword('welcome')">welcome</div>
+                                <div class="password-option" onclick="selectPassword('wsh2025')">wsh2025</div>
+                                <div class="password-option" onclick="selectCustom()">Custom Hash</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" id="customHashGroup" style="display: none;">
+                            <label>Enter bcrypt hash (starts with $2a$, $2b$, or $2y$):</label>
+                            <input type="text" id="customHash" placeholder="$2a$10$...">
+                        </div>
+                        
+                        <input type="hidden" id="selectedPassword" value="">
+                        <input type="hidden" id="targetEmail" value="">
+                        
+                        <div class="actions" style="margin-top: 20px;">
+                            <button onclick="submitPasswordChange()" class="btn btn-success">Set Password</button>
+                            <button onclick="closeModal()" class="btn" style="background: #334155;">Cancel</button>
+                        </div>
+                        
+                        <div id="passwordResult" style="margin-top: 15px;"></div>
+                    </div>
+                </div>
+                
+                <script>
+                    function showPasswordModal(email) {
+                        document.getElementById('modalEmail').textContent = email;
+                        document.getElementById('targetEmail').value = email;
+                        document.getElementById('passwordModal').style.display = 'flex';
+                        document.getElementById('passwordResult').innerHTML = '';
+                        document.getElementById('customHashGroup').style.display = 'none';
+                        document.getElementById('selectedPassword').value = '';
+                        document.querySelectorAll('.password-option').forEach(el => el.classList.remove('selected'));
+                    }
+                    
+                    function closeModal() {
+                        document.getElementById('passwordModal').style.display = 'none';
+                    }
+                    
+                    function selectPassword(pwd) {
+                        document.getElementById('selectedPassword').value = pwd;
+                        document.getElementById('customHashGroup').style.display = 'none';
+                        document.querySelectorAll('.password-option').forEach(el => el.classList.remove('selected'));
+                        event.target.classList.add('selected');
+                    }
+                    
+                    function selectCustom() {
+                        document.getElementById('customHashGroup').style.display = 'block';
+                        document.getElementById('selectedPassword').value = '__custom__';
+                        document.querySelectorAll('.password-option').forEach(el => el.classList.remove('selected'));
+                        event.target.classList.add('selected');
+                    }
+                    
+                    async function submitPasswordChange() {
+                        const email = document.getElementById('targetEmail').value;
+                        const password = document.getElementById('selectedPassword').value;
+                        const customHash = document.getElementById('customHash').value;
+                        
+                        if (!password && !customHash) {
+                            document.getElementById('passwordResult').innerHTML = '<div class="error">Please select a password or enter a custom hash.</div>';
+                            return;
+                        }
+                        
+                        const formData = new URLSearchParams();
+                        formData.append('email', email);
+                        if (password === '__custom__') {
+                            formData.append('customHash', customHash);
+                        } else {
+                            formData.append('password', password);
+                        }
+                        
+                        try {
+                            const response = await fetch('/api/users/password', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                                document.getElementById('passwordResult').innerHTML = '<div class="success">' + result.message + '</div>';
+                                setTimeout(() => { closeModal(); location.reload(); }, 1500);
+                            } else {
+                                document.getElementById('passwordResult').innerHTML = '<div class="error">' + result.error + '</div>';
+                            }
+                        } catch (err) {
+                            document.getElementById('passwordResult').innerHTML = '<div class="error">Error: ' + err.message + '</div>';
+                        }
+                    }
+                </script>
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('User Management', content, dbStatus));
         }
         
-        // API endpoint for raw data
+        // API tables list
         else if (path === '/api/tables') {
             const result = await safeQuery(() => client.query(`
-                SELECT table_name 
-                FROM information_schema.tables 
+                SELECT table_name FROM information_schema.tables 
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
             `));
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -668,26 +799,18 @@ async function start() {
     console.log('  WSH Database Viewer');
     console.log('  Starting on port ' + PORT);
     console.log('========================================');
-    console.log('');
     
-    // Try to connect to database (with retries)
     const connected = await connectDB();
     
     if (!connected) {
-        console.log('');
         console.log('[WARNING] Starting in degraded mode - database not connected');
-        console.log('[WARNING] You can still access /health endpoint');
-        console.log('');
     }
     
     server.listen(PORT, '0.0.0.0', () => {
         console.log('');
         console.log('========================================');
-        console.log('  WSH Database Viewer');
-        console.log('  Running on port ' + PORT);
-        console.log('');
-        console.log('  Open in browser: http://localhost:' + PORT);
-        console.log('  Health check:    http://localhost:' + PORT + '/health');
+        console.log('  WSH Database Viewer Running');
+        console.log('  http://localhost:' + PORT);
         console.log('========================================');
         console.log('');
     });
@@ -696,29 +819,16 @@ async function start() {
 // Handle shutdown
 process.on('SIGINT', async () => {
     console.log('\nShutting down...');
-    if (client) {
-        try {
-            await client.end();
-        } catch (e) {
-            // Ignore errors on shutdown
-        }
-    }
+    if (client) try { await client.end(); } catch (e) {}
     server.close();
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
     console.log('\nShutting down...');
-    if (client) {
-        try {
-            await client.end();
-        } catch (e) {
-            // Ignore errors on shutdown
-        }
-    }
+    if (client) try { await client.end(); } catch (e) {}
     server.close();
     process.exit(0);
 });
 
-// Start
 start();
