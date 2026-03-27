@@ -362,9 +362,9 @@ switch ($Mode) {
         
         Push-Location /app
         
-        # CRITICAL: Set HOSTNAME to 0.0.0.0 for Docker container accessibility
+        # CRITICAL: Set HOST to 0.0.0.0 for Docker container accessibility
         # Next.js standalone defaults to localhost which won't work in Docker
-        $env:HOSTNAME = "0.0.0.0"
+        $env:HOST = "0.0.0.0"
         $env:PORT = "3000"
         
         Write-Host "Starting Node.js server on 0.0.0.0:3000..." -ForegroundColor Gray

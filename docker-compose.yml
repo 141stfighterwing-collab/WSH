@@ -37,7 +37,7 @@ services:
       DATABASE_URL: postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public
       
       # Server binding - MUST be 0.0.0.0 for Docker
-      HOSTNAME: "0.0.0.0"
+      HOST: "0.0.0.0"
       PORT: "3000"
       
       # JWT Configuration

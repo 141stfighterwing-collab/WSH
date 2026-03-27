@@ -127,7 +127,7 @@ WORKDIR /app
 ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
     POWERSHELL_EXECUTOR_VERSION="2.5.1" \
-    HOSTNAME=0.0.0.0 \
+    HOST=0.0.0.0 \
     PORT=3000
 
 # Create non-root user for security
