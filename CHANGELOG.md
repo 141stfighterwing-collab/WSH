@@ -84,6 +84,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Patch Notes
 
+### Patch 3.1.0-p3 (2026-03-28)
+- BUILD FIX: Completely removed benchmarks directory
+- BUILD FIX: Added .dockerignore to exclude unnecessary files
+- BUILD FIX: Prevents "@testing-library/react not found" error
+
 ### Patch 3.1.0-p2 (2026-03-28)
 - DOCS: Added Mind Map documentation to README
 - DOCS: Added Patching Guide section to README
