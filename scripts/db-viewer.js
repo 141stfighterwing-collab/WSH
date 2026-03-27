@@ -1,16 +1,29 @@
 /**
  * WSH Database Viewer - Simple Web UI to view database tables
  * Runs on port 5682
+ * Uses pg module directly (more reliable than Prisma)
  */
 
 const http = require('http');
-const { PrismaClient } = require('/app/node_modules/@prisma/client');
+const { Client } = require('pg');
 
-const prisma = new PrismaClient({
-    datasourceUrl: 'postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public'
+// Database connection
+const client = new Client({
+    connectionString: process.env.DATABASE_URL || 'postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public'
 });
 
 const PORT = 5682;
+
+// Connect to database
+async function connectDB() {
+    try {
+        await client.connect();
+        console.log('Connected to PostgreSQL');
+    } catch (err) {
+        console.error('Failed to connect to database:', err.message);
+        process.exit(1);
+    }
+}
 
 // HTML template
 const htmlTemplate = (title, content) => `
@@ -173,10 +186,10 @@ const server = http.createServer(async (req, res) => {
         // Dashboard
         if (path === '/') {
             const [userCount, noteCount, folderCount, auditCount] = await Promise.all([
-                prisma.user.count().catch(() => 0),
-                prisma.note.count().catch(() => 0),
-                prisma.folder.count().catch(() => 0),
-                prisma.auditLog.count().catch(() => 0),
+                client.query('SELECT COUNT(*) FROM users').then(r => parseInt(r.rows[0].count)).catch(() => 0),
+                client.query('SELECT COUNT(*) FROM notes').then(r => parseInt(r.rows[0].count)).catch(() => 0),
+                client.query('SELECT COUNT(*) FROM folders').then(r => parseInt(r.rows[0].count)).catch(() => 0),
+                client.query('SELECT COUNT(*) FROM audit_logs').then(r => parseInt(r.rows[0].count)).catch(() => 0),
             ]);
             
             const content = `
@@ -224,15 +237,23 @@ const server = http.createServer(async (req, res) => {
             const limit = 50;
             const offset = (page - 1) * limit;
             
-            // Get table data
-            const rows = await prisma.$queryRawUnsafe(`
-                SELECT * FROM ${tableName} 
-                ORDER BY "createdAt" DESC NULLS LAST 
-                LIMIT ${limit} OFFSET ${offset}
-            `);
+            // Validate table name (security)
+            const validTables = ['users', 'notes', 'folders', 'audit_logs', 'system_config', 'script_executions', 'scheduled_tasks'];
+            if (!validTables.includes(tableName)) {
+                throw new Error('Invalid table name');
+            }
             
-            const count = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM ${tableName}`);
-            const totalCount = count[0]?.count || 0;
+            // Get table data
+            const rowsResult = await client.query(`
+                SELECT * FROM "${tableName}" 
+                ORDER BY "createdAt" DESC NULLS LAST 
+                LIMIT $1 OFFSET $2
+            `, [limit, offset]);
+            
+            const rows = rowsResult.rows;
+            
+            const countResult = await client.query(`SELECT COUNT(*)::int as count FROM "${tableName}"`);
+            const totalCount = countResult.rows[0]?.count || 0;
             const totalPages = Math.ceil(totalCount / limit);
             
             if (!rows || rows.length === 0) {
@@ -284,26 +305,26 @@ const server = http.createServer(async (req, res) => {
         
         // Schema view
         else if (path === '/schema') {
-            const tables = await prisma.$queryRaw`
+            const tablesResult = await client.query(`
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
                 ORDER BY table_name
-            `;
+            `);
             
             let schemaHtml = '';
             
-            for (const table of tables) {
-                const columns = await prisma.$queryRawUnsafe(`
+            for (const table of tablesResult.rows) {
+                const columnsResult = await client.query(`
                     SELECT column_name, data_type, is_nullable, column_default
                     FROM information_schema.columns
-                    WHERE table_schema = 'public' AND table_name = '${table.table_name}'
+                    WHERE table_schema = 'public' AND table_name = $1
                     ORDER BY ordinal_position
-                `);
+                `, [table.table_name]);
                 
                 schemaHtml += `<h2>📋 ${table.table_name}</h2>`;
                 schemaHtml += `<table><thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th></tr></thead><tbody>`;
-                columns.forEach(col => {
+                columnsResult.rows.forEach(col => {
                     schemaHtml += `<tr>
                         <td><strong>${escapeHtml(col.column_name)}</strong></td>
                         <td>${escapeHtml(col.data_type)}</td>
@@ -329,15 +350,15 @@ const server = http.createServer(async (req, res) => {
                     const upperQuery = query.trim().toUpperCase();
                     
                     if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('SHOW') || upperQuery.startsWith('EXPLAIN')) {
-                        const results = await prisma.$queryRawUnsafe(query);
+                        const result = await client.query(query);
                         
-                        if (Array.isArray(results) && results.length > 0) {
-                            const columns = Object.keys(results[0]);
-                            resultHtml = `<h3>Results (${results.length} rows)</h3>`;
+                        if (result.rows && result.rows.length > 0) {
+                            const columns = Object.keys(result.rows[0]);
+                            resultHtml = `<h3>Results (${result.rows.length} rows)</h3>`;
                             resultHtml += `<table><thead><tr>`;
                             columns.forEach(col => resultHtml += `<th>${escapeHtml(col)}</th>`);
                             resultHtml += `</tr></thead><tbody>`;
-                            results.forEach(row => {
+                            result.rows.forEach(row => {
                                 resultHtml += `<tr>`;
                                 columns.forEach(col => resultHtml += `<td>${formatValue(row[col], 100)}</td>`);
                                 resultHtml += `</tr>`;
@@ -374,13 +395,13 @@ const server = http.createServer(async (req, res) => {
         
         // API endpoint for raw data
         else if (path === '/api/tables') {
-            const tables = await prisma.$queryRaw`
+            const result = await client.query(`
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-            `;
+            `);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(tables));
+            res.end(JSON.stringify(result.rows));
         }
         
         // 404
@@ -397,8 +418,11 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Start server
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`
+async function start() {
+    await connectDB();
+    
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`
 ========================================
   WSH Database Viewer
   Running on port ${PORT}
@@ -406,12 +430,16 @@ server.listen(PORT, '0.0.0.0', () => {
   Open in browser: http://localhost:${PORT}
 ========================================
 `);
-});
+    });
+}
 
 // Handle shutdown
 process.on('SIGINT', async () => {
     console.log('\nShutting down...');
-    await prisma.$disconnect();
+    await client.end();
     server.close();
     process.exit(0);
 });
+
+// Start
+start();

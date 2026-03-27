@@ -1,0 +1,142 @@
+{
+  "version": "1.0.0",
+  "description": "WSH Database Schema - JSON representation for manual SQL injection",
+  "tables": {
+    "users": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "email", "type": "VARCHAR(255)", "nullable": false, "unique": true},
+        {"name": "username", "type": "VARCHAR(255)", "nullable": false, "unique": true},
+        {"name": "password", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "role", "type": "VARCHAR(50)", "nullable": false, "default": "'user'"},
+        {"name": "permission", "type": "VARCHAR(50)", "nullable": false, "default": "'edit'"},
+        {"name": "status", "type": "VARCHAR(50)", "nullable": false, "default": "'active'"},
+        {"name": "lastLogin", "type": "TIMESTAMP", "nullable": true},
+        {"name": "aiUsageCount", "type": "INTEGER", "nullable": false, "default": "0"},
+        {"name": "createdAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"},
+        {"name": "updatedAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"}
+      ],
+      "indexes": [
+        {"name": "users_email_unique", "columns": ["email"], "unique": true},
+        {"name": "users_username_unique", "columns": ["username"], "unique": true}
+      ]
+    },
+    "folders": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "name", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "order", "type": "INTEGER", "nullable": false, "default": "0"},
+        {"name": "userId", "type": "UUID", "nullable": false},
+        {"name": "createdAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"},
+        {"name": "updatedAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"}
+      ],
+      "foreignKeys": [
+        {"name": "folders_userId_fkey", "columns": ["userId"], "references": "users", "refColumns": ["id"], "onDelete": "CASCADE"}
+      ],
+      "indexes": [
+        {"name": "folders_userId_idx", "columns": ["userId"]}
+      ]
+    },
+    "notes": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "title", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "content", "type": "TEXT", "nullable": false},
+        {"name": "rawContent", "type": "TEXT", "nullable": true},
+        {"name": "category", "type": "VARCHAR(50)", "nullable": false, "default": "'QUICK'"},
+        {"name": "type", "type": "VARCHAR(50)", "nullable": false, "default": "'quick'"},
+        {"name": "tags", "type": "TEXT[]", "nullable": false, "default": "'{}'"},
+        {"name": "color", "type": "VARCHAR(50)", "nullable": false, "default": "'yellow'"},
+        {"name": "textColor", "type": "VARCHAR(50)", "nullable": true},
+        {"name": "backgroundColor", "type": "VARCHAR(50)", "nullable": true},
+        {"name": "folderId", "type": "UUID", "nullable": true},
+        {"name": "userId", "type": "UUID", "nullable": false},
+        {"name": "isDeleted", "type": "BOOLEAN", "nullable": false, "default": "false"},
+        {"name": "deletedAt", "type": "TIMESTAMP", "nullable": true},
+        {"name": "isSynthesized", "type": "BOOLEAN", "nullable": false, "default": "false"},
+        {"name": "accessCount", "type": "INTEGER", "nullable": false, "default": "0"},
+        {"name": "wordCount", "type": "INTEGER", "nullable": false, "default": "0"},
+        {"name": "projectData", "type": "JSONB", "nullable": true},
+        {"name": "attachments", "type": "TEXT[]", "nullable": false, "default": "'{}'"},
+        {"name": "createdAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"},
+        {"name": "updatedAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"}
+      ],
+      "foreignKeys": [
+        {"name": "notes_userId_fkey", "columns": ["userId"], "references": "users", "refColumns": ["id"], "onDelete": "CASCADE"},
+        {"name": "notes_folderId_fkey", "columns": ["folderId"], "references": "folders", "refColumns": ["id"], "onDelete": "SET NULL"}
+      ],
+      "indexes": [
+        {"name": "notes_userId_idx", "columns": ["userId"]},
+        {"name": "notes_folderId_idx", "columns": ["folderId"]},
+        {"name": "notes_isDeleted_idx", "columns": ["isDeleted"]}
+      ]
+    },
+    "audit_logs": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "action", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "actor", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "target", "type": "VARCHAR(255)", "nullable": true},
+        {"name": "details", "type": "TEXT", "nullable": true},
+        {"name": "timestamp", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"},
+        {"name": "userId", "type": "UUID", "nullable": false}
+      ],
+      "foreignKeys": [
+        {"name": "audit_logs_userId_fkey", "columns": ["userId"], "references": "users", "refColumns": ["id"], "onDelete": "CASCADE"}
+      ],
+      "indexes": [
+        {"name": "audit_logs_userId_idx", "columns": ["userId"]}
+      ]
+    },
+    "system_config": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "key", "type": "VARCHAR(255)", "nullable": false, "unique": true},
+        {"name": "value", "type": "TEXT", "nullable": false},
+        {"name": "createdAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"},
+        {"name": "updatedAt", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"}
+      ],
+      "indexes": [
+        {"name": "system_config_key_unique", "columns": ["key"], "unique": true}
+      ]
+    },
+    "script_executions": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "scriptName", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "scriptPath", "type": "VARCHAR(500)", "nullable": false},
+        {"name": "parameters", "type": "JSONB", "nullable": true},
+        {"name": "status", "type": "VARCHAR(50)", "nullable": false, "default": "'pending'"},
+        {"name": "startTime", "type": "TIMESTAMP", "nullable": false, "default": "NOW()"},
+        {"name": "endTime", "type": "TIMESTAMP", "nullable": true},
+        {"name": "duration", "type": "INTEGER", "nullable": true},
+        {"name": "output", "type": "TEXT", "nullable": true},
+        {"name": "error", "type": "TEXT", "nullable": true},
+        {"name": "exitCode", "type": "INTEGER", "nullable": true},
+        {"name": "retryCount", "type": "INTEGER", "nullable": false, "default": "0"},
+        {"name": "triggeredBy", "type": "VARCHAR(50)", "nullable": true},
+        {"name": "userId", "type": "UUID", "nullable": true},
+        {"name": "metadata", "type": "JSONB", "nullable": true}
+      ],
+      "indexes": [
+        {"name": "script_executions_status_idx", "columns": ["status"]},
+        {"name": "script_executions_startTime_idx", "columns": ["startTime"]}
+      ]
+    },
+    "scheduled_tasks": {
+      "columns": [
+        {"name": "id", "type": "UUID", "nullable": false, "default": "gen_random_uuid()", "primary": true},
+        {"name": "name", "type": "VARCHAR(255)", "nullable": false},
+        {"name": "scriptPath", "type": "VARCHAR(500)", "nullable": false},
+        {"name": "cron", "type": "VARCHAR(100)", "nullable": false},
+        {"name": "enabled", "type": "BOOLEAN", "nullable": false, "default": "true"},
+        {"name": "lastRun", "type": "TIMESTAMP", "nullable": true},
+        {"name": "nextRun", "type": "TIMESTAMP", "nullable": true},
+        {"name": "lastStatus", "type": "VARCHAR(50)", "nullable": true},
+        {"name": "parameters", "type": "JSONB", "nullable": true},
+        {"name": "userId", "type": "UUID", "nullable": true}
+      ]
+    }
+  },
+  "tableOrder": ["users", "folders", "notes", "audit_logs", "system_config", "script_executions", "scheduled_tasks"]
+}

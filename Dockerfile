@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
 # Unified Dockerfile with Node.js + PowerShell support
-# Version: 2.3.0 - Database Viewer & Fix Tools
+# Version: 2.4.0 - JSON-Based Schema Injection
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.3.0"
+LABEL version="2.4.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="2.3.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="2.4.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -40,7 +40,12 @@ ENV POWERSHELL_EXECUTOR_VERSION="2.3.0" \
     NODE_ENV="production"
 
 # Create operational directories
-RUN mkdir -p /scripts /logs /config /output /modules /app /data /public
+RUN mkdir -p /scripts /logs /config /output /modules /app /data /public /schema
+
+# Install PostgreSQL client tools (for psql) and pg module for Node.js
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 # ============================================================================
 # Stage 2: Dependencies
@@ -105,14 +110,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.3.0"
+    POWERSHELL_EXECUTOR_VERSION="2.4.0"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Install Prisma CLI globally for schema migrations
-RUN npm install -g prisma@latest
+# Install Prisma CLI globally for schema migrations and pg module for Node.js
+RUN npm install -g prisma@latest && \
+    npm install -g pg
 
 # Copy Next.js standalone build
 COPY --from=builder /app/public ./public
@@ -137,11 +143,13 @@ COPY scripts/db-diagnostic.ps1 /scripts/db-diagnostic.ps1
 COPY scripts/db-inject-schema.ps1 /scripts/db-inject-schema.ps1
 COPY scripts/db-fix-tool.ps1 /scripts/db-fix-tool.ps1
 COPY scripts/db-viewer.js /app/db-viewer.js
+COPY scripts/inject-schema.js /app/inject-schema.js
+COPY schema/tables.json /schema/tables.json
 
 # Set permissions
-RUN chmod -R 755 /modules /app/pwsh /scripts /logs /output /config /data /app && \
-    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 /scripts/db-fix-tool.ps1 && \
-    chown -R nextjs:nodejs /app /logs /output /config /scripts /data
+RUN chmod -R 755 /modules /app/pwsh /scripts /logs /output /config /data /app /schema && \
+    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /app/inject-schema.js /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 /scripts/db-fix-tool.ps1 && \
+    chown -R nextjs:nodejs /app /logs /output /config /scripts /data /schema
 
 # Health check configuration
 HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=3 \
@@ -149,8 +157,9 @@ HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=3 \
 
 # Expose ports
 # 3000 - Next.js application
+# 5682 - Database viewer web UI
 # 8080 - PowerShell health endpoint (optional)
-EXPOSE 3000 8080
+EXPOSE 3000 5682 8080
 
 # Switch to non-root user
 USER nextjs
