@@ -291,6 +291,19 @@ if ($tablesExist) {
 Write-Host ""
 New-DefaultAdminUser
 
+# Apply user updates (admin password = 123456, Shootre = SUPER ADMIN)
+Write-Host ""
+Write-Host "Applying user updates..." -ForegroundColor Yellow
+
+# Update admin password to 123456
+$adminPasswordHash = '$2a$10$OWGz9bmMQaFSv5AqB5UihuRmlzpH6xiPr1WxnPdzVyomRAF3kV6AS'
+$UpdateAdmin = & psql $PsqlConn -c "UPDATE users SET password = '$adminPasswordHash', \"updatedAt\" = NOW() WHERE email = 'admin@wsh.local';" 2>&1
+Write-Host "  Admin password updated to '123456'" -ForegroundColor Green
+
+# Set Shootre to SUPER ADMIN
+$UpdateShootre = & psql $PsqlConn -c "UPDATE users SET role = 'super-admin', \"updatedAt\" = NOW() WHERE username = 'Shootre' OR email LIKE '%shootre%';" 2>&1
+Write-Host "  Shootre set to SUPER ADMIN" -ForegroundColor Green
+
 # Final verification - show user count
 Write-Host ""
 Write-Host "Final verification:" -ForegroundColor Cyan
@@ -320,7 +333,7 @@ switch ($Mode) {
         Write-Host ""
         Write-Host "DEFAULT LOGIN:" -ForegroundColor Yellow
         Write-Host "  Email:       admin@wsh.local" -ForegroundColor White
-        Write-Host "  Password:    admin123" -ForegroundColor White
+        Write-Host "  Password:    123456" -ForegroundColor White
         Write-Host ""
         
         Push-Location /app
