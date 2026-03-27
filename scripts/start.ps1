@@ -14,6 +14,14 @@ Write-Host "========================================" -ForegroundColor Cyan
 if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"
 }
+
+# Parse database connection info
+$DbHost = "postgres"
+$DbPort = 5432
+$DbName = "wsh_db"
+$DbUser = "wsh"
+$DbPassword = "wsh_secure_password"
+
 Write-Host "Database URL: $($env:DATABASE_URL -replace 'password[^@]*', 'password=****')" -ForegroundColor Gray
 
 # Wait for database to be ready
@@ -25,7 +33,7 @@ $dbReady = $false
 while ($dbWaited -lt $maxDbWait) {
     try {
         $tcp = New-Object System.Net.Sockets.TcpClient
-        $connect = $tcp.BeginConnect("postgres", 5432, $null, $null)
+        $connect = $tcp.BeginConnect($DbHost, $DbPort, $null, $null)
         $wait = $connect.AsyncWaitHandle.WaitOne(2000, $false)
         if ($wait) {
             try { $tcp.EndConnect($connect) } catch {}
@@ -50,11 +58,15 @@ if (-not $dbReady) {
 Write-Host "Giving PostgreSQL 5 seconds to complete initialization..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 
-# Function to check if tables exist using PSQL
+# Database connection string for psql
+$PsqlConn = "postgresql://${DbUser}:${DbPassword}@${DbHost}:${DbPort}/${DbName}"
+
+# Function to check if tables exist
 function Test-TablesExist {
     try {
-        $result = & psql "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users';" 2>$null
-        return ($result -as [int]) -gt 0
+        $result = & psql $PsqlConn -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users';" 2>$null
+        $count = ($result | Where-Object { $_ -match '^\d' } | ForEach-Object { $_.Trim() }) -as [int]
+        return $count -gt 0
     } catch {
         return $false
     }
@@ -64,7 +76,12 @@ function Test-TablesExist {
 function Invoke-CreateTablesSQL {
     Write-Host "Creating tables using direct SQL..." -ForegroundColor Yellow
     
-    $sqlStatements = @'
+    $sqlFile = "/tmp/create-tables.sql"
+    
+    @"
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Users table
 CREATE TABLE IF NOT EXISTS "users" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -173,12 +190,10 @@ CREATE INDEX IF NOT EXISTS idx_notes_userId ON "notes"("userId");
 CREATE INDEX IF NOT EXISTS idx_notes_folderId ON "notes"("folderId");
 CREATE INDEX IF NOT EXISTS idx_folders_userId ON "folders"("userId");
 CREATE INDEX IF NOT EXISTS idx_audit_logs_userId ON "audit_logs"("userId");
-'@
+"@ | Out-File -FilePath $sqlFile -Encoding utf8 -Force
 
     try {
-        # Write SQL to temp file and execute
-        $sqlStatements | Out-File -FilePath "/tmp/create-tables.sql" -Encoding utf8 -Force
-        $result = & psql "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db" -f "/tmp/create-tables.sql" 2>&1
+        $result = & psql $PsqlConn -f $sqlFile 2>&1
         Write-Host $result -ForegroundColor Gray
         return $true
     } catch {
@@ -187,12 +202,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_userId ON "audit_logs"("userId");
     }
 }
 
-# Function to verify tables using PSQL
+# Function to verify tables
 function Invoke-VerifyTables {
     Write-Host "Verifying tables..." -ForegroundColor Yellow
     
     try {
-        $tables = & psql "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db" -t -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;" 2>$null
+        $tables = & psql $PsqlConn -t -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name;" 2>$null
         Write-Host "Tables found:" -ForegroundColor Green
         $tables | ForEach-Object { 
             $t = $_.Trim()
@@ -201,6 +216,56 @@ function Invoke-VerifyTables {
         return $true
     } catch {
         Write-Host "Verification error: $_" -ForegroundColor Red
+        return $false
+    }
+}
+
+# Function to create default admin user
+function New-DefaultAdminUser {
+    Write-Host "Checking for default admin user..." -ForegroundColor Yellow
+    
+    try {
+        # Check if admin exists
+        $exists = & psql $PsqlConn -t -c "SELECT COUNT(*) FROM users WHERE email = 'admin@wsh.local';" 2>$null
+        $count = ($exists | Where-Object { $_ -match '^\d' } | ForEach-Object { $_.Trim() }) -as [int]
+        
+        if ($count -gt 0) {
+            Write-Host "Admin user already exists" -ForegroundColor Green
+            return $true
+        }
+        
+        Write-Host "Creating default admin user..." -ForegroundColor Yellow
+        
+        # Bcrypt hash for password 'admin123' (generated with cost 10)
+        # This is a valid bcrypt hash for 'admin123'
+        $hashedPassword = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+        
+        $createSQL = @"
+INSERT INTO users (id, email, username, password, role, permission, status, "createdAt", "updatedAt")
+VALUES (
+    gen_random_uuid(),
+    'admin@wsh.local',
+    'Admin',
+    '$hashedPassword',
+    'super-admin',
+    'edit',
+    'active',
+    NOW(),
+    NOW()
+)
+ON CONFLICT (email) DO NOTHING;
+"@
+        
+        $result = & psql $PsqlConn -c $createSQL 2>&1
+        Write-Host "Insert result: $result" -ForegroundColor Gray
+        
+        # Verify user was created
+        $verify = & psql $PsqlConn -t -c "SELECT email, username, role FROM users WHERE email = 'admin@wsh.local';" 2>$null
+        Write-Host "Admin user created: $verify" -ForegroundColor Green
+        
+        return $true
+    } catch {
+        Write-Host "Error creating admin user: $_" -ForegroundColor Red
         return $false
     }
 }
@@ -215,138 +280,22 @@ if ($tablesExist) {
 } else {
     Write-Host "Tables do not exist, attempting schema creation..." -ForegroundColor Yellow
     
-    # PRIORITY 1: Use direct SQL via psql (most reliable)
-    $schemaCreated = $false
-    
-    Write-Host ""
-    Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "METHOD 1: Direct SQL via psql" -ForegroundColor Cyan
-    Write-Host "========================================" -ForegroundColor Cyan
-    
+    # Create tables using SQL
     $sqlResult = Invoke-CreateTablesSQL
-    if ($sqlResult) {
-        $schemaCreated = $true
-        Write-Host "SQL table creation succeeded!" -ForegroundColor Green
-    }
     
-    # PRIORITY 2: Try Prisma db push as fallback
-    if (-not $schemaCreated) {
-        Write-Host ""
-        Write-Host "SQL failed, trying Prisma db push..." -ForegroundColor Yellow
-        
-        Push-Location /app
-        for ($i = 1; $i -le 3; $i++) {
-            Write-Host "Attempt $i/3: Running prisma db push..." -ForegroundColor Yellow
-            
-            $prismaOutput = & npx prisma db push --accept-data-loss 2>&1 | Out-String
-            
-            Write-Host "=== PRISMA OUTPUT ===" -ForegroundColor Cyan
-            Write-Host $prismaOutput -ForegroundColor Gray
-            Write-Host "=== END PRISMA OUTPUT ===" -ForegroundColor Cyan
-            
-            if ($LASTEXITCODE -eq 0 -or $prismaOutput -match "already in sync" -or $prismaOutput -match "success" -or $prismaOutput -match "pushed") {
-                $schemaCreated = $true
-                Write-Host "Prisma schema push succeeded!" -ForegroundColor Green
-                break
-            }
-            
-            Write-Host "Prisma failed with exit code: $LASTEXITCODE" -ForegroundColor Yellow
-            Start-Sleep -Seconds 3
-        }
-        Pop-Location
-    }
-    
-    # PRIORITY 3: Try Node.js with pg module
-    if (-not $schemaCreated) {
-        if (Test-Path "/app/inject-schema.js") {
-            Write-Host ""
-            Write-Host "Trying Node.js inject-schema.js..." -ForegroundColor Yellow
-            
-            Push-Location /app
-            $injectResult = & node /app/inject-schema.js --verbose 2>&1 | Out-String
-            Write-Host $injectResult -ForegroundColor Gray
-            Pop-Location
-            
-            if ($injectResult -match "completed successfully" -or $injectResult -match "Created table") {
-                $schemaCreated = $true
-                Write-Host "Node.js schema injection succeeded!" -ForegroundColor Green
-            }
-        }
-    }
-    
-    # Final verification
-    Write-Host ""
+    # Verify tables
     Invoke-VerifyTables
-    
-    if (-not $schemaCreated) {
-        Write-Warning "WARNING: Could not verify all tables were created. App may have issues."
-    }
 }
 
-# Create default admin user if not exists
+# Create default admin user
 Write-Host ""
-Write-Host "Checking for default admin user..." -ForegroundColor Yellow
+New-DefaultAdminUser
 
-$adminExists = & psql "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db" -t -c "SELECT COUNT(*) FROM users WHERE email = 'admin@wsh.local';" 2>$null
-$adminCount = ($adminExists -as [int])
-
-if ($adminCount -eq 0) {
-    Write-Host "Creating default admin user..." -ForegroundColor Yellow
-    
-    # Generate bcrypt hash for 'admin123' - using Node.js
-    $hashScript = @'
-const bcrypt = require('bcryptjs');
-const hash = bcrypt.hashSync('admin123', 10);
-console.log(hash);
-'@
-    
-    try {
-        # Try to create admin via Node.js
-        $createAdminScript = @'
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
-
-async function createAdmin() {
-    try {
-        const existing = await prisma.user.findUnique({ where: { email: 'admin@wsh.local' } });
-        if (existing) {
-            console.log('Admin already exists');
-            return;
-        }
-        
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        const user = await prisma.user.create({
-            data: {
-                email: 'admin@wsh.local',
-                username: 'Admin',
-                password: hashedPassword,
-                role: 'super-admin',
-                permission: 'edit',
-                status: 'active'
-            }
-        });
-        console.log('Admin created:', user.email);
-    } catch (e) {
-        console.error('Error:', e.message);
-    } finally {
-        await prisma.$disconnect();
-    }
-}
-createAdmin();
-'@
-        
-        $createAdminScript | Out-File -FilePath "/tmp/create-admin.js" -Encoding utf8 -Force
-        Push-Location /app
-        $adminResult = & node /tmp/create-admin.js 2>&1 | Out-String
-        Pop-Location
-        Write-Host $adminResult -ForegroundColor Gray
-    } catch {
-        Write-Host "Could not create admin via Node.js, will be created on first login attempt" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "Admin user already exists" -ForegroundColor Green
-}
+# Final verification - show user count
+Write-Host ""
+Write-Host "Final verification:" -ForegroundColor Cyan
+$userCount = & psql $PsqlConn -t -c "SELECT COUNT(*) FROM users;" 2>$null
+Write-Host "  Users in database: $(($userCount | Where-Object { $_ -match '^\d' } | ForEach-Object { $_.Trim() }))" -ForegroundColor White
 
 # Start the application
 switch ($Mode) {

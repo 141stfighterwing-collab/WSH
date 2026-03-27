@@ -25,11 +25,12 @@ async function connectDB() {
     }
 }
 
-// HTML template
+// HTML template - NO EMOJIS to avoid encoding issues
 const htmlTemplate = (title, content) => `
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>WSH DB Viewer - ${title}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -129,23 +130,24 @@ const htmlTemplate = (title, content) => `
         .btn-primary { background: #0ea5e9; color: white; }
         .btn-danger { background: #dc2626; color: white; }
         .btn:hover { opacity: 0.9; }
+        .icon { margin-right: 6px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🗄️ WSH Database Viewer</h1>
+        <h1>WSH Database Viewer</h1>
         <p style="color: #64748b; margin-bottom: 20px;">Read-only database viewer for WSH</p>
         
         <div class="nav">
-            <a href="/" class="${title === 'Dashboard' ? 'active' : ''}">📊 Dashboard</a>
-            <a href="/tables/users" class="${title === 'users' ? 'active' : ''}">👥 Users</a>
-            <a href="/tables/notes" class="${title === 'notes' ? 'active' : ''}">📝 Notes</a>
-            <a href="/tables/folders" class="${title === 'folders' ? 'active' : ''}">📁 Folders</a>
-            <a href="/tables/audit_logs" class="${title === 'audit_logs' ? 'active' : ''}">📋 Audit Logs</a>
-            <a href="/tables/system_config" class="${title === 'system_config' ? 'active' : ''}">⚙️ Config</a>
-            <a href="/tables/script_executions" class="${title === 'script_executions' ? 'active' : ''}">⚡ Scripts</a>
-            <a href="/schema" class="${title === 'Schema' ? 'active' : ''}">📐 Schema</a>
-            <a href="/sql" class="${title === 'SQL' ? 'active' : ''}">🔧 SQL</a>
+            <a href="/" class="${title === 'Dashboard' ? 'active' : ''}">[DB] Dashboard</a>
+            <a href="/tables/users" class="${title === 'users' ? 'active' : ''}">[U] Users</a>
+            <a href="/tables/notes" class="${title === 'notes' ? 'active' : ''}">[N] Notes</a>
+            <a href="/tables/folders" class="${title === 'folders' ? 'active' : ''}">[F] Folders</a>
+            <a href="/tables/audit_logs" class="${title === 'audit_logs' ? 'active' : ''}">[L] Audit Logs</a>
+            <a href="/tables/system_config" class="${title === 'system_config' ? 'active' : ''}">[C] Config</a>
+            <a href="/tables/script_executions" class="${title === 'script_executions' ? 'active' : ''}">[S] Scripts</a>
+            <a href="/schema" class="${title === 'Schema' ? 'active' : ''}">[+] Schema</a>
+            <a href="/sql" class="${title === 'SQL' ? 'active' : ''}">[>] SQL</a>
         </div>
         
         ${content}
@@ -164,9 +166,9 @@ const formatValue = (val, maxLength = 50) => {
     if (val === null) return '<span style="color:#64748b">NULL</span>';
     if (val === undefined) return '';
     if (typeof val === 'boolean') return val ? '<span class="badge badge-green">true</span>' : '<span class="badge badge-red">false</span>';
-    if (typeof val === 'object') return `<span class="json">${JSON.stringify(val).substring(0, maxLength)}</span>`;
+    if (typeof val === 'object') return '<span class="json">' + JSON.stringify(val).substring(0, maxLength) + '</span>';
     if (typeof val === 'string' && val.length > maxLength) {
-        return `<span class="truncate" title="${val.replace(/"/g, '&quot;')}">${val.substring(0, maxLength)}...</span>`;
+        return '<span class="truncate" title="' + val.replace(/"/g, '&quot;') + '">' + val.substring(0, maxLength) + '...</span>';
     }
     return String(val);
 };
@@ -179,7 +181,7 @@ const escapeHtml = (str) => {
 
 // Create server
 const server = http.createServer(async (req, res) => {
-    const url = new URL(req.url, `http://localhost:${PORT}`);
+    const url = new URL(req.url, 'http://localhost:' + PORT);
     const path = url.pathname;
     
     try {
@@ -226,7 +228,7 @@ const server = http.createServer(async (req, res) => {
                 </div>
             `;
             
-            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('Dashboard', content));
         }
         
@@ -244,15 +246,14 @@ const server = http.createServer(async (req, res) => {
             }
             
             // Get table data
-            const rowsResult = await client.query(`
-                SELECT * FROM "${tableName}" 
-                ORDER BY "createdAt" DESC NULLS LAST 
-                LIMIT $1 OFFSET $2
-            `, [limit, offset]);
+            const rowsResult = await client.query(
+                'SELECT * FROM "' + tableName + '" ORDER BY "createdAt" DESC NULLS LAST LIMIT $1 OFFSET $2',
+                [limit, offset]
+            );
             
             const rows = rowsResult.rows;
             
-            const countResult = await client.query(`SELECT COUNT(*)::int as count FROM "${tableName}"`);
+            const countResult = await client.query('SELECT COUNT(*)::int as count FROM "' + tableName + '"');
             const totalCount = countResult.rows[0]?.count || 0;
             const totalPages = Math.ceil(totalCount / limit);
             
@@ -263,43 +264,43 @@ const server = http.createServer(async (req, res) => {
                         <p style="margin-top: 15px; color: #64748b;">No data found in this table.</p>
                     </div>
                 `;
-                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(htmlTemplate(tableName, content));
                 return;
             }
             
             const columns = Object.keys(rows[0]);
             
-            let tableHtml = `<table><thead><tr>`;
+            let tableHtml = '<table><thead><tr>';
             columns.forEach(col => {
-                tableHtml += `<th>${escapeHtml(col)}</th>`;
+                tableHtml += '<th>' + escapeHtml(col) + '</th>';
             });
-            tableHtml += `</tr></thead><tbody>`;
+            tableHtml += '</tr></thead><tbody>';
             
             rows.forEach(row => {
-                tableHtml += `<tr>`;
+                tableHtml += '<tr>';
                 columns.forEach(col => {
-                    tableHtml += `<td>${formatValue(row[col])}</td>`;
+                    tableHtml += '<td>' + formatValue(row[col]) + '</td>';
                 });
-                tableHtml += `</tr>`;
+                tableHtml += '</tr>';
             });
-            tableHtml += `</tbody></table>`;
+            tableHtml += '</tbody></table>';
             
             const content = `
                 <div class="card">
                     <h2>Table: ${tableName} (${totalCount} rows)</h2>
                     ${page > 1 || page < totalPages ? `
                         <div class="actions" style="margin-top: 15px;">
-                            ${page > 1 ? `<a href="/tables/${tableName}?page=${page-1}" class="btn btn-primary">← Previous</a>` : ''}
+                            ${page > 1 ? '<a href="/tables/' + tableName + '?page=' + (page-1) + '" class="btn btn-primary">&lt; Previous</a>' : ''}
                             <span style="color: #64748b;">Page ${page} of ${totalPages}</span>
-                            ${page < totalPages ? `<a href="/tables/${tableName}?page=${page+1}" class="btn btn-primary">Next →</a>` : ''}
+                            ${page < totalPages ? '<a href="/tables/' + tableName + '?page=' + (page+1) + '" class="btn btn-primary">Next &gt;</a>' : ''}
                         </div>
                     ` : ''}
                 </div>
                 ${tableHtml}
             `;
             
-            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate(tableName, content));
         }
         
@@ -322,21 +323,21 @@ const server = http.createServer(async (req, res) => {
                     ORDER BY ordinal_position
                 `, [table.table_name]);
                 
-                schemaHtml += `<h2>📋 ${table.table_name}</h2>`;
-                schemaHtml += `<table><thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th></tr></thead><tbody>`;
+                schemaHtml += '<h2>[T] ' + table.table_name + '</h2>';
+                schemaHtml += '<table><thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th></tr></thead><tbody>';
                 columnsResult.rows.forEach(col => {
-                    schemaHtml += `<tr>
-                        <td><strong>${escapeHtml(col.column_name)}</strong></td>
-                        <td>${escapeHtml(col.data_type)}</td>
-                        <td>${col.is_nullable === 'YES' ? '<span class="badge badge-yellow">NULL</span>' : '<span class="badge badge-green">NOT NULL</span>'}</td>
-                        <td>${col.column_default ? escapeHtml(col.column_default) : ''}</td>
-                    </tr>`;
+                    schemaHtml += '<tr>';
+                    schemaHtml += '<td><strong>' + escapeHtml(col.column_name) + '</strong></td>';
+                    schemaHtml += '<td>' + escapeHtml(col.data_type) + '</td>';
+                    schemaHtml += '<td>' + (col.is_nullable === 'YES' ? '<span class="badge badge-yellow">NULL</span>' : '<span class="badge badge-green">NOT NULL</span>') + '</td>';
+                    schemaHtml += '<td>' + (col.column_default ? escapeHtml(col.column_default) : '') + '</td>';
+                    schemaHtml += '</tr>';
                 });
-                schemaHtml += `</tbody></table>`;
+                schemaHtml += '</tbody></table>';
             }
             
-            const content = `<div class="card">${schemaHtml}</div>`;
-            res.writeHead(200, { 'Content-Type': 'text/html' });
+            const content = '<div class="card">' + schemaHtml + '</div>';
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('Schema', content));
         }
         
@@ -354,24 +355,24 @@ const server = http.createServer(async (req, res) => {
                         
                         if (result.rows && result.rows.length > 0) {
                             const columns = Object.keys(result.rows[0]);
-                            resultHtml = `<h3>Results (${result.rows.length} rows)</h3>`;
-                            resultHtml += `<table><thead><tr>`;
-                            columns.forEach(col => resultHtml += `<th>${escapeHtml(col)}</th>`);
-                            resultHtml += `</tr></thead><tbody>`;
+                            resultHtml = '<h3>Results (' + result.rows.length + ' rows)</h3>';
+                            resultHtml += '<table><thead><tr>';
+                            columns.forEach(col => resultHtml += '<th>' + escapeHtml(col) + '</th>');
+                            resultHtml += '</tr></thead><tbody>';
                             result.rows.forEach(row => {
-                                resultHtml += `<tr>`;
-                                columns.forEach(col => resultHtml += `<td>${formatValue(row[col], 100)}</td>`);
-                                resultHtml += `</tr>`;
+                                resultHtml += '<tr>';
+                                columns.forEach(col => resultHtml += '<td>' + formatValue(row[col], 100) + '</td>');
+                                resultHtml += '</tr>';
                             });
-                            resultHtml += `</tbody></table>`;
+                            resultHtml += '</tbody></table>';
                         } else {
-                            resultHtml = `<div class="success">Query executed successfully. No results returned.</div>`;
+                            resultHtml = '<div class="success">Query executed successfully. No results returned.</div>';
                         }
                     } else {
-                        resultHtml = `<div class="error">Only SELECT queries are allowed for security.</div>`;
+                        resultHtml = '<div class="error">Only SELECT queries are allowed for security.</div>';
                     }
                 } catch (err) {
-                    resultHtml = `<div class="error">Error: ${escapeHtml(err.message)}</div>`;
+                    resultHtml = '<div class="error">Error: ' + escapeHtml(err.message) + '</div>';
                 }
             }
             
@@ -386,10 +387,10 @@ const server = http.createServer(async (req, res) => {
                         </div>
                     </form>
                 </div>
-                ${resultHtml ? `<div class="card">${resultHtml}</div>` : ''}
+                ${resultHtml ? '<div class="card">' + resultHtml + '</div>' : ''}
             `;
             
-            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('SQL', content));
         }
         
@@ -406,14 +407,14 @@ const server = http.createServer(async (req, res) => {
         
         // 404
         else {
-            res.writeHead(404, { 'Content-Type': 'text/html' });
+            res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(htmlTemplate('404', '<div class="error">Page not found</div>'));
         }
         
     } catch (error) {
         console.error('Error:', error);
-        res.writeHead(500, { 'Content-Type': 'text/html' });
-        res.end(htmlTemplate('Error', `<div class="error">Error: ${escapeHtml(error.message)}</div>`));
+        res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(htmlTemplate('Error', '<div class="error">Error: ' + escapeHtml(error.message) + '</div>'));
     }
 });
 
@@ -422,14 +423,14 @@ async function start() {
     await connectDB();
     
     server.listen(PORT, '0.0.0.0', () => {
-        console.log(`
-========================================
-  WSH Database Viewer
-  Running on port ${PORT}
-  
-  Open in browser: http://localhost:${PORT}
-========================================
-`);
+        console.log('');
+        console.log('========================================');
+        console.log('  WSH Database Viewer');
+        console.log('  Running on port ' + PORT);
+        console.log('');
+        console.log('  Open in browser: http://localhost:' + PORT);
+        console.log('========================================');
+        console.log('');
     });
 }
 
