@@ -7,6 +7,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.0] - 2026-03-28
+
+### MAJOR RELEASE - Settings & Admin Overhaul
+
+This is a MAJOR version upgrade with comprehensive admin features, user settings, and system management capabilities.
+
+### Added
+
+#### Settings Panel with Gear Icon (All Users)
+- **NEW**: Settings accessible via ⚙️ gear icon in header
+- Available to all authenticated users
+- Tabbed interface for easy navigation
+
+#### Themes & Appearance (All Users)
+- **NEW**: Expanded theme selection with 15+ themes
+- Added themes: yellow, orange, red, green, hyperblue
+- Existing themes: default, ocean, forest, sunset, rose, midnight, coffee, neon, cyberpunk, nord, dracula, lavender, earth
+- Dark mode toggle
+
+#### My Security (All Users)
+- **NEW**: Password change functionality for logged-in users
+- Minimum 8 character password requirement
+- Secure bcrypt hashing
+- Immediate password update
+
+#### Versioning Menu (Admin Only)
+- **NEW**: System version display
+- Version history with patch notes
+- Breaking change indicators
+- Applied date tracking
+
+#### User Base Management (Admin Only)
+- **NEW**: View all registered users
+- User role management (user/admin/super-admin)
+- User status management (active/banned/suspended)
+- Password reset trigger for users
+- Last login tracking
+
+#### ENV Settings for AI (Admin Only)
+- **NEW**: Environment variable management UI
+- Category-based organization (api, database, firebase, security, general)
+- Import/Export .env files
+- Quick-add templates for common keys
+- **NOTE**: AI functionality placeholder - not yet implemented
+
+#### System Logs (Admin Only)
+- **NEW**: Audit trail viewer
+- User action logging
+- System event tracking
+- Timestamp-based filtering
+
+#### Diagnostics (All Users)
+- **NEW**: System health check
+- Database connectivity test
+- API health endpoint check
+- Latency measurement
+- DNS resolution test
+
+### Changed
+
+- Updated version from 2.5.0 to 3.0.0 across all files
+- Enhanced SettingsModal with comprehensive tab system
+- Improved admin role detection for feature gating
+- Better error handling in settings operations
+
+### Fixed
+
+- All fixes from v2.5.1 included
+- Docker deployment stability
+- Health check reliability
+- Database viewer startup
+
+### Security
+
+- Password change requires current session
+- Admin features properly gated by role check
+- ENV variables stored securely
+
+---
+
+## [2.5.1] - 2026-03-28
+
+### Fixed
+
+- **CRITICAL**: Healthcheck now returns proper exit codes based on actual health status
+- **CRITICAL**: Database viewer starts in degraded mode when DB unavailable
+- **CRITICAL**: Startup script has retry logic for Prisma operations
+- **CRITICAL**: Installer builds locally instead of pulling from non-existent registry
+- **HIGH**: Admin password default matches seed script (123456)
+- **HIGH**: TypeScript build excludes skills and WSH examples directories
+- **HIGH**: Services directory included in Docker build
+
+### Added
+
+- Password reset feature in Database Viewer (port 5682)
+- Comprehensive issues and fixes documentation
+- Test report documentation
+
+---
+
 ## [2.5.0] - 2026-03-28
 
 ### Added
@@ -229,6 +329,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Type | Key Features |
 |---------|------|------|--------------|
+| 3.0.0 | 2026-03-28 | MAJOR | Settings Panel, Themes, My Security, User Base, ENV Settings, System Logs, Diagnostics |
+| 2.5.1 | 2026-03-28 | PATCH | Healthcheck fix, DB viewer retry, Start.ps1 retry logic |
 | 2.5.0 | 2026-03-28 | MINOR | Docker fixes, Prisma setup, HOST binding |
 | 2.4.0 | 2026-03-27 | FEATURE | Today's Things, Ongoing Projects Sidebar, SUPER ADMIN |
 | 2.3.0 | 2026-03-27 | HOTFIX | Database Viewer UI, Interactive Fix Tool, Multiple Hotfixes |
@@ -308,21 +410,21 @@ start http://localhost:5682
 
 ## Future Roadmap
 
-### Planned for v2.6.0
+### Planned for v3.1.0
 
+- [ ] AI Integration (Gemini API)
 - [ ] Hashtags support for notes
-- [ ] All themes from Weavenote main app
 - [ ] Calendar integration improvements
 - [ ] Analytics Dashboard for users
 
-### Planned for v2.7.0
+### Planned for v3.2.0
 
 - [ ] Database backup/restore functionality
-- [ ] User management UI in database viewer
+- [ ] Enhanced user management UI
 - [ ] API rate limiting
 - [ ] WebSocket support for real-time updates
 
-### Planned for v3.0.0
+### Planned for v4.0.0
 
 - [ ] Multi-tenant support
 - [ ] Plugin system
