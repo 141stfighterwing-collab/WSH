@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="3.0.0"
+LABEL version="3.1.0"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -90,7 +90,7 @@ WORKDIR /app
 
 ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="3.0.0" \
+    POWERSHELL_EXECUTOR_VERSION="3.1.0" \
     HOST=0.0.0.0 \
     PORT=3000
 

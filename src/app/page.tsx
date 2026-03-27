@@ -161,7 +161,7 @@ const SettingsModal = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                     <p className="text-xs text-slate-400 uppercase font-bold mb-1">Version</p>
-                    <p className="text-2xl font-black text-red-500">v3.0.0</p>
+                    <p className="text-2xl font-black text-red-500">v3.1.0</p>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                     <p className="text-xs text-slate-400 uppercase font-bold mb-1">Database</p>
@@ -189,7 +189,7 @@ const SettingsModal = ({
                     </div>
                     <div>
                       <p className="text-xs text-purple-500 font-bold uppercase tracking-widest">Current Version</p>
-                      <p className="text-3xl font-black text-purple-700 dark:text-purple-300">v3.0.0</p>
+                      <p className="text-3xl font-black text-purple-700 dark:text-purple-300">v3.1.0</p>
                     </div>
                   </div>
                 </div>
@@ -198,6 +198,7 @@ const SettingsModal = ({
                   <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Version History</h4>
                   <div className="space-y-2">
                     {[
+                      { version: '3.1.0', date: '2026-03-28', notes: 'NEW: WeaveMap visualization - interactive graph showing note connections based on shared tags, node size by content depth' },
                       { version: '3.0.0', date: '2026-03-28', notes: 'MAJOR: Settings panel with gear icon, User management, Password reset, System logs, Diagnostics, ENV settings for AI (admin), Enhanced themes' },
                       { version: '2.5.1', date: '2026-03-28', notes: 'Fixed Docker deployment, health checks, DB viewer with password reset' },
                       { version: '2.5.0', date: '2026-03-27', notes: 'Initial Docker setup with PowerShell executor' },
@@ -532,6 +533,335 @@ const AnalyticsModal = ({
   );
 };
 
+// WeaveMap Modal Component - Interactive note connection visualization
+const WeaveMapModal = ({ 
+  isOpen, 
+  onClose, 
+  notes,
+  onNoteClick
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  notes: Note[];
+  onNoteClick: (note: Note) => void;
+}) => {
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [hoveredNote, setHoveredNote] = useState<Note | null>(null);
+  const canvasRef = useState<HTMLDivElement | null>(null)[0];
+  
+  // Calculate note connections based on shared tags
+  interface NodePosition {
+    id: string;
+    x: number;
+    y: number;
+    note: Note;
+    strength: number;
+    connections: number;
+  }
+  
+  const { nodes, connections } = useMemo(() => {
+    if (notes.length === 0) return { nodes: [], connections: [] };
+    
+    // Calculate note strength (based on word count + access count)
+    const getStrength = (note: Note) => {
+      const wordCount = note.wordCount || (note.content || "").trim().split(/\s+/).filter(Boolean).length;
+      const accessCount = note.accessCount || 0;
+      return wordCount + (accessCount * 10);
+    };
+    
+    // Calculate connections based on shared tags
+    interface Connection {
+      source: string;
+      target: string;
+      strength: number;
+      sharedTags: string[];
+    }
+    
+    const conns: Connection[] = [];
+    const nodeConnections: Record<string, number> = {};
+    
+    for (let i = 0; i < notes.length; i++) {
+      for (let j = i + 1; j < notes.length; j++) {
+        const noteA = notes[i];
+        const noteB = notes[j];
+        const sharedTags = (noteA.tags || []).filter(tag => (noteB.tags || []).includes(tag));
+        
+        if (sharedTags.length > 0) {
+          conns.push({
+            source: noteA.id,
+            target: noteB.id,
+            strength: sharedTags.length,
+            sharedTags
+          });
+          nodeConnections[noteA.id] = (nodeConnections[noteA.id] || 0) + 1;
+          nodeConnections[noteB.id] = (nodeConnections[noteB.id] || 0) + 1;
+        }
+      }
+    }
+    
+    // Position nodes in a force-directed-like layout (simplified)
+    const centerX = 400;
+    const centerY = 300;
+    const radius = 250;
+    
+    const nodePositions: NodePosition[] = notes.map((note, index) => {
+      const angle = (index / notes.length) * 2 * Math.PI;
+      const strength = getStrength(note);
+      const conns = nodeConnections[note.id] || 0;
+      
+      // Nodes with more connections are closer to center
+      const distFromCenter = Math.max(50, radius - (conns * 30));
+      
+      return {
+        id: note.id,
+        x: centerX + Math.cos(angle) * distFromCenter + (Math.random() - 0.5) * 40,
+        y: centerY + Math.sin(angle) * distFromCenter + (Math.random() - 0.5) * 40,
+        note,
+        strength,
+        connections: conns
+      };
+    });
+    
+    return { nodes: nodePositions, connections: conns };
+  }, [notes]);
+  
+  // Get node color based on note type
+  const getNoteColor = (note: Note) => {
+    switch (note.type) {
+      case 'quick': return { fill: '#fbbf24', stroke: '#f59e0b' }; // yellow
+      case 'deep': return { fill: '#60a5fa', stroke: '#3b82f6' }; // blue
+      case 'project': return { fill: '#4ade80', stroke: '#22c55e' }; // green
+      case 'notebook': return { fill: '#a78bfa', stroke: '#8b5cf6' }; // purple
+      default: return { fill: '#94a3b8', stroke: '#64748b' }; // slate
+    }
+  };
+  
+  // Get node size based on strength
+  const getNodeSize = (node: NodePosition) => {
+    const minSize = 20;
+    const maxSize = 50;
+    const maxStrength = Math.max(...nodes.map(n => n.strength), 1);
+    return minSize + (node.strength / maxStrength) * (maxSize - minSize);
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <span className="text-primary-500">🕸️</span> WeaveMap
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Visualize note connections • Node size = content depth • Lines = shared tags
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xl">✕</button>
+        </div>
+
+        <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          {notes.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">🕸️</div>
+                <p className="text-slate-500 font-medium">No notes to visualize</p>
+                <p className="text-sm text-slate-400 mt-1">Create notes with tags to see connections</p>
+              </div>
+            </div>
+          ) : (
+            <svg width="100%" height="100%" viewBox="0 0 800 600" className="w-full h-full min-h-[500px]">
+              {/* Definitions for gradients and filters */}
+              <defs>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/>
+                </filter>
+              </defs>
+              
+              {/* Connection lines */}
+              {connections.map((conn, index) => {
+                const sourceNode = nodes.find(n => n.id === conn.source);
+                const targetNode = nodes.find(n => n.id === conn.target);
+                if (!sourceNode || !targetNode) return null;
+                
+                const isHighlighted = hoveredNote?.id === conn.source || hoveredNote?.id === conn.target;
+                
+                return (
+                  <line
+                    key={`conn-${index}`}
+                    x1={sourceNode.x}
+                    y1={sourceNode.y}
+                    x2={targetNode.x}
+                    y2={targetNode.y}
+                    stroke={isHighlighted ? '#ef4444' : '#cbd5e1'}
+                    strokeWidth={conn.strength * 1.5}
+                    opacity={isHighlighted ? 0.8 : 0.3}
+                    className="transition-all duration-200"
+                  />
+                );
+              })}
+              
+              {/* Note nodes */}
+              {nodes.map((node) => {
+                const colors = getNoteColor(node.note);
+                const size = getNodeSize(node);
+                const isSelected = selectedNote?.id === node.id;
+                const isHovered = hoveredNote?.id === node.id;
+                
+                return (
+                  <g
+                    key={node.id}
+                    transform={`translate(${node.x}, ${node.y})`}
+                    onClick={() => setSelectedNote(node.note)}
+                    onMouseEnter={() => setHoveredNote(node.note)}
+                    onMouseLeave={() => setHoveredNote(null)}
+                    className="cursor-pointer"
+                    style={{ filter: isHovered ? 'url(#glow)' : 'url(#shadow)' }}
+                  >
+                    {/* Outer ring for connections */}
+                    {node.connections > 0 && (
+                      <circle
+                        r={size + 5}
+                        fill="none"
+                        stroke="#ef4444"
+                        strokeWidth="2"
+                        strokeDasharray="4 2"
+                        opacity={0.4}
+                        className="animate-pulse"
+                      />
+                    )}
+                    
+                    {/* Main circle */}
+                    <circle
+                      r={size}
+                      fill={colors.fill}
+                      stroke={isSelected ? '#ef4444' : colors.stroke}
+                      strokeWidth={isSelected ? 3 : 2}
+                      className="transition-all duration-200"
+                    />
+                    
+                    {/* Connection count badge */}
+                    {node.connections > 0 && (
+                      <g transform={`translate(${size * 0.7}, ${-size * 0.7})`}>
+                        <circle r="10" fill="#ef4444" />
+                        <text
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fill="white"
+                          fontSize="10"
+                          fontWeight="bold"
+                        >
+                          {node.connections}
+                        </text>
+                      </g>
+                    )}
+                    
+                    {/* Note title (truncated) */}
+                    <text
+                      y={size + 15}
+                      textAnchor="middle"
+                      fill={isHovered ? '#1e293b' : '#64748b'}
+                      fontSize="11"
+                      fontWeight="600"
+                      className="dark:fill-slate-300"
+                    >
+                      {node.note.title.length > 15 
+                        ? `${node.note.title.substring(0, 15)}...` 
+                        : node.note.title}
+                    </text>
+                    
+                    {/* Type indicator */}
+                    <text
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="white"
+                      fontSize={Math.max(10, size / 3)}
+                      fontWeight="bold"
+                    >
+                      {node.note.type.charAt(0).toUpperCase()}
+                    </text>
+                  </g>
+                );
+              })}
+              
+              {/* Legend */}
+              <g transform="translate(20, 20)">
+                <rect x="-10" y="-10" width="160" height="120" rx="8" fill="white" fillOpacity="0.9" className="dark:fill-slate-800" />
+                <text y="10" fontSize="12" fontWeight="bold" fill="#1e293b" className="dark:fill-white">Legend</text>
+                
+                <circle cx="10" cy="35" r="8" fill="#fbbf24" />
+                <text x="25" y="39" fontSize="10" fill="#64748b">Quick Note</text>
+                
+                <circle cx="10" cy="55" r="8" fill="#60a5fa" />
+                <text x="25" y="59" fontSize="10" fill="#64748b">Deep Work</text>
+                
+                <circle cx="10" cy="75" r="8" fill="#4ade80" />
+                <text x="25" y="79" fontSize="10" fill="#64748b">Project</text>
+                
+                <circle cx="10" cy="95" r="8" fill="#a78bfa" />
+                <text x="25" y="99" fontSize="10" fill="#64748b">Notebook</text>
+              </g>
+              
+              {/* Stats */}
+              <g transform="translate(600, 20)">
+                <rect x="-10" y="-10" width="180" height="80" rx="8" fill="white" fillOpacity="0.9" className="dark:fill-slate-800" />
+                <text y="10" fontSize="12" fontWeight="bold" fill="#1e293b" className="dark:fill-white">Stats</text>
+                <text y="30" fontSize="10" fill="#64748b">{notes.length} notes</text>
+                <text y="45" fontSize="10" fill="#64748b">{connections.length} connections</text>
+                <text y="60" fontSize="10" fill="#64748b">{nodes.filter(n => n.connections > 0).length} connected</text>
+              </g>
+            </svg>
+          )}
+        </div>
+        
+        {/* Selected note details panel */}
+        {selectedNote && (
+          <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <h3 className="font-bold text-slate-800 dark:text-white">{selectedNote.title}</h3>
+                <p className="text-sm text-slate-500 mt-1 line-clamp-2">{selectedNote.content}</p>
+                <div className="flex gap-2 mt-2">
+                  {selectedNote.tags?.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 ml-4">
+                <button
+                  onClick={() => {
+                    onNoteClick(selectedNote);
+                    onClose();
+                  }}
+                  className="px-3 py-1.5 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white rounded-lg"
+                >
+                  Open
+                </button>
+                <button
+                  onClick={() => setSelectedNote(null)}
+                  className="px-3 py-1.5 text-sm font-semibold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -545,6 +875,7 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showWeaveMap, setShowWeaveMap] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   
   // Login state
@@ -1000,6 +1331,15 @@ export default function Home() {
               📊
             </button>
 
+            {/* WeaveMap Button */}
+            <button
+              onClick={() => setShowWeaveMap(true)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-primary-500"
+              title="WeaveMap - Visualize note connections"
+            >
+              🕸️
+            </button>
+
             {/* Settings Button */}
             <button
               onClick={() => {
@@ -1366,6 +1706,14 @@ export default function Home() {
         user={user}
         allUsers={allUsers}
         onRefreshUsers={fetchAllUsers}
+      />
+
+      {/* WeaveMap Modal */}
+      <WeaveMapModal
+        isOpen={showWeaveMap}
+        onClose={() => setShowWeaveMap(false)}
+        notes={notes}
+        onNoteClick={(note) => setEditingNote(note)}
       />
 
       {/* Footer */}

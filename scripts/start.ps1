@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Continue'
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "WSH - Weavenote Self Hosted v3.0.0" -ForegroundColor Cyan
+Write-Host "WSH - Weavenote Self Hosted v3.1.0" -ForegroundColor Cyan
 Write-Host "Mode: $Mode" -ForegroundColor Cyan
 Write-Host "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan

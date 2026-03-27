@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] - 2026-03-28
+
+### MINOR RELEASE - WeaveMap Visualization
+
+This release adds an interactive note connection visualization feature that shows how notes relate to each other through shared tags.
+
+### Added
+
+#### WeaveMap Visualization (All Users)
+- **NEW**: Interactive graph visualization accessible via 🕸️ icon in header
+- Notes displayed as colored nodes on a canvas
+- Node size determined by content depth (word count + access frequency)
+- Connection lines between notes that share tags
+- Line thickness indicates connection strength (number of shared tags)
+- Color-coded nodes by note type:
+  - 🟡 Yellow = Quick Notes
+  - 🔵 Blue = Deep Work
+  - 🟢 Green = Projects
+  - 🟣 Purple = Notebooks
+- Click nodes to see note details and open for editing
+- Hover highlighting shows connected notes
+- Stats panel showing total notes, connections, and connected nodes
+- Legend explaining node types
+
+#### WeaveMap Features
+- Force-directed-like layout with connected nodes closer to center
+- Animated pulse ring on nodes with connections
+- Connection count badges on each node
+- SVG-based rendering for smooth performance
+- Responsive design with scroll/zoom capability
+
+### Technical Details
+
+- WeaveMapModal component with SVG rendering
+- `useMemo` optimization for connection calculations
+- O(n²) tag intersection algorithm for connection detection
+- Dynamic node sizing based on strength formula
+- Type-based color mapping for visual distinction
+
+---
+
 ## [3.0.0] - 2026-03-28
 
 ### MAJOR RELEASE - Settings & Admin Overhaul
@@ -329,6 +370,7 @@ This is a MAJOR version upgrade with comprehensive admin features, user settings
 
 | Version | Date | Type | Key Features |
 |---------|------|------|--------------|
+| 3.1.0 | 2026-03-28 | MINOR | WeaveMap visualization, note connections, interactive graph |
 | 3.0.0 | 2026-03-28 | MAJOR | Settings Panel, Themes, My Security, User Base, ENV Settings, System Logs, Diagnostics |
 | 2.5.1 | 2026-03-28 | PATCH | Healthcheck fix, DB viewer retry, Start.ps1 retry logic |
 | 2.5.0 | 2026-03-28 | MINOR | Docker fixes, Prisma setup, HOST binding |
@@ -410,14 +452,15 @@ start http://localhost:5682
 
 ## Future Roadmap
 
-### Planned for v3.1.0
+### Planned for v3.2.0
 
 - [ ] AI Integration (Gemini API)
 - [ ] Hashtags support for notes
 - [ ] Calendar integration improvements
 - [ ] Analytics Dashboard for users
+- [ ] WeaveMap force-directed physics simulation
 
-### Planned for v3.2.0
+### Planned for v3.3.0
 
 - [ ] Database backup/restore functionality
 - [ ] Enhanced user management UI
