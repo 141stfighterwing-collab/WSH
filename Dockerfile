@@ -1,5 +1,5 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
-# Optimized Dockerfile - Version 2.5.0
+# Optimized Dockerfile - Version 2.5.1
 # Build time: ~2-3 minutes (optimized from ~8 minutes)
 
 # ============================================================================
@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.5.0"
+LABEL version="3.0.0"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g npm@latest \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
-ENV POWERSHELL_EXECUTOR_VERSION="2.5.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="3.0.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -90,7 +90,7 @@ WORKDIR /app
 
 ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.5.0" \
+    POWERSHELL_EXECUTOR_VERSION="3.0.0" \
     HOST=0.0.0.0 \
     PORT=3000
 

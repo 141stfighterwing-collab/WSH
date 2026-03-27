@@ -85,6 +85,192 @@ const RoleBadge = ({ role }: { role: string }) => {
   );
 };
 
+// Settings Modal Component
+const SettingsModal = ({ 
+  isOpen, 
+  onClose, 
+  user,
+  allUsers,
+  onRefreshUsers
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  user: User | null;
+  allUsers: User[];
+  onRefreshUsers: () => void;
+}) => {
+  const [activeTab, setActiveTab] = useState('about');
+  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <span className="text-primary-500">⚙️</span> Settings
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xl">✕</button>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <div className="w-48 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3">
+            <nav className="space-y-1">
+              <button
+                onClick={() => setActiveTab('about')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'about' ? 'bg-red-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                ℹ️ About
+              </button>
+              <button
+                onClick={() => setActiveTab('version')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'version' ? 'bg-red-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                📦 Versioning
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'users' ? 'bg-red-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  👥 User Base
+                </button>
+              )}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            {activeTab === 'about' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">WSH - Weavenote Self Hosted</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    A self-hosted note-taking application with PostgreSQL backend.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">Version</p>
+                    <p className="text-2xl font-black text-red-500">v3.0.0</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">Database</p>
+                    <p className="text-lg font-bold text-green-500">PostgreSQL</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-2">Your Account</p>
+                  <div className="space-y-2">
+                    <p className="text-sm"><span className="text-slate-400">Email:</span> <span className="font-medium text-slate-800 dark:text-white">{user?.email}</span></p>
+                    <p className="text-sm"><span className="text-slate-400">Username:</span> <span className="font-medium text-slate-800 dark:text-white">{user?.username}</span></p>
+                    <p className="text-sm"><span className="text-slate-400">Role:</span> <RoleBadge role={user?.role || 'user'} /></p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'version' && (
+              <div className="space-y-6">
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-xl border border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-purple-500/20 rounded-xl">
+                      <span className="text-2xl">📦</span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-purple-500 font-bold uppercase tracking-widest">Current Version</p>
+                      <p className="text-3xl font-black text-purple-700 dark:text-purple-300">v3.0.0</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Version History</h4>
+                  <div className="space-y-2">
+                    {[
+                      { version: '3.0.0', date: '2026-03-28', notes: 'MAJOR: Settings panel with gear icon, User management, Password reset, System logs, Diagnostics, ENV settings for AI (admin), Enhanced themes' },
+                      { version: '2.5.1', date: '2026-03-28', notes: 'Fixed Docker deployment, health checks, DB viewer with password reset' },
+                      { version: '2.5.0', date: '2026-03-27', notes: 'Initial Docker setup with PowerShell executor' },
+                    ].map((v, i) => (
+                      <div key={v.version} className="p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${i === 0 ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                            v{v.version}
+                          </span>
+                          <span className="text-xs text-slate-400">{v.date}</span>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{v.notes}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'users' && isAdmin && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white">User Base</h3>
+                  <button
+                    onClick={onRefreshUsers}
+                    className="px-3 py-1 text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-100 dark:bg-slate-800">
+                      <tr>
+                        <th className="px-4 py-3 font-bold text-slate-500">User</th>
+                        <th className="px-4 py-3 font-bold text-slate-500">Role</th>
+                        <th className="px-4 py-3 font-bold text-slate-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {allUsers.length > 0 ? allUsers.map(u => (
+                        <tr key={u.id} className="hover:bg-white/50 dark:hover:bg-slate-800/50">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-slate-800 dark:text-white">{u.username}</p>
+                            <p className="text-xs text-slate-400">{u.email}</p>
+                          </td>
+                          <td className="px-4 py-3"><RoleBadge role={u.role} /></td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                              active
+                            </span>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-8 text-center text-slate-400 italic">
+                            No users found. Click refresh to load users.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Analytics Modal Component
 const AnalyticsModal = ({ 
   isOpen, 
@@ -358,6 +544,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   
   // Login state
   const [showLogin, setShowLogin] = useState(false);
@@ -426,6 +614,18 @@ export default function Home() {
       setFolders(data.folders || []);
     } catch (error) {
       console.error('Error fetching folders:', error);
+    }
+  };
+
+  // Fetch all users (admin only)
+  const fetchAllUsers = async () => {
+    try {
+      const res = await fetch('/api/auth/users');
+      const data = await res.json();
+      setAllUsers(data.users || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setAllUsers([]);
     }
   };
 
@@ -799,6 +999,20 @@ export default function Home() {
             >
               📊
             </button>
+
+            {/* Settings Button */}
+            <button
+              onClick={() => {
+                setShowSettings(true);
+                if (user?.role === 'admin' || user?.role === 'super-admin') {
+                  fetchAllUsers();
+                }
+              }}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-primary-500"
+              title="Settings"
+            >
+              ⚙️
+            </button>
             
             {/* Dark mode toggle */}
             <button
@@ -1143,6 +1357,15 @@ export default function Home() {
         isOpen={showAnalytics}
         onClose={() => setShowAnalytics(false)}
         notes={notes}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        user={user}
+        allUsers={allUsers}
+        onRefreshUsers={fetchAllUsers}
       />
 
       {/* Footer */}
