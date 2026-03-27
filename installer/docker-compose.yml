@@ -2,7 +2,7 @@
 # WSH (Weavenote Self Hosted) - Docker Compose Configuration
 # ==============================================================================
 # Standalone Docker Compose file for WSH deployment
-# Generated for version 1.0.0
+# Generated for version 2.5.0
 # ==============================================================================
 #
 # Usage:
@@ -13,15 +13,9 @@
 #
 # Prerequisites:
 #   - Docker Desktop installed and running
-#   - Ports 3000, 5432 (and 5050 for pgAdmin) available
+#   - Ports 3000, 5432, 5682 (and 5050 for pgAdmin) available
 #   - Environment variables configured in .env file
 #
-# ==============================================================================
-
-version: '3.8'
-
-# ==============================================================================
-# SERVICES
 # ==============================================================================
 
 services:
@@ -34,31 +28,18 @@ services:
     container_name: wsh-postgres
     restart: unless-stopped
     
-    # Environment Configuration
-    # -------------------------
-    # Uses values from .env file or defaults below
-    # IMPORTANT: Change these defaults for production!
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-wsh}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wsh_secure_password_CHANGE_ME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wsh_secure_password}
       POSTGRES_DB: ${POSTGRES_DB:-wsh_db}
     
-    # Volume Configuration
-    # --------------------
-    # Persists database data and backup location
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     
-    # Port Configuration
-    # ------------------
-    # Maps container port to host
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     
-    # Health Check Configuration
-    # --------------------------
-    # Ensures database is ready before app starts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wsh} -d ${POSTGRES_DB:-wsh_db}"]
       interval: 10s
@@ -66,46 +47,28 @@ services:
       retries: 5
       start_period: 30s
     
-    # Network Configuration
-    # ---------------------
     networks:
       - wsh-network
-    
-    # Labels for identification
-    labels:
-      - "com.wsh.description=WSH PostgreSQL Database"
-      - "com.wsh.version=1.0.0"
-      - "com.wsh.service=database"
 
   # ============================================================================
   # WSH Application
   # ============================================================================
   app:
-    # Image Configuration
-    # -------------------
-    # Uses pre-built image from GitHub Container Registry
-    # Fallback: Build from source if image unavailable
     image: ghcr.io/141stfighterwing-collab/wsh:latest
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
     container_name: wsh-app
     restart: unless-stopped
     
-    # Service Dependencies
-    # --------------------
-    # Waits for database to be healthy before starting
     depends_on:
       postgres:
         condition: service_healthy
     
-    # Environment Configuration
-    # -------------------------
-    # All configuration from .env file
-    # IMPORTANT: Change secrets for production!
     environment:
       # Database Connection
       DATABASE_URL: postgresql://${POSTGRES_USER:-wsh}:${POSTGRES_PASSWORD:-wsh_secure_password}@postgres:5432/${POSTGRES_DB:-wsh_db}?schema=public
+      
+      # Server binding (CRITICAL for Docker)
+      HOST: "0.0.0.0"
+      PORT: "3000"
       
       # JWT Configuration
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
@@ -116,84 +79,52 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       
       # Admin Configuration
-      # ⚠️ CHANGE THESE IMMEDIATELY AFTER FIRST LOGIN!
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wsh.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-123456}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
-      
-      # Optional: AI Features
-      # GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     
-    # Port Configuration
-    # ------------------
     ports:
       - "${APP_PORT:-3000}:3000"
+      - "5682:5682"  # Database Viewer Web UI
     
-    # Volume Configuration
-    # --------------------
-    # Persists uploads and logs
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
     
-    # Health Check Configuration
-    # --------------------------
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "pwsh", "-NoProfile", "-Command", "& /app/healthcheck.ps1"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
     
-    # Network Configuration
-    # ---------------------
     networks:
       - wsh-network
-    
-    # Labels for identification
-    labels:
-      - "com.wsh.description=WSH Application"
-      - "com.wsh.version=1.0.0"
-      - "com.wsh.service=application"
 
   # ============================================================================
   # pgAdmin (Database Management UI) - Optional
   # ============================================================================
-  # Enable with: docker-compose --profile admin up -d
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: wsh-pgadmin
     restart: unless-stopped
     
-    # Profile Configuration
-    # ---------------------
-    # Only starts when 'admin' profile is specified
     profiles:
       - admin
     
-    # Environment Configuration
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@wsh.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_LISTEN_PORT: 5050
     
-    # Port Configuration
     ports:
       - "${PGADMIN_PORT:-5050}:5050"
     
-    # Service Dependencies
     depends_on:
       - postgres
     
-    # Network Configuration
     networks:
       - wsh-network
-    
-    # Labels for identification
-    labels:
-      - "com.wsh.description=WSH pgAdmin"
-      - "com.wsh.version=1.0.0"
-      - "com.wsh.service=admin"
 
 # ==============================================================================
 # VOLUMES
@@ -201,8 +132,6 @@ services:
 volumes:
   postgres_data:
     name: wsh_postgres_data
-    labels:
-      - "com.wsh.description=WSH PostgreSQL Data Volume"
 
 # ==============================================================================
 # NETWORKS
@@ -211,5 +140,3 @@ networks:
   wsh-network:
     name: wsh-network
     driver: bridge
-    labels:
-      - "com.wsh.description=WSH Application Network"
