@@ -49,6 +49,7 @@
     "node_modules",
     "benchmarks",
     "scripts",
-    "skills"
+    "skills",
+    "WSH"
   ]
 }

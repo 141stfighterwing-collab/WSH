@@ -55,6 +55,9 @@ docs/
 # Skills directory (not needed in container)
 skills/
 
+# WSH examples directory
+WSH/
+
 # Uploads
 upload/
 
