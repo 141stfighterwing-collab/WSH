@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
 # Unified Dockerfile with Node.js + PowerShell support
-# Version: 2.5.0 - Fixed pg module installation
+# Version: 3.1.0 - Today's Things, Ongoing Projects, Password Management
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.5.0"
+LABEL version="3.1.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="2.5.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="3.1.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -131,7 +131,8 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Install pg module AFTER copying standalone (so it doesn't get overwritten)
 # This adds pg to the existing node_modules
-RUN npm install pg --save || true
+# Also install bcryptjs for password management in db-viewer
+RUN npm install pg bcryptjs --save || true
 
 # Copy PowerShell modules and pwsh scripts
 COPY --from=builder /modules/ /modules/

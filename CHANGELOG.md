@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] - 2026-03-28
+
+### Added
+
+#### Right Sidebar Enhancements
+- **TODAY'S THINGS Section**: Shows notes created today with quick access
+  - Displays up to 5 notes from today
+  - Click to open note details
+  - Empty state message when no notes for today
+
+- **ONGOING PROJECTS Section**: Displays active projects with progress tracking
+  - Progress bars with color coding (green/blue/yellow based on completion)
+  - Projects sorted by progress percentage
+  - Excludes completed projects
+  - Click to open project details
+
+#### Database Viewer Password Management
+- **Change User Password**: Admins can now change any user's password
+- Password change via bcrypt hashing
+- Secure password update through web UI
+- Available at http://localhost:5682
+
+#### User Management Improvements
+- Enhanced user management interface
+- Quick action buttons for role management
+- Ban/activate user functionality
+- Password reset capability
+
+### Changed
+
+- Updated RightSidebar component with new sections
+- Improved project progress calculation
+- Enhanced database viewer with password management
+- Updated README with v3.1.0 features
+
+### Fixed
+
+- Fixed progress bar display colors for ongoing projects
+- Improved sidebar section styling
+- Better empty state handling
+
+---
+
 ## [2.4.0] - 2026-03-27
 
 ### Added

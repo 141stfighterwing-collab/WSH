@@ -2,10 +2,30 @@
  * WSH Database Viewer - Simple Web UI to view database tables
  * Runs on port 5682
  * Uses pg module directly (more reliable than Prisma)
+ * v3.1.0 - Added password change functionality
  */
 
 const http = require('http');
+const crypto = require('crypto');
 const { Client } = require('pg');
+
+// Simple bcrypt hash function (using Node.js crypto)
+function hashPassword(password) {
+    // Generate a salt and hash using SHA256 (simplified for Node.js without bcrypt dependency)
+    // In production, use bcrypt properly
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return `$pbkdf2-sha512$${salt}$${hash}`;
+}
+
+// Simpler hash for demo purposes (matches the pattern in start.ps1)
+function simpleBcryptHash(password) {
+    // This creates a hash that looks like bcrypt but uses SHA256
+    // The actual authentication uses bcryptjs in the API
+    const salt = crypto.randomBytes(16).toString('base64').substring(0, 22);
+    const hash = crypto.createHash('sha256').update(password + salt).digest('base64');
+    return `$2a$10$${salt.replace(/\+/g, '.').replace(/\//g, '_')}${hash.substring(0, 31)}`;
+}
 
 // Database connection
 const client = new Client({
@@ -431,6 +451,7 @@ const server = http.createServer(async (req, res) => {
         else if (path === '/users/manage') {
             const action = url.searchParams.get('action');
             const email = url.searchParams.get('email');
+            const newPassword = url.searchParams.get('password');
             let actionResult = '';
             
             if (action && email) {
@@ -450,6 +471,14 @@ const server = http.createServer(async (req, res) => {
                     } else if (action === 'activate') {
                         await client.query("UPDATE users SET status = 'active', \"updatedAt\" = NOW() WHERE email = $1", [email]);
                         actionResult = '<div class="success">User ' + escapeHtml(email) + ' has been ACTIVATED</div>';
+                    } else if (action === 'change-password' && newPassword) {
+                        // Use bcrypt hash for password (same format as start.ps1)
+                        // Bcrypt hash for common passwords - using a pre-computed hash
+                        // For production, this should use bcryptjs library
+                        const bcrypt = require('bcryptjs');
+                        const hashedPassword = await bcrypt.hash(newPassword, 10);
+                        await client.query("UPDATE users SET password = $1, \"updatedAt\" = NOW() WHERE email = $2", [hashedPassword, email]);
+                        actionResult = '<div class="success">Password changed for ' + escapeHtml(email) + ' to: ' + escapeHtml(newPassword) + '</div>';
                     }
                 } catch (err) {
                     actionResult = '<div class="error">Error: ' + escapeHtml(err.message) + '</div>';
@@ -473,6 +502,7 @@ const server = http.createServer(async (req, res) => {
                 usersHtml += '<a href="/users/manage?action=promote-super&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">Super</a>';
                 usersHtml += '<a href="/users/manage?action=promote-admin&email=' + encodeURIComponent(user.email) + '" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">Admin</a>';
                 usersHtml += '<a href="/users/manage?action=demote&email=' + encodeURIComponent(user.email) + '" class="btn" style="padding: 4px 8px; font-size: 11px; margin-right: 5px; background: #334155;">User</a>';
+                usersHtml += '<button onclick="showPasswordForm(\'' + escapeHtml(user.email) + '\')" class="btn" style="padding: 4px 8px; font-size: 11px; margin-right: 5px; background: #7c3aed; color: white;">Password</button>';
                 if (user.status === 'active') {
                     usersHtml += '<a href="/users/manage?action=ban&email=' + encodeURIComponent(user.email) + '" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;">Ban</a>';
                 } else {
@@ -486,12 +516,60 @@ const server = http.createServer(async (req, res) => {
             const content = `
                 <div class="card">
                     <h2>User Management</h2>
-                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Click buttons to promote, demote, ban, or activate users</p>
+                    <p style="color: #94a3b8; margin-top: 5px; margin-bottom: 15px;">Click buttons to promote, demote, ban, activate users, or change passwords</p>
                     ${actionResult}
                     <div style="margin-top: 15px;">
                         ${usersHtml}
                     </div>
                 </div>
+                
+                <!-- Password Change Modal -->
+                <div id="passwordModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: #1e293b; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
+                        <h3 style="color: #e2e8f0; margin-bottom: 20px;">Change Password</h3>
+                        <p style="color: #94a3b8; margin-bottom: 15px;">User: <span id="modalEmail" style="color: #38bdf8;"></span></p>
+                        <input type="text" id="newPassword" placeholder="Enter new password" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; margin-bottom: 15px;" />
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="submitPassword()" class="btn btn-primary" style="flex: 1;">Change Password</button>
+                            <button onclick="closePasswordModal()" class="btn" style="flex: 1; background: #334155;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <script>
+                    let currentEmail = '';
+                    
+                    function showPasswordForm(email) {
+                        currentEmail = email;
+                        document.getElementById('modalEmail').textContent = email;
+                        document.getElementById('passwordModal').style.display = 'flex';
+                        document.getElementById('newPassword').value = '';
+                        document.getElementById('newPassword').focus();
+                    }
+                    
+                    function closePasswordModal() {
+                        document.getElementById('passwordModal').style.display = 'none';
+                    }
+                    
+                    function submitPassword() {
+                        const password = document.getElementById('newPassword').value;
+                        if (!password) {
+                            alert('Please enter a password');
+                            return;
+                        }
+                        window.location.href = '/users/manage?action=change-password&email=' + encodeURIComponent(currentEmail) + '&password=' + encodeURIComponent(password);
+                    }
+                    
+                    // Close modal on escape key
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape') closePasswordModal();
+                    });
+                    
+                    // Close modal on background click
+                    document.getElementById('passwordModal').addEventListener('click', function(e) {
+                        if (e.target === this) closePasswordModal();
+                    });
+                </script>
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

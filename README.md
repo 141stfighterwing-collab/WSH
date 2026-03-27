@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted
 
-> **Version 2.3.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
+> **Version 3.1.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)](https://www.postgresql.org/)
@@ -12,24 +12,25 @@
 
 ---
 
-## 🆕 What's New in v2.3.0
+## 🆕 What's New in v3.1.0
 
-### Database Viewer Web UI (Port 5682)
-- **Read-only web interface** to view database tables
-- View table schemas and column definitions
-- Run SQL SELECT queries directly
-- No authentication required for viewing
+### Today's Things & Ongoing Projects Sidebar
+- **TODAY'S THINGS**: Shows notes created today with quick access links
+- **ONGOING PROJECTS**: Displays active projects with progress bars
+  - Color-coded progress indicators (green > 75%, blue > 50%, yellow > 25%)
+  - Click to open project details
+  - Sorted by progress percentage
 
-### Interactive Database Fix Tool
-- **Menu-driven tool** to fix database issues
-- Option to create all tables manually
-- Option to open PSQL shell
-- Option to restart database with fresh schema
+### Database Viewer Enhancements (Port 5682)
+- **Password Change**: Admins can now change any user's password directly
+- **Enhanced User Management**: Full user management with role promotion/demotion
+- **Security Actions**: Ban/activate users, reset passwords
 
-### Improved Schema Push
-- Automatic fallback to inline SQL when Prisma fails
-- Detailed error output for debugging
-- Table verification after creation
+### User Role System
+- **SUPER ADMIN**: Full system access with elevated permissions
+- **ADMIN**: Administrative access to manage users
+- **USER**: Standard user access
+- Role badges displayed in UI with color coding
 
 ---
 
@@ -58,7 +59,7 @@ docker-compose up -d --build
 | Service | URL | Description |
 |---------|-----|-------------|
 | Web UI | http://localhost:3000 | Main application |
-| **Database Viewer** | http://localhost:5682 | **NEW: View tables & run queries** |
+| **Database Viewer** | http://localhost:5682 | **View tables, manage users, change passwords** |
 | Health API | http://localhost:3000/api/health | Health check endpoint |
 | PowerShell Health | http://localhost:8080/health | PowerShell executor status |
 | pgAdmin | http://localhost:5050 | Database management (optional) |
@@ -67,7 +68,7 @@ docker-compose up -d --build
 
 ```
 Email: admin@wsh.local
-Password: admin123
+Password: 123456
 ```
 
 ---
@@ -81,6 +82,8 @@ Open **http://localhost:5682** in your browser to:
 - Check table schemas
 - Run SELECT queries
 - View row counts
+- **Manage users** (promote, demote, ban, activate)
+- **Change user passwords**
 
 ### Option 2: Interactive Fix Tool
 
@@ -247,6 +250,10 @@ WSH/
 │       ├── auth.ts          # Authentication utilities
 │       └── db.ts            # Prisma client
 ├── components/              # React components
+│   ├── RightSidebar.tsx     # Today's Things & Ongoing Projects
+│   ├── Sidebar.tsx          # Main sidebar with folders/tags
+│   ├── NoteCard.tsx         # Note display component
+│   └── ...
 ├── prisma/
 │   └── schema.prisma        # Database schema
 ├── pwsh/                    # PowerShell modules
