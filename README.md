@@ -73,6 +73,88 @@ Password: 123456
 
 ---
 
+## 🔄 Updating WSH
+
+### Quick Update (Keeps Your Data)
+
+If you already have WSH installed and want to update to the latest version while preserving your database and notes:
+
+```powershell
+# Navigate to your WSH directory
+cd C:\path\to\WSH
+
+# Stop the containers
+docker-compose down
+
+# Pull the latest changes from GitHub
+git pull origin main
+
+# Rebuild and restart (this preserves your database volume)
+docker-compose up -d --build
+
+# Check logs if needed
+docker-compose logs -f app
+```
+
+### Full Clean Update (Resets Everything)
+
+If you want a completely fresh installation (WARNING: This deletes all data):
+
+```powershell
+# Navigate to your WSH directory
+cd C:\path\to\WSH
+
+# Stop and remove everything including database
+docker-compose down -v
+
+# Pull the latest changes
+git pull origin main
+
+# Rebuild with no cache
+docker-compose build --no-cache
+
+# Start fresh
+docker-compose up -d
+```
+
+### Update Without Git (Manual)
+
+If you downloaded WSH as a ZIP file or don't have Git:
+
+1. **Backup your data** (export notes manually if needed)
+2. Download the latest version from: https://github.com/141stfighterwing-collab/WSH
+3. Extract and replace your existing WSH folder
+4. Run: `docker-compose down && docker-compose up -d --build`
+
+### Check Current Version
+
+```powershell
+# Check version in running container
+docker exec wsh-app pwsh -Command "Write-Host $env:POWERSHELL_EXECUTOR_VERSION"
+
+# Or check the package.json
+docker exec wsh-app cat /app/package.json | findstr version
+```
+
+### Update Troubleshooting
+
+If the update fails or containers won't start:
+
+```powershell
+# Full reset with cleanup
+docker-compose down -v
+docker system prune -f
+docker-compose build --no-cache
+docker-compose up -d
+
+# If still failing, remove all WSH containers and volumes
+docker rm -f wsh-app wsh-postgres
+docker volume rm wsh_postgres-data
+docker-compose up -d --build
+```
+
+---
+
 ## 🔧 Database Fix Tools
 
 ### Option 1: Web UI Database Viewer
