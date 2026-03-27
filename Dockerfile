@@ -126,7 +126,9 @@ WORKDIR /app
 
 ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.5.1"
+    POWERSHELL_EXECUTOR_VERSION="2.5.1" \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
@@ -152,9 +154,10 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 # Install pg module for PostgreSQL connectivity
 RUN npm install pg --no-save 2>&1 || true
 
-# Copy PowerShell modules if they exist
-RUN if [ -d /modules ]; then cp -r /modules/ /modules/; fi
-COPY --from=builder /app/pwsh/ /app/pwsh/ 2>/dev/null || true
+# Copy PowerShell modules if they exist (handle missing directories gracefully)
+RUN mkdir -p /app/pwsh
+RUN if [ -d /app/pwsh ]; then echo 'pwsh directory exists'; fi || true
+COPY --from=builder /app/pwsh/ /app/pwsh/
 
 # Copy all management scripts from scripts directory
 COPY scripts/start.ps1 /app/start.ps1
@@ -166,7 +169,10 @@ COPY scripts/user-management.ps1 /scripts/user-management.ps1
 COPY scripts/update-users.ps1 /scripts/update-users.ps1
 COPY scripts/db-viewer.js /app/db-viewer.js
 COPY scripts/inject-schema.js /app/inject-schema.js
-COPY schema/tables.json /schema/tables.json 2>/dev/null || echo "{}" > /schema/tables.json
+# Create schema directory
+RUN mkdir -p /schema
+# Copy schema file if it exists in builder stage
+RUN if [ -f /app/schema/tables.json ]; then cp /app/schema/tables.json /schema/tables.json; fi || true
 
 # Set permissions - include /modules directory
 RUN chmod -R 755 /app /scripts /logs /output /config /data /schema /modules 2>/dev/null || true && \
