@@ -889,6 +889,8 @@ function New-DockerComposeFile {
         # Build environment entries for app service
         $appEnvEntries = @(
             "      DATABASE_URL: ""postgresql://$($script:Config.DbUser):$($script:Config.DbPassword)@postgres:5432/$($script:Config.DbName)?schema=public""",
+            "      HOSTNAME: ""0.0.0.0""",
+            "      PORT: ""3000""",
             "      JWT_SECRET: ""$($script:Config.JwtSecret)""",
             "      JWT_EXPIRES_IN: ""$($script:Config.JwtExpiresIn)""",
             "      NEXT_PUBLIC_APP_NAME: ""$($script:Config.AppName)""",

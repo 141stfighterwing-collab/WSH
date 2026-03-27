@@ -36,6 +36,10 @@ services:
       # Database
       DATABASE_URL: postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public
       
+      # Server binding - MUST be 0.0.0.0 for Docker
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+      
       # JWT Configuration
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
