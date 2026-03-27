@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Mind Map View
+- **Interactive Mind Map**: Visualize notes as connected nodes on a zoomable canvas
+  - Notes displayed as color-coded nodes by type (Quick=amber, Deep=blue, Project=green, Notebook=purple)
+  - Edges connect notes that share tags or are in the same folder
+  - Zoom in/out with mouse wheel
+  - Pan by dragging the canvas
+  - Click nodes to open note details
+  - Fullscreen mode support
+  - Filter by folder, tag, or note type
+  - Cluster nodes by folder, tag, or type
+  - Legend showing node colors and edge types
+  - Statistics panel with counts
+
 #### Right Sidebar Enhancements
 - **TODAY'S THINGS Section**: Shows notes created today with quick access
   - Displays up to 5 notes from today
@@ -22,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Projects sorted by progress percentage
   - Excludes completed projects
   - Click to open project details
+
+#### Settings Modal
+- **Gear Icon** in header for quick access
+- User profile display with role badge
+- Dark mode toggle
+- View mode switcher (Grid/List/Mind Map)
+- Quick links to Database Viewer and Health API
+- Logout button
 
 #### Database Viewer Password Management
 - **Change User Password**: Admins can now change any user's password
@@ -35,9 +56,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ban/activate user functionality
 - Password reset capability
 
+### Backend
+- **Graph API Endpoint** (`/api/graph`): Returns notes as node/edge format
+  - Filter by userId, folder, tag, and note type
+  - Automatic edge generation from shared tags and folders
+  - Statistics calculation
+- **NoteLink Model**: Explicit note-to-note relationships in database
+  - Link types: related, depends_on, references, custom
+  - Weight for connection strength
+  - Unique constraint on note pairs
+
 ### Changed
 
-- Updated RightSidebar component with new sections
+- Updated main page layout to include RightSidebar
+- Added MindMap toggle button in header
 - Improved project progress calculation
 - Enhanced database viewer with password management
 - Updated README with v3.1.0 features
