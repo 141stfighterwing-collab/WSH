@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.1] - 2026-03-28
+
+### Added
+
+#### In-App Update System
+- **Update Button in Settings**: Click ⚙️ gear icon → Update Application section
+  - Check for updates button to see if new version is available
+  - Pull & Restart button to update the application in one click
+  - Shows changed files after update
+  - Automatic dependency installation when package.json changes
+  - Supports pm2, systemctl, and Docker restart methods
+
+#### New API Endpoints
+- **GET /api/update**: Check for available updates
+  - Returns behind/ahead commit counts
+  - Shows current version and branch
+  - Indicates if update is available
+- **POST /api/update**: Perform the update
+  - Runs git pull to get latest changes
+  - Installs npm/bun dependencies if needed
+  - Restarts the application automatically
+
+### Changed
+- Updated Settings modal with Update Application section
+- Enhanced SettingsPanel for admins with version management
+- Improved patch documentation in README
+
+---
+
 ## [3.1.0] - 2026-03-28
 
 ### Added
@@ -83,6 +112,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BUILD FIX**: Updated next.config.js to ignore ESLint during builds
 
 ### Patch Notes
+
+### Patch 3.1.0-p4 (2026-03-28)
+- **NEW**: In-App Update Button in Settings modal (⚙️)
+  - Check for updates button to see if new version available
+  - Pull & Restart button to update the application
+  - Shows changed files after update
+  - Automatic dependency installation when package.json changes
+- **NEW**: `/api/update` endpoint for programmatic updates
+  - GET: Check for available updates (git fetch + status)
+  - POST: Pull changes and restart application
+  - Supports pm2, systemctl, and Docker restart methods
+- **NEW**: Update section in SettingsPanel for admins
+  - Version checking with behind/ahead commit counts
+  - One-click update with confirmation
+  - Change log display after successful update
 
 ### Patch 3.1.0-p3 (2026-03-28)
 - BUILD FIX: Completely removed benchmarks directory
@@ -296,6 +340,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Type | Key Features |
 |---------|------|------|--------------|
+| 3.1.1 | 2026-03-28 | FEATURE | In-App Update Button, /api/update endpoint |
+| 3.1.0 | 2026-03-28 | FEATURE | Mind Map View, Right Sidebar, Settings Modal |
 | 2.4.0 | 2026-03-27 | FEATURE | Today's Things, Ongoing Projects Sidebar, SUPER ADMIN |
 | 2.3.0 | 2026-03-27 | HOTFIX | Database Viewer UI, Interactive Fix Tool, Multiple Hotfixes |
 | 2.2.0 | 2026-03-26 | FEATURE | Database Diagnostic Tools, Schema Injection |

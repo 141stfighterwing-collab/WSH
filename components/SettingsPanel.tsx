@@ -72,6 +72,23 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [systemVersion, setSystemVersion] = useState<SystemVersion | null>(null);
   const [versionHistory, setVersionHistory] = useState<any[]>([]);
   
+  // Update State
+  const [updateStatus, setUpdateStatus] = useState<{
+    checking: boolean;
+    updating: boolean;
+    updateAvailable: boolean;
+    behind: number;
+    message: string;
+    result: { success: boolean; message: string; changes?: string[] } | null;
+  }>({
+    checking: false,
+    updating: false,
+    updateAvailable: false,
+    behind: 0,
+    message: '',
+    result: null,
+  });
+  
   const [newPass, setNewPass] = useState('');
   const [passMsg, setPassMsg] = useState<{type: 'success'|'error', text: string} | null>(null);
 
@@ -143,6 +160,64 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       } catch (error) {
           console.error('Failed to load version info:', error);
       }
+  };
+
+  // Check for Updates
+  const checkForUpdates = async () => {
+    setUpdateStatus(prev => ({ ...prev, checking: true, message: '' }));
+    try {
+      const response = await fetch(`${API_URL}/update`);
+      const data = await response.json();
+      
+      setUpdateStatus(prev => ({
+        ...prev,
+        checking: false,
+        updateAvailable: data.updateAvailable || false,
+        behind: data.behind || 0,
+        message: data.message || 'Could not check for updates',
+      }));
+    } catch (error: any) {
+      setUpdateStatus(prev => ({
+        ...prev,
+        checking: false,
+        message: 'Failed to check for updates: ' + error.message,
+      }));
+    }
+  };
+
+  // Perform Update
+  const performUpdate = async () => {
+    if (!confirm('This will pull the latest changes from GitHub and restart the application. Continue?')) return;
+    
+    setUpdateStatus(prev => ({ ...prev, updating: true, result: null }));
+    try {
+      const response = await fetch(`${API_URL}/update`, { method: 'POST' });
+      const data = await response.json();
+      
+      setUpdateStatus(prev => ({
+        ...prev,
+        updating: false,
+        result: {
+          success: data.success,
+          message: data.message,
+          changes: data.changes,
+        },
+      }));
+      
+      // Reload version info after update
+      if (data.success) {
+        await loadVersionInfo();
+      }
+    } catch (error: any) {
+      setUpdateStatus(prev => ({
+        ...prev,
+        updating: false,
+        result: {
+          success: false,
+          message: 'Update failed: ' + error.message,
+        },
+      }));
+    }
   };
 
   // Save Environment Variable
@@ -597,6 +672,72 @@ service cloud.firestore {
                   {systemVersion?.patchNotes && (
                     <div className="mt-4 pt-4 border-t border-purple-500/20">
                       <p className="text-xs text-slate-400">{systemVersion.patchNotes}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Update Section */}
+                <div className="p-6 bg-emerald-900/10 border border-emerald-500/20 rounded-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h5 className="font-black text-white uppercase text-sm">🔄 Update Application</h5>
+                      <p className="text-xs text-slate-500 mt-1">Pull latest changes from GitHub and restart.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 mb-4">
+                    <button
+                      onClick={checkForUpdates}
+                      disabled={updateStatus.checking || updateStatus.updating}
+                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all"
+                    >
+                      {updateStatus.checking ? '⌛ Checking...' : '🔍 Check for Updates'}
+                    </button>
+                    <button
+                      onClick={performUpdate}
+                      disabled={updateStatus.checking || updateStatus.updating}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                    >
+                      {updateStatus.updating ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <span>⬇️</span>
+                          Pull & Restart
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Update Status Messages */}
+                  {updateStatus.message && !updateStatus.result && (
+                    <div className={`p-3 rounded-lg text-xs font-bold ${updateStatus.updateAvailable ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700/50 text-slate-300'}`}>
+                      {updateStatus.message}
+                    </div>
+                  )}
+                  
+                  {updateStatus.result && (
+                    <div className={`p-4 rounded-lg text-xs ${updateStatus.result.success ? 'bg-emerald-500/20 border border-emerald-500/30' : 'bg-rose-500/20 border border-rose-500/30'}`}>
+                      <p className={`font-black uppercase mb-2 ${updateStatus.result.success ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {updateStatus.result.success ? '✅ Update Successful' : '❌ Update Failed'}
+                      </p>
+                      <p className="text-slate-300">{updateStatus.result.message}</p>
+                      {updateStatus.result.changes && updateStatus.result.changes.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-700">
+                          <p className="text-slate-500 font-bold uppercase text-[10px] mb-1">Changed Files:</p>
+                          <ul className="text-slate-400 font-mono text-[10px] max-h-32 overflow-y-auto">
+                            {updateStatus.result.changes.slice(0, 10).map((change, i) => (
+                              <li key={i} className="truncate">{change}</li>
+                            ))}
+                            {updateStatus.result.changes.length > 10 && (
+                              <li className="text-slate-500">... and {updateStatus.result.changes.length - 10} more</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted
 
-> **Version 3.1.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
+> **Version 3.1.1** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)](https://www.postgresql.org/)
@@ -92,6 +92,22 @@ Password: 123456
 ---
 
 ## 🔄 Updating WSH
+
+### In-App Update (Recommended)
+
+The easiest way to update WSH is directly from the Settings modal:
+
+1. **Click the ⚙️ gear icon** in the header
+2. **Scroll to the "Update Application" section**
+3. **Click "Check"** to see if updates are available
+4. **Click "Pull & Restart"** to update
+
+The in-app updater will:
+- Pull the latest changes from GitHub
+- Install any new dependencies automatically
+- Restart the application (supports pm2, systemctl, and Docker)
+
+> **Note**: For Docker deployments, the container may need manual restart if the orchestrator doesn't support automatic restarts.
 
 ### Quick Update (Keeps Your Data)
 
@@ -270,6 +286,7 @@ docker-compose up -d --build
 
 | Patch | Date | Description |
 |-------|------|-------------|
+| 3.1.0-p4 | 2026-03-28 | **In-App Update Button** - Update directly from Settings |
 | 3.1.0-p1 | 2026-03-28 | Fixed benchmark build error |
 | 2.4.0-p1 | 2026-03-27 | Added update-users.ps1 script |
 | 2.3.0-p3 | 2026-03-27 | Fixed encoding issues in db-viewer.js |

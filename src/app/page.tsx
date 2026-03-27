@@ -366,6 +366,19 @@ export default function Home() {
   const [showMindMap, setShowMindMap] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
+  // Update state
+  const [updateStatus, setUpdateStatus] = useState<{
+    checking: boolean;
+    updating: boolean;
+    message: string;
+    result: { success: boolean; message: string; changes?: string[] } | null;
+  }>({
+    checking: false,
+    updating: false,
+    message: '',
+    result: null,
+  });
+  
   // Login state
   const [showLogin, setShowLogin] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -600,6 +613,56 @@ export default function Home() {
       if (activeFolderId === id) setActiveFolderId(null);
     } catch (error) {
       console.error('Error deleting folder:', error);
+    }
+  };
+
+  // Check for updates
+  const checkForUpdates = async () => {
+    setUpdateStatus(prev => ({ ...prev, checking: true, message: '' }));
+    try {
+      const response = await fetch('/api/update');
+      const data = await response.json();
+      setUpdateStatus(prev => ({
+        ...prev,
+        checking: false,
+        message: data.message || 'Could not check for updates',
+      }));
+    } catch (error: any) {
+      setUpdateStatus(prev => ({
+        ...prev,
+        checking: false,
+        message: 'Failed to check for updates: ' + error.message,
+      }));
+    }
+  };
+
+  // Perform update
+  const performUpdate = async () => {
+    if (!confirm('This will pull the latest changes from GitHub and restart the application. Continue?')) return;
+    
+    setUpdateStatus(prev => ({ ...prev, updating: true, result: null }));
+    try {
+      const response = await fetch('/api/update', { method: 'POST' });
+      const data = await response.json();
+      
+      setUpdateStatus(prev => ({
+        ...prev,
+        updating: false,
+        result: {
+          success: data.success,
+          message: data.message,
+          changes: data.changes,
+        },
+      }));
+    } catch (error: any) {
+      setUpdateStatus(prev => ({
+        ...prev,
+        updating: false,
+        result: {
+          success: false,
+          message: 'Update failed: ' + error.message,
+        },
+      }));
     }
   };
 
@@ -1288,6 +1351,57 @@ export default function Home() {
                     🏥 Health Check API
                   </a>
                 </div>
+              </div>
+
+              {/* Update Section */}
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">🔄 Update Application</h3>
+                <p className="text-xs text-slate-500 mb-3">Pull latest changes from GitHub and restart the app.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={checkForUpdates}
+                    disabled={updateStatus.checking || updateStatus.updating}
+                    className="flex-1 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {updateStatus.checking ? '⌛ Checking...' : '🔍 Check'}
+                  </button>
+                  <button
+                    onClick={performUpdate}
+                    disabled={updateStatus.checking || updateStatus.updating}
+                    className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {updateStatus.updating ? '⏳ Updating...' : '⬇️ Pull & Restart'}
+                  </button>
+                </div>
+                
+                {/* Update Status */}
+                {updateStatus.message && !updateStatus.result && (
+                  <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-300">
+                    {updateStatus.message}
+                  </div>
+                )}
+                
+                {updateStatus.result && (
+                  <div className={`mt-3 p-3 rounded-lg text-xs ${updateStatus.result.success ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
+                    <p className="font-bold mb-1">
+                      {updateStatus.result.success ? '✅ Update Successful' : '❌ Update Failed'}
+                    </p>
+                    <p>{updateStatus.result.message}</p>
+                    {updateStatus.result.changes && updateStatus.result.changes.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-slate-300 dark:border-slate-600">
+                        <p className="font-medium text-[10px] uppercase mb-1">Changed Files:</p>
+                        <ul className="text-[10px] font-mono max-h-24 overflow-y-auto">
+                          {updateStatus.result.changes.slice(0, 5).map((change, i) => (
+                            <li key={i} className="truncate">{change}</li>
+                          ))}
+                          {updateStatus.result.changes.length > 5 && (
+                            <li className="text-slate-500">... and {updateStatus.result.changes.length - 5} more</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

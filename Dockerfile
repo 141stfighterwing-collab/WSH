@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="3.1.0" \
+ENV POWERSHELL_EXECUTOR_VERSION="3.1.1" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -109,7 +109,7 @@ WORKDIR /app
 
 ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.5.0"
+    POWERSHELL_EXECUTOR_VERSION="3.1.1"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
