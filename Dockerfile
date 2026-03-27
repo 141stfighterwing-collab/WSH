@@ -151,8 +151,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# Install pg module for PostgreSQL connectivity
-RUN npm install pg --no-save 2>&1 || true
+# Install pg module and bcryptjs for PostgreSQL connectivity and auth
+RUN npm install pg bcryptjs --no-save 2>&1 || true
 
 # Copy PowerShell modules if they exist (handle missing directories gracefully)
 RUN mkdir -p /app/pwsh

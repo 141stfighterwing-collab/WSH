@@ -15,45 +15,34 @@ if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"
 }
 
+Write-Host "Database URL: $($env:DATABASE_URL -replace ':([^@]+)@', ':****@')" -ForegroundColor Gray
+
 # Parse database connection info from DATABASE_URL environment variable
-# Format: postgresql://user:password@host:port/database?schema=public
 $DbHost = "postgres"
 $DbPort = 5432
 $DbName = "wsh_db"
 $DbUser = "wsh"
 $DbPassword = "wsh_secure_password"
 
-# Try to parse DATABASE_URL for actual credentials
 if ($env:DATABASE_URL) {
     try {
-        # Parse the connection string
         $dbUrl = $env:DATABASE_URL
-        # Extract components using regex
         if ($dbUrl -match 'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)') {
             $DbUser = $matches[1]
             $DbPassword = $matches[2]
             $DbHost = $matches[3]
             $DbPort = [int]$matches[4]
             $DbName = $matches[5]
-            Write-Host "Parsed DATABASE_URL - Host: $DbHost, Port: $DbPort, DB: $DbName, User: $DbUser" -ForegroundColor Gray
-        } elseif ($dbUrl -match 'postgresql://([^:]+):([^@]+)@([^/]+)/(.+)') {
-            # Handle URLs without explicit port
-            $DbUser = $matches[1]
-            $DbPassword = $matches[2]
-            $DbHost = $matches[3]
-            $DbName = $matches[4]
-            Write-Host "Parsed DATABASE_URL (no port) - Host: $DbHost, DB: $DbName, User: $DbUser" -ForegroundColor Gray
+            Write-Host "Parsed DATABASE_URL - Host: $DbHost, DB: $DbName, User: $DbUser" -ForegroundColor Gray
         }
     } catch {
-        Write-Host "Warning: Could not parse DATABASE_URL, using defaults" -ForegroundColor Yellow
+        Write-Host "Warning: Could not parse DATABASE_URL" -ForegroundColor Yellow
     }
 }
 
-Write-Host "Database URL: $($env:DATABASE_URL -replace 'password[^@]*', 'password=****')" -ForegroundColor Gray
-
-# Wait for database to be ready (optimized - faster startup)
+# Wait for database TCP port
 Write-Host "Waiting for PostgreSQL to be ready..." -ForegroundColor Yellow
-$maxDbWait = 30  # Reduced from 60 to 30
+$maxDbWait = 30
 $dbWaited = 0
 $dbReady = $false
 
@@ -61,7 +50,7 @@ while ($dbWaited -lt $maxDbWait) {
     try {
         $tcp = New-Object System.Net.Sockets.TcpClient
         $connect = $tcp.BeginConnect($DbHost, $DbPort, $null, $null)
-        $wait = $connect.AsyncWaitHandle.WaitOne(1000, $false)  # Reduced from 2000 to 1000
+        $wait = $connect.AsyncWaitHandle.WaitOne(1000, $false)
         if ($wait) {
             try { $tcp.EndConnect($connect) } catch {}
             $tcp.Close()
@@ -72,267 +61,75 @@ while ($dbWaited -lt $maxDbWait) {
         $tcp.Close()
     } catch {}
     
-    $dbWaited += 1  # Increment by 1 second
-    Write-Host "  Waiting for database... ($dbWaited/$maxDbWait seconds)" -ForegroundColor Gray
+    $dbWaited += 1
+    Write-Host "  Waiting for database... ($dbWaited/$maxDbWait)" -ForegroundColor Gray
     Start-Sleep -Seconds 1
 }
 
 if (-not $dbReady) {
-    Write-Warning "Database connection timeout after $maxDbWait seconds - proceeding anyway"
+    Write-Warning "Database connection timeout - proceeding anyway"
 }
 
-# Give PostgreSQL minimal time to finish initialization
-Write-Host "Giving PostgreSQL 2 seconds to complete initialization..." -ForegroundColor Gray
-Start-Sleep -Seconds 2  # Reduced from 5 to 2
+Start-Sleep -Seconds 2
 
-# Database connection string for psql
-$PsqlConn = "postgresql://${DbUser}:${DbPassword}@${DbHost}:${DbPort}/${DbName}"
+# Use Prisma to set up database
+Write-Host "Setting up database with Prisma..." -ForegroundColor Yellow
 
-# Function to check if tables exist
-function Test-TablesExist {
-    try {
-        $result = & psql $PsqlConn -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users';" 2>$null
-        $count = ($result | Where-Object { $_ -match '^\d' } | ForEach-Object { $_.Trim() }) -as [int]
-        return $count -gt 0
-    } catch {
-        return $false
-    }
+Push-Location /app
+
+# Push schema to database (creates tables)
+Write-Host "Running prisma db push..." -ForegroundColor Gray
+$env:DATABASE_URL | Out-Null
+$npxResult = & npx prisma db push --skip-generate 2>&1
+Write-Host $npxResult -ForegroundColor Gray
+
+# Create admin user using Node.js
+Write-Host "Creating admin user..." -ForegroundColor Yellow
+
+$createAdminScript = @'
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const prisma = new PrismaClient();
+
+async function main() {
+  const email = process.env.ADMIN_EMAIL || 'admin@wsh.local';
+  const password = process.env.ADMIN_PASSWORD || '123456';
+  const username = process.env.ADMIN_USERNAME || 'Admin';
+  
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  try {
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { 
+        password: hashedPassword,
+        role: 'super-admin',
+        status: 'active'
+      },
+      create: {
+        email,
+        username,
+        password: hashedPassword,
+        role: 'super-admin',
+        permission: 'edit',
+        status: 'active',
+      }
+    });
+    console.log('Admin user ready:', user.email, 'Role:', user.role);
+  } catch (e) {
+    console.error('Error creating admin user:', e.message);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-# Function to create tables using direct SQL
-function Invoke-CreateTablesSQL {
-    Write-Host "Creating tables using direct SQL..." -ForegroundColor Yellow
-    
-    $sqlFile = "/tmp/create-tables.sql"
-    
-    @"
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+main();
+'@
 
--- Users table
-CREATE TABLE IF NOT EXISTS "users" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "email" VARCHAR(255) UNIQUE NOT NULL,
-    "username" VARCHAR(255) UNIQUE NOT NULL,
-    "password" VARCHAR(255) NOT NULL,
-    "role" VARCHAR(50) DEFAULT 'user',
-    "permission" VARCHAR(50) DEFAULT 'edit',
-    "status" VARCHAR(50) DEFAULT 'active',
-    "lastLogin" TIMESTAMP,
-    "aiUsageCount" INTEGER DEFAULT 0,
-    "createdAt" TIMESTAMP DEFAULT NOW(),
-    "updatedAt" TIMESTAMP DEFAULT NOW()
-);
+$createAdminScript | Out-File -FilePath "/tmp/create-admin.js" -Encoding UTF8 -Force
+& node /tmp/create-admin.js 2>&1
 
--- Folders table
-CREATE TABLE IF NOT EXISTS "folders" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "name" VARCHAR(255) NOT NULL,
-    "order" INTEGER DEFAULT 0,
-    "userId" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-    "createdAt" TIMESTAMP DEFAULT NOW(),
-    "updatedAt" TIMESTAMP DEFAULT NOW()
-);
-
--- Notes table
-CREATE TABLE IF NOT EXISTS "notes" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "title" VARCHAR(255) NOT NULL,
-    "content" TEXT,
-    "rawContent" TEXT,
-    "category" VARCHAR(50) DEFAULT 'QUICK',
-    "type" VARCHAR(50) DEFAULT 'quick',
-    "tags" TEXT[] DEFAULT '{}',
-    "color" VARCHAR(50) DEFAULT 'yellow',
-    "textColor" VARCHAR(50),
-    "backgroundColor" VARCHAR(50),
-    "folderId" UUID REFERENCES "folders"("id") ON DELETE SET NULL,
-    "userId" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-    "isDeleted" BOOLEAN DEFAULT false,
-    "deletedAt" TIMESTAMP,
-    "isSynthesized" BOOLEAN DEFAULT false,
-    "accessCount" INTEGER DEFAULT 0,
-    "wordCount" INTEGER DEFAULT 0,
-    "projectData" JSONB,
-    "attachments" TEXT[] DEFAULT '{}',
-    "createdAt" TIMESTAMP DEFAULT NOW(),
-    "updatedAt" TIMESTAMP DEFAULT NOW()
-);
-
--- Audit logs table
-CREATE TABLE IF NOT EXISTS "audit_logs" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "action" VARCHAR(255) NOT NULL,
-    "actor" VARCHAR(255) NOT NULL,
-    "target" VARCHAR(255),
-    "details" TEXT,
-    "timestamp" TIMESTAMP DEFAULT NOW(),
-    "userId" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE
-);
-
--- System config table
-CREATE TABLE IF NOT EXISTS "system_config" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "key" VARCHAR(255) UNIQUE NOT NULL,
-    "value" TEXT,
-    "createdAt" TIMESTAMP DEFAULT NOW(),
-    "updatedAt" TIMESTAMP DEFAULT NOW()
-);
-
--- Script executions table
-CREATE TABLE IF NOT EXISTS "script_executions" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "scriptName" VARCHAR(255) NOT NULL,
-    "scriptPath" VARCHAR(500) NOT NULL,
-    "parameters" JSONB,
-    "status" VARCHAR(50) DEFAULT 'pending',
-    "startTime" TIMESTAMP DEFAULT NOW(),
-    "endTime" TIMESTAMP,
-    "duration" INTEGER,
-    "output" TEXT,
-    "error" TEXT,
-    "exitCode" INTEGER,
-    "retryCount" INTEGER DEFAULT 0,
-    "triggeredBy" VARCHAR(50),
-    "userId" UUID REFERENCES "users"("id") ON DELETE SET NULL,
-    "metadata" JSONB
-);
-
--- Scheduled tasks table
-CREATE TABLE IF NOT EXISTS "scheduled_tasks" (
-    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "name" VARCHAR(255) NOT NULL,
-    "scriptPath" VARCHAR(500) NOT NULL,
-    "cron" VARCHAR(100) NOT NULL,
-    "enabled" BOOLEAN DEFAULT true,
-    "lastRun" TIMESTAMP,
-    "nextRun" TIMESTAMP,
-    "lastStatus" VARCHAR(50),
-    "parameters" JSONB,
-    "userId" UUID REFERENCES "users"("id") ON DELETE SET NULL
-);
-
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_notes_userId ON "notes"("userId");
-CREATE INDEX IF NOT EXISTS idx_notes_folderId ON "notes"("folderId");
-CREATE INDEX IF NOT EXISTS idx_folders_userId ON "folders"("userId");
-CREATE INDEX IF NOT EXISTS idx_audit_logs_userId ON "audit_logs"("userId");
-"@ | Out-File -FilePath $sqlFile -Encoding utf8 -Force
-
-    try {
-        $result = & psql $PsqlConn -f $sqlFile 2>&1
-        Write-Host $result -ForegroundColor Gray
-        return $true
-    } catch {
-        Write-Host "SQL Error: $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-# Function to verify tables
-function Invoke-VerifyTables {
-    Write-Host "Verifying tables..." -ForegroundColor Yellow
-    
-    try {
-        $tables = & psql $PsqlConn -t -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name;" 2>$null
-        Write-Host "Tables found:" -ForegroundColor Green
-        $tables | ForEach-Object { 
-            $t = $_.Trim()
-            if ($t) { Write-Host "  - $t" -ForegroundColor White }
-        }
-        return $true
-    } catch {
-        Write-Host "Verification error: $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-# Function to create default admin user
-function New-DefaultAdminUser {
-    Write-Host "Checking for default admin user..." -ForegroundColor Yellow
-    
-    try {
-        # Check if admin exists
-        $exists = & psql $PsqlConn -t -c "SELECT COUNT(*) FROM users WHERE email = 'admin@wsh.local';" 2>$null
-        $count = ($exists | Where-Object { $_ -match '^\d' } | ForEach-Object { $_.Trim() }) -as [int]
-        
-        if ($count -gt 0) {
-            Write-Host "Admin user already exists" -ForegroundColor Green
-            return $true
-        }
-        
-        Write-Host "Creating default admin user..." -ForegroundColor Yellow
-        
-        # Bcrypt hash for password 'admin123' (generated with cost 10)
-        # This is a valid bcrypt hash for 'admin123'
-        $hashedPassword = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
-        
-        $createSQL = @"
-INSERT INTO users (id, email, username, password, role, permission, status, "createdAt", "updatedAt")
-VALUES (
-    gen_random_uuid(),
-    'admin@wsh.local',
-    'Admin',
-    '$hashedPassword',
-    'super-admin',
-    'edit',
-    'active',
-    NOW(),
-    NOW()
-)
-ON CONFLICT (email) DO NOTHING;
-"@
-        
-        $result = & psql $PsqlConn -c $createSQL 2>&1
-        Write-Host "Insert result: $result" -ForegroundColor Gray
-        
-        # Verify user was created
-        $verify = & psql $PsqlConn -t -c "SELECT email, username, role FROM users WHERE email = 'admin@wsh.local';" 2>$null
-        Write-Host "Admin user created: $verify" -ForegroundColor Green
-        
-        return $true
-    } catch {
-        Write-Host "Error creating admin user: $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-# Check if tables already exist
-Write-Host "Checking if database tables already exist..." -ForegroundColor Yellow
-$tablesExist = Test-TablesExist
-
-if ($tablesExist) {
-    Write-Host "Database tables already exist!" -ForegroundColor Green
-} else {
-    Write-Host "Tables do not exist, creating schema..." -ForegroundColor Yellow
-    
-    # Create tables using SQL
-    Invoke-CreateTablesSQL | Out-Null
-    Write-Host "Schema creation completed" -ForegroundColor Green
-}
-
-# Create default admin user
-Write-Host ""
-New-DefaultAdminUser
-
-# Apply user updates (admin password = 123456, Shootre = SUPER ADMIN)
-Write-Host ""
-Write-Host "Applying user updates..." -ForegroundColor Yellow
-
-# Update admin password to 123456
-$adminPasswordHash = '$2a$10$OWGz9bmMQaFSv5AqB5UihuRmlzpH6xiPr1WxnPdzVyomRAF3kV6AS'
-$UpdateAdmin = & psql $PsqlConn -c "UPDATE users SET password = '$adminPasswordHash', \"updatedAt\" = NOW() WHERE email = 'admin@wsh.local';" 2>&1
-Write-Host "  Admin password updated to '123456'" -ForegroundColor Green
-
-# Set Shootre to SUPER ADMIN
-$UpdateShootre = & psql $PsqlConn -c "UPDATE users SET role = 'super-admin', \"updatedAt\" = NOW() WHERE username = 'Shootre' OR email LIKE '%shootre%';" 2>&1
-Write-Host "  Shootre set to SUPER ADMIN" -ForegroundColor Green
-
-# Final verification - show user count
-Write-Host ""
-Write-Host "Final verification:" -ForegroundColor Cyan
-$userCount = & psql $PsqlConn -t -c "SELECT COUNT(*) FROM users;" 2>$null
-Write-Host "  Users in database: $(($userCount | Where-Object { $_ -match '^\d' } | ForEach-Object { $_.Trim() }))" -ForegroundColor White
+Pop-Location
 
 # Start the application
 switch ($Mode) {
@@ -340,10 +137,9 @@ switch ($Mode) {
         Write-Host ""
         
         # Start Database Viewer in background
-        Write-Host "Starting Database Viewer on port 5682..." -ForegroundColor Green
         if (Test-Path "/app/db-viewer.js") {
+            Write-Host "Starting Database Viewer on port 5682..." -ForegroundColor Green
             Start-Process -FilePath "node" -ArgumentList "/app/db-viewer.js" -NoNewWindow
-            Write-Host "  Database Viewer: http://localhost:5682" -ForegroundColor Gray
         }
         
         Write-Host "Starting WSH Application on port 3000..." -ForegroundColor Green
@@ -352,7 +148,6 @@ switch ($Mode) {
         Write-Host "AVAILABLE SERVICES:" -ForegroundColor Cyan
         Write-Host "  App:         http://localhost:3000" -ForegroundColor White
         Write-Host "  DB Viewer:   http://localhost:5682" -ForegroundColor White
-        Write-Host "  Health:      http://localhost:8080" -ForegroundColor White
         Write-Host "========================================" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "DEFAULT LOGIN:" -ForegroundColor Yellow
@@ -363,7 +158,6 @@ switch ($Mode) {
         Push-Location /app
         
         # CRITICAL: Set HOST to 0.0.0.0 for Docker container accessibility
-        # Next.js standalone defaults to localhost which won't work in Docker
         $env:HOST = "0.0.0.0"
         $env:PORT = "3000"
         
@@ -380,7 +174,8 @@ switch ($Mode) {
         & pwsh -NoProfile -File $ScriptPath
     }
     "daemon" {
-        Write-Host "Starting daemon mode with health server..." -ForegroundColor Green
+        Write-Host "Starting daemon mode..." -ForegroundColor Green
+        $env:HOST = "0.0.0.0"
         & node server.js &
         Start-Sleep -Seconds 5
         while ($true) {
