@@ -1,0 +1,77 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Testing
+coverage
+.nyc_output
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+benchmarks/
+
+# Development files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+dev.log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.docker
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Skills directory (not needed in container)
+skills/
+
+# Uploads
+upload/
+
+# Installer files (not needed in container)
+installer/
+
+# Services not used in container
+services/
+
+# Misc
+bun.lock
+*.docx
+*.xlsx
+*.pptx
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico

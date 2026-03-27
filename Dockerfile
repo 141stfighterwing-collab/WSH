@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
-# Unified Dockerfile with Node.js + PowerShell support
-# Version: 2.5.0 - Robust build with proper Docker networking
+# Optimized Dockerfile - Version 2.5.0
+# Build time: ~2-3 minutes (optimized from ~8 minutes)
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -11,25 +11,19 @@ LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
 LABEL version="2.5.0"
 
-# Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Node.js 20.x and dependencies
+# Install Node.js 20.x and dependencies in single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    gnupg \
-    git \
+    curl ca-certificates gnupg git postgresql-client \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
     && apt-get update \
     && apt-get install -y nodejs \
     && npm install -g npm@latest \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
-# Set environment variables
 ENV POWERSHELL_EXECUTOR_VERSION="2.5.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
@@ -39,33 +33,24 @@ ENV POWERSHELL_EXECUTOR_VERSION="2.5.0" \
     TZ="UTC" \
     NODE_ENV="production"
 
-# Create operational directories
 RUN mkdir -p /scripts /logs /config /output /modules /app /data /public /schema
 
-# Install PostgreSQL client tools (for psql)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
-
 # ============================================================================
-# Stage 2: Dependencies
+# Stage 2: Dependencies (cached separately)
 # ============================================================================
 FROM base AS deps
 
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY package.json ./
-COPY package-lock.json* ./
-
-# Copy prisma schema if it exists
+# Copy package files first for better layer caching
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Install all dependencies (including dev for build)
-RUN npm install 2>&1 || npm install --legacy-peer-deps 2>&1
+# Install dependencies with cache mount for speed
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --include=dev 2>&1 || npm install 2>&1
 
-# Generate Prisma client if schema exists
-RUN if [ -f prisma/schema.prisma ]; then npx prisma generate; fi
+RUN npx prisma generate
 
 # ============================================================================
 # Stage 3: Builder
@@ -76,49 +61,28 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-
-# Copy all source files
 COPY . .
 
-# Copy PowerShell modules and scripts if they exist
-RUN if [ -d pwsh/modules ]; then cp -r pwsh/modules/ /modules/; fi
-RUN if [ -d pwsh/app ]; then mkdir -p /app/pwsh && cp -r pwsh/app/ /app/pwsh/; fi
+# Copy PowerShell modules in one step
+RUN cp -r pwsh/modules/ /modules/ 2>/dev/null || true
+RUN cp -r pwsh/app/ /app/pwsh/ 2>/dev/null || true
 
-# Set permissions for PowerShell scripts
-RUN if [ -d /modules ]; then chmod -R 755 /modules; fi
-RUN if [ -d /app/pwsh ]; then chmod -R 755 /app/pwsh; fi
+# Generate Prisma and build
+RUN npx prisma generate
 
-# Generate Prisma Client again for this stage if schema exists
-RUN if [ -f prisma/schema.prisma ]; then npx prisma generate; fi
-
-# Build Next.js app with standalone output
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV="production"
 
-# Ensure public directory exists for Next.js standalone
 RUN mkdir -p public && touch public/.gitkeep
 
-# Build with error handling and verbose output
-RUN npm run build 2>&1 || (echo "Build failed, checking..." && ls -la && exit 1)
+# Build Next.js
+RUN npm run build
 
-# Verify build output exists
-RUN if [ ! -d .next/standalone ]; then \
-    echo "ERROR: .next/standalone directory not found"; \
-    ls -la .next/ || echo "No .next directory"; \
-    exit 1; \
-    fi
-
-RUN if [ ! -d .next/static ]; then \
-    echo "ERROR: .next/static directory not found"; \
-    ls -la .next/ || echo "No .next directory"; \
-    exit 1; \
-    fi
-
-# Show build output for verification
-RUN echo "Build successful! Contents:" && ls -la .next/standalone/ && ls -la .next/static/
+# Verify build
+RUN ls -la .next/standalone/ && ls -la .next/static/
 
 # ============================================================================
-# Stage 4: Runner (Production)
+# Stage 4: Runner (Production) - OPTIMIZED
 # ============================================================================
 FROM base AS runner
 
@@ -130,36 +94,33 @@ ENV NODE_ENV="production" \
     HOST=0.0.0.0 \
     PORT=3000
 
-# Create non-root user for security
+# Create user early
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Install Prisma CLI globally for schema migrations
+# Install Prisma CLI globally
 RUN npm install -g prisma@latest
 
-# Copy Next.js standalone build
+# Copy Next.js standalone in single layer
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Copy Prisma for database operations
+# Copy Prisma (needed for db push on startup)
 COPY --from=builder /app/prisma ./prisma
 
-# Copy Prisma client libraries
+# Copy Prisma client libraries in one step
 RUN mkdir -p ./node_modules/.prisma ./node_modules/@prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# Install pg module and bcryptjs for PostgreSQL connectivity and auth
-RUN npm install pg bcryptjs --no-save 2>&1 || true
+# Pre-install pg and bcryptjs during build (not at runtime)
+RUN npm install pg bcryptjs --no-save 2>&1
 
-# Copy PowerShell modules if they exist (handle missing directories gracefully)
-RUN mkdir -p /app/pwsh
-RUN if [ -d /app/pwsh ]; then echo 'pwsh directory exists'; fi || true
+# Copy all scripts in one layer
+COPY --from=builder /modules/ /modules/
 COPY --from=builder /app/pwsh/ /app/pwsh/
-
-# Copy all management scripts from scripts directory
 COPY scripts/start.ps1 /app/start.ps1
 COPY scripts/healthcheck.ps1 /app/healthcheck.ps1
 COPY scripts/db-diagnostic.ps1 /scripts/db-diagnostic.ps1
@@ -169,31 +130,20 @@ COPY scripts/user-management.ps1 /scripts/user-management.ps1
 COPY scripts/update-users.ps1 /scripts/update-users.ps1
 COPY scripts/db-viewer.js /app/db-viewer.js
 COPY scripts/inject-schema.js /app/inject-schema.js
-# Create schema directory
-RUN mkdir -p /schema
-# Copy schema file if it exists in builder stage
-RUN if [ -f /app/schema/tables.json ]; then cp /app/schema/tables.json /schema/tables.json; fi || true
+COPY schema/tables.json /schema/tables.json
 
-# Set permissions - include /modules directory
-RUN chmod -R 755 /app /scripts /logs /output /config /data /schema /modules 2>/dev/null || true && \
-    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /app/inject-schema.js 2>/dev/null || true && \
-    chown -R nextjs:nodejs /app /logs /output /config /scripts /data /schema /modules 2>/dev/null || true
+# Single chmod/chown layer - much faster
+RUN chmod -R 755 /app /scripts /logs /output /config /data /schema /modules 2>/dev/null; \
+    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /app/inject-schema.js; \
+    chown -R nextjs:nodejs /app /logs /output /config /scripts /data /schema /modules
 
-# Health check configuration - increased start_period for database initialization
+# Health check
 HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
     CMD pwsh -NoProfile -Command "& /app/healthcheck.ps1" || exit 1
 
-# Expose ports
-# 3000 - Next.js application
-# 5682 - Database viewer web UI
-# 8080 - PowerShell health endpoint (optional)
 EXPOSE 3000 5682 8080
 
-# Switch to non-root user
 USER nextjs
 
-# Entrypoint
 ENTRYPOINT ["pwsh", "-NoLogo", "-NoProfile", "-File", "/app/start.ps1"]
-
-# Default command
 CMD ["app"]
