@@ -2,31 +2,87 @@
  * WSH Database Viewer - Simple Web UI to view database tables
  * Runs on port 5682
  * Uses pg module directly (more reliable than Prisma)
+ * 
+ * Improved: Handles database connection failures gracefully with retry logic
  */
 
 const http = require('http');
 const { Client } = require('pg');
 
-// Database connection
-const client = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public'
-});
-
 const PORT = 5682;
+const MAX_RETRIES = 10;
+const RETRY_DELAY = 3000; // 3 seconds
 
-// Connect to database
-async function connectDB() {
+// Database connection configuration
+const dbConfig = {
+    connectionString: process.env.DATABASE_URL || 'postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public',
+    connectionTimeoutMillis: 5000,
+    query_timeout: 10000,
+};
+
+// Database client (will be null until connected)
+let client = null;
+let dbConnected = false;
+
+// Connect to database with retry logic
+async function connectDB(retryCount = 0) {
+    if (client) {
+        try {
+            await client.end();
+        } catch (e) {
+            // Ignore errors when ending old connection
+        }
+    }
+    
+    client = new Client(dbConfig);
+    
     try {
         await client.connect();
+        dbConnected = true;
         console.log('Connected to PostgreSQL');
+        
+        // Handle unexpected disconnections
+        client.on('error', async (err) => {
+            console.error('Database connection error:', err.message);
+            dbConnected = false;
+            // Try to reconnect
+            setTimeout(() => connectDB(0), 1000);
+        });
+        
+        return true;
     } catch (err) {
-        console.error('Failed to connect to database:', err.message);
-        process.exit(1);
+        dbConnected = false;
+        console.error(`Failed to connect to database (attempt ${retryCount + 1}/${MAX_RETRIES}):`, err.message);
+        
+        if (retryCount < MAX_RETRIES - 1) {
+            console.log(`Retrying in ${RETRY_DELAY/1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            return connectDB(retryCount + 1);
+        } else {
+            console.error('Max retries reached. Starting server in degraded mode.');
+            console.log('Database viewer will show connection error page.');
+            return false;
+        }
+    }
+}
+
+// Check database health
+async function checkDatabase() {
+    if (!client || !dbConnected) {
+        return { connected: false, error: 'Not connected' };
+    }
+    
+    try {
+        await client.query('SELECT 1');
+        return { connected: true };
+    } catch (err) {
+        dbConnected = false;
+        return { connected: false, error: err.message };
     }
 }
 
 // HTML template - NO EMOJIS to avoid encoding issues
-const htmlTemplate = (title, content) => `
+const htmlTemplate = (title, content, dbStatus = null) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -115,9 +171,10 @@ const htmlTemplate = (title, content) => `
         }
         .error { background: #450a0a; border: 1px solid #991b1b; padding: 15px; border-radius: 8px; }
         .success { background: #052e16; border: 1px solid #166534; padding: 15px; border-radius: 8px; }
+        .warning { background: #422006; border: 1px solid #a16207; padding: 15px; border-radius: 8px; }
         .json { color: #a5b4fc; }
         .truncate { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .actions { display: flex; gap: 10px; margin-bottom: 20px; }
+        .actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .btn {
             padding: 10px 20px;
             border: none;
@@ -131,12 +188,26 @@ const htmlTemplate = (title, content) => `
         .btn-danger { background: #dc2626; color: white; }
         .btn:hover { opacity: 0.9; }
         .icon { margin-right: 6px; }
+        .db-status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .db-status.connected { background: #166534; color: #bbf7d0; }
+        .db-status.disconnected { background: #991b1b; color: #fecaca; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WSH Database Viewer</h1>
-        <p style="color: #64748b; margin-bottom: 20px;">Read-only database viewer for WSH</p>
+        <p style="color: #64748b; margin-bottom: 20px;">Read-only database viewer for WSH - Port ${PORT}</p>
+        
+        ${dbStatus !== null ? `
+            <div class="db-status ${dbStatus.connected ? 'connected' : 'disconnected'}">
+                Database: ${dbStatus.connected ? 'Connected' : 'Disconnected - ' + (dbStatus.error || 'Connection failed')}
+            </div>
+        ` : ''}
         
         <div class="nav">
             <a href="/" class="${title === 'Dashboard' ? 'active' : ''}">[DB] Dashboard</a>
@@ -149,6 +220,7 @@ const htmlTemplate = (title, content) => `
             <a href="/tables/script_executions" class="${title === 'script_executions' ? 'active' : ''}">[S] Scripts</a>
             <a href="/schema" class="${title === 'Schema' ? 'active' : ''}">[+] Schema</a>
             <a href="/sql" class="${title === 'SQL' ? 'active' : ''}">[>] SQL</a>
+            <a href="/health" class="${title === 'Health' ? 'active' : ''}">[H] Health</a>
         </div>
         
         ${content}
@@ -161,6 +233,30 @@ const htmlTemplate = (title, content) => `
 </body>
 </html>
 `;
+
+// Error page for database connection issues
+const errorPage = (error) => htmlTemplate('Error', `
+    <div class="card">
+        <h2>Database Connection Error</h2>
+        <div class="error" style="margin-top: 15px;">
+            <p><strong>Unable to connect to the database.</strong></p>
+            <p style="margin-top: 10px;">Error: ${escapeHtml(error)}</p>
+        </div>
+        <div class="warning" style="margin-top: 15px;">
+            <p><strong>Troubleshooting:</strong></p>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li>Ensure the PostgreSQL container is running: <code>docker ps</code></li>
+                <li>Check database credentials in DATABASE_URL environment variable</li>
+                <li>Verify network connectivity between containers</li>
+                <li>Check PostgreSQL logs: <code>docker logs wsh-postgres</code></li>
+            </ul>
+        </div>
+        <div class="actions" style="margin-top: 15px;">
+            <a href="/" class="btn btn-primary">Retry Connection</a>
+            <a href="/health" class="btn btn-primary">Check Health</a>
+        </div>
+    </div>
+`);
 
 // Format data for display
 const formatValue = (val, maxLength = 50) => {
@@ -180,19 +276,62 @@ const escapeHtml = (str) => {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 };
 
+// Safe query wrapper
+async function safeQuery(queryFn) {
+    if (!dbConnected || !client) {
+        const dbCheck = await checkDatabase();
+        if (!dbCheck.connected) {
+            throw new Error('Database not connected: ' + (dbCheck.error || 'Unknown error'));
+        }
+    }
+    
+    return await queryFn();
+}
+
 // Create server
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost:' + PORT);
     const path = url.pathname;
     
+    // Check database status for all requests
+    let dbStatus = null;
     try {
+        dbStatus = await checkDatabase();
+    } catch (e) {
+        dbStatus = { connected: false, error: e.message };
+    }
+    
+    try {
+        // Health check endpoint (always works)
+        if (path === '/health') {
+            const healthData = {
+                status: dbStatus.connected ? 'healthy' : 'degraded',
+                timestamp: new Date().toISOString(),
+                port: PORT,
+                database: {
+                    connected: dbStatus.connected,
+                    error: dbStatus.error || null
+                }
+            };
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(healthData, null, 2));
+            return;
+        }
+        
+        // If database is not connected, show error page (except for health endpoint)
+        if (!dbStatus.connected) {
+            res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(errorPage(dbStatus.error || 'Database connection not established'));
+            return;
+        }
+        
         // Dashboard
         if (path === '/') {
             const [userCount, noteCount, folderCount, auditCount] = await Promise.all([
-                client.query('SELECT COUNT(*) FROM users').then(r => parseInt(r.rows[0].count)).catch(() => 0),
-                client.query('SELECT COUNT(*) FROM notes').then(r => parseInt(r.rows[0].count)).catch(() => 0),
-                client.query('SELECT COUNT(*) FROM folders').then(r => parseInt(r.rows[0].count)).catch(() => 0),
-                client.query('SELECT COUNT(*) FROM audit_logs').then(r => parseInt(r.rows[0].count)).catch(() => 0),
+                safeQuery(() => client.query('SELECT COUNT(*) FROM users').then(r => parseInt(r.rows[0].count))).catch(() => 0),
+                safeQuery(() => client.query('SELECT COUNT(*) FROM notes').then(r => parseInt(r.rows[0].count))).catch(() => 0),
+                safeQuery(() => client.query('SELECT COUNT(*) FROM folders').then(r => parseInt(r.rows[0].count))).catch(() => 0),
+                safeQuery(() => client.query('SELECT COUNT(*) FROM audit_logs').then(r => parseInt(r.rows[0].count))).catch(() => 0),
             ]);
             
             const content = `
@@ -231,7 +370,7 @@ const server = http.createServer(async (req, res) => {
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate('Dashboard', content));
+            res.end(htmlTemplate('Dashboard', content, dbStatus));
         }
         
         // View table
@@ -248,14 +387,14 @@ const server = http.createServer(async (req, res) => {
             }
             
             // Get table data
-            const rowsResult = await client.query(
+            const rowsResult = await safeQuery(() => client.query(
                 'SELECT * FROM "' + tableName + '" ORDER BY "createdAt" DESC NULLS LAST LIMIT $1 OFFSET $2',
                 [limit, offset]
-            );
+            ));
             
             const rows = rowsResult.rows;
             
-            const countResult = await client.query('SELECT COUNT(*)::int as count FROM "' + tableName + '"');
+            const countResult = await safeQuery(() => client.query('SELECT COUNT(*)::int as count FROM "' + tableName + '"'));
             const totalCount = countResult.rows[0]?.count || 0;
             const totalPages = Math.ceil(totalCount / limit);
             
@@ -267,7 +406,7 @@ const server = http.createServer(async (req, res) => {
                     </div>
                 `;
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(htmlTemplate(tableName, content));
+                res.end(htmlTemplate(tableName, content, dbStatus));
                 return;
             }
             
@@ -303,27 +442,27 @@ const server = http.createServer(async (req, res) => {
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate(tableName, content));
+            res.end(htmlTemplate(tableName, content, dbStatus));
         }
         
         // Schema view
         else if (path === '/schema') {
-            const tablesResult = await client.query(`
+            const tablesResult = await safeQuery(() => client.query(`
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
                 ORDER BY table_name
-            `);
+            `));
             
             let schemaHtml = '';
             
             for (const table of tablesResult.rows) {
-                const columnsResult = await client.query(`
+                const columnsResult = await safeQuery(() => client.query(`
                     SELECT column_name, data_type, is_nullable, column_default
                     FROM information_schema.columns
                     WHERE table_schema = 'public' AND table_name = $1
                     ORDER BY ordinal_position
-                `, [table.table_name]);
+                `, [table.table_name]));
                 
                 schemaHtml += '<h2>[T] ' + table.table_name + '</h2>';
                 schemaHtml += '<table><thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th></tr></thead><tbody>';
@@ -340,7 +479,7 @@ const server = http.createServer(async (req, res) => {
             
             const content = '<div class="card">' + schemaHtml + '</div>';
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate('Schema', content));
+            res.end(htmlTemplate('Schema', content, dbStatus));
         }
         
         // SQL query page
@@ -354,7 +493,7 @@ const server = http.createServer(async (req, res) => {
                     
                     // Allow SELECT, SHOW, EXPLAIN
                     if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('SHOW') || upperQuery.startsWith('EXPLAIN')) {
-                        const result = await client.query(query);
+                        const result = await safeQuery(() => client.query(query));
                         
                         if (result.rows && result.rows.length > 0) {
                             const columns = Object.keys(result.rows[0]);
@@ -374,13 +513,13 @@ const server = http.createServer(async (req, res) => {
                     }
                     // Allow UPDATE for user management (role changes only)
                     else if (upperQuery.startsWith('UPDATE') && upperQuery.includes('USERS') && (upperQuery.includes('ROLE') || upperQuery.includes('STATUS'))) {
-                        const result = await client.query(query);
+                        const result = await safeQuery(() => client.query(query));
                         resultHtml = '<div class="success">Update executed successfully. ' + result.rowCount + ' row(s) affected.</div>';
                         resultHtml += '<p style="margin-top: 10px;"><a href="/tables/users" class="btn btn-primary">View Users Table</a></p>';
                     }
                     // Allow INSERT into audit_logs
                     else if (upperQuery.startsWith('INSERT') && upperQuery.includes('AUDIT_LOGS')) {
-                        const result = await client.query(query);
+                        const result = await safeQuery(() => client.query(query));
                         resultHtml = '<div class="success">Audit log entry created. ' + result.rowCount + ' row(s) inserted.</div>';
                     }
                     else {
@@ -424,7 +563,7 @@ const server = http.createServer(async (req, res) => {
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate('SQL', content));
+            res.end(htmlTemplate('SQL', content, dbStatus));
         }
         
         // User Management page
@@ -436,19 +575,19 @@ const server = http.createServer(async (req, res) => {
             if (action && email) {
                 try {
                     if (action === 'promote-super') {
-                        await client.query("UPDATE users SET role = 'super-admin', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        await safeQuery(() => client.query("UPDATE users SET role = 'super-admin', \"updatedAt\" = NOW() WHERE email = $1", [email]));
                         actionResult = '<div class="success">User ' + escapeHtml(email) + ' promoted to SUPER ADMIN</div>';
                     } else if (action === 'promote-admin') {
-                        await client.query("UPDATE users SET role = 'admin', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        await safeQuery(() => client.query("UPDATE users SET role = 'admin', \"updatedAt\" = NOW() WHERE email = $1", [email]));
                         actionResult = '<div class="success">User ' + escapeHtml(email) + ' promoted to ADMIN</div>';
                     } else if (action === 'demote') {
-                        await client.query("UPDATE users SET role = 'user', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        await safeQuery(() => client.query("UPDATE users SET role = 'user', \"updatedAt\" = NOW() WHERE email = $1", [email]));
                         actionResult = '<div class="success">User ' + escapeHtml(email) + ' demoted to USER</div>';
                     } else if (action === 'ban') {
-                        await client.query("UPDATE users SET status = 'banned', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        await safeQuery(() => client.query("UPDATE users SET status = 'banned', \"updatedAt\" = NOW() WHERE email = $1", [email]));
                         actionResult = '<div class="success">User ' + escapeHtml(email) + ' has been BANNED</div>';
                     } else if (action === 'activate') {
-                        await client.query("UPDATE users SET status = 'active', \"updatedAt\" = NOW() WHERE email = $1", [email]);
+                        await safeQuery(() => client.query("UPDATE users SET status = 'active', \"updatedAt\" = NOW() WHERE email = $1", [email]));
                         actionResult = '<div class="success">User ' + escapeHtml(email) + ' has been ACTIVATED</div>';
                     }
                 } catch (err) {
@@ -457,7 +596,7 @@ const server = http.createServer(async (req, res) => {
             }
             
             // Get all users
-            const usersResult = await client.query("SELECT email, username, role, status, \"createdAt\" FROM users ORDER BY role, email");
+            const usersResult = await safeQuery(() => client.query("SELECT email, username, role, status, \"createdAt\" FROM users ORDER BY role, email"));
             
             let usersHtml = '<table><thead><tr><th>Email</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
             usersResult.rows.forEach(user => {
@@ -495,16 +634,16 @@ const server = http.createServer(async (req, res) => {
             `;
             
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate('User Management', content));
+            res.end(htmlTemplate('User Management', content, dbStatus));
         }
         
         // API endpoint for raw data
         else if (path === '/api/tables') {
-            const result = await client.query(`
+            const result = await safeQuery(() => client.query(`
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-            `);
+            `));
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(result.rows));
         }
@@ -512,19 +651,34 @@ const server = http.createServer(async (req, res) => {
         // 404
         else {
             res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(htmlTemplate('404', '<div class="error">Page not found</div>'));
+            res.end(htmlTemplate('404', '<div class="error">Page not found</div>', dbStatus));
         }
         
     } catch (error) {
         console.error('Error:', error);
         res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(htmlTemplate('Error', '<div class="error">Error: ' + escapeHtml(error.message) + '</div>'));
+        res.end(htmlTemplate('Error', '<div class="error">Error: ' + escapeHtml(error.message) + '</div>', dbStatus));
     }
 });
 
 // Start server
 async function start() {
-    await connectDB();
+    console.log('');
+    console.log('========================================');
+    console.log('  WSH Database Viewer');
+    console.log('  Starting on port ' + PORT);
+    console.log('========================================');
+    console.log('');
+    
+    // Try to connect to database (with retries)
+    const connected = await connectDB();
+    
+    if (!connected) {
+        console.log('');
+        console.log('[WARNING] Starting in degraded mode - database not connected');
+        console.log('[WARNING] You can still access /health endpoint');
+        console.log('');
+    }
     
     server.listen(PORT, '0.0.0.0', () => {
         console.log('');
@@ -533,6 +687,7 @@ async function start() {
         console.log('  Running on port ' + PORT);
         console.log('');
         console.log('  Open in browser: http://localhost:' + PORT);
+        console.log('  Health check:    http://localhost:' + PORT + '/health');
         console.log('========================================');
         console.log('');
     });
@@ -541,7 +696,26 @@ async function start() {
 // Handle shutdown
 process.on('SIGINT', async () => {
     console.log('\nShutting down...');
-    await client.end();
+    if (client) {
+        try {
+            await client.end();
+        } catch (e) {
+            // Ignore errors on shutdown
+        }
+    }
+    server.close();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    console.log('\nShutting down...');
+    if (client) {
+        try {
+            await client.end();
+        } catch (e) {
+            // Ignore errors on shutdown
+        }
+    }
     server.close();
     process.exit(0);
 });
