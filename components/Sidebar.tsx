@@ -21,6 +21,17 @@ interface SidebarProps {
   userRole?: string;
 }
 
+// Dark theme colors matching Weavenote
+const darkTheme = {
+  bg: 'rgba(30, 37, 50, 0.95)',
+  bgCard: 'rgba(30, 37, 50, 0.8)',
+  border: 'rgba(255, 255, 255, 0.05)',
+  accent: '#a78bfa', // purple
+  textPrimary: '#e2e8f0',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
+};
+
 const DEFAULT_TEMPLATES: QuickReferenceTemplate[] = [
   {
     id: 'bec-response-template',
@@ -74,13 +85,18 @@ const Calendar: React.FC<{ activeDate: Date | null; onDateClick: (d: Date | null
                     key={d}
                     onClick={() => onDateClick(isSelected ? null : date)}
                     className={`h-7 w-7 text-[10px] font-bold rounded-full flex items-center justify-center transition-all relative ${
-                        isSelected ? 'bg-primary-600 text-white shadow-md' : 
-                        isToday ? 'border border-primary-500 text-primary-600' : 
-                        'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        isSelected ? 'text-white shadow-md' : 
+                        isToday ? 'border text-white' : 
+                        'hover:bg-white/10'
                     }`}
+                    style={{
+                        background: isSelected ? darkTheme.accent : 'transparent',
+                        borderColor: isToday ? darkTheme.accent : 'transparent',
+                        color: isSelected ? 'white' : isToday ? darkTheme.accent : darkTheme.textSecondary
+                    }}
                 >
                     {d}
-                    {hasNotes && !isSelected && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary-400" />}
+                    {hasNotes && !isSelected && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: darkTheme.accent }} />}
                 </button>
             );
         }
@@ -88,162 +104,26 @@ const Calendar: React.FC<{ activeDate: Date | null; onDateClick: (d: Date | null
     };
 
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="rounded-xl p-4" style={{ background: darkTheme.bgCard, border: `1px solid ${darkTheme.border}` }}>
             <div className="flex items-center justify-between mb-3 px-1">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200">{monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}</h4>
+                <h4 className="text-xs font-bold" style={{ color: darkTheme.textPrimary }}>{monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}</h4>
                 <div className="flex gap-1">
-                    <button onClick={handlePrev} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                    <button onClick={handlePrev} className="p-1 rounded hover:bg-white/10 transition-colors" style={{ color: darkTheme.textSecondary }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m15 18-6-6 6-6"/></svg>
                     </button>
-                    <button onClick={handleNext} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                    <button onClick={handleNext} className="p-1 rounded hover:bg-white/10 transition-colors" style={{ color: darkTheme.textSecondary }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m9 18 6-6-6-6"/></svg>
                     </button>
                 </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center mb-1">
-                {days.map((day, i) => <div key={`${day}-${i}`} className="text-[9px] font-bold text-slate-400">{day}</div>)}
+                {days.map((day, i) => <div key={`${day}-${i}`} className="text-[9px] font-bold" style={{ color: darkTheme.textMuted }}>{day}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-1">
                 {renderDays()}
             </div>
             {activeDate && (
-                <button onClick={() => onDateClick(null)} className="w-full mt-2 text-[10px] text-primary-600 hover:underline font-bold">Clear Date Filter</button>
-            )}
-        </div>
-    );
-};
-
-// Today's Things Component
-const TodaysThings: React.FC<{ notes: Note[]; onNoteClick: (note: Note) => void }> = ({ notes, onNoteClick }) => {
-    const today = new Date();
-    const todayStr = today.toDateString();
-    
-    const todaysNotes = useMemo(() => {
-        return notes.filter(n => {
-            const noteDate = new Date(n.createdAt).toDateString();
-            return noteDate === todayStr;
-        }).slice(0, 5);
-    }, [notes, todayStr]);
-
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
-    };
-
-    return (
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-600">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-xs uppercase tracking-wider">TODAY'S THINGS</h3>
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-3">{formatDate(today)}</p>
-            
-            {todaysNotes.length === 0 ? (
-                <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">Nothing for today yet</p>
-            ) : (
-                <div className="space-y-2">
-                    {todaysNotes.map(note => (
-                        <button 
-                            key={note.id}
-                            onClick={() => onNoteClick(note)}
-                            className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors truncate"
-                        >
-                            <span className="font-medium">{note.title}</span>
-                            <span className="text-slate-400 dark:text-slate-500 ml-2">#{note.type}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
-
-// Ongoing Projects Component
-const OngoingProjects: React.FC<{ notes: Note[]; onNoteClick: (note: Note) => void }> = ({ notes, onNoteClick }) => {
-    const projects = useMemo(() => {
-        return notes
-            .filter(n => n.type === 'project' && n.projectData)
-            .map(n => ({
-                id: n.id,
-                title: n.title,
-                progress: calculateProgress(n.projectData!),
-                isCompleted: n.projectData?.isCompleted
-            }))
-            .filter(p => !p.isCompleted)
-            .sort((a, b) => b.progress - a.progress)
-            .slice(0, 5);
-    }, [notes]);
-
-    function calculateProgress(data: ProjectData): number {
-        if (data.manualProgress !== undefined) return data.manualProgress;
-        
-        const objectives = data.objectives || [];
-        const deliverables = data.deliverables || [];
-        const allItems = [...objectives, ...deliverables];
-        
-        if (allItems.length === 0) return 0;
-        
-        const completed = allItems.filter(i => i.status === 'completed').length;
-        return Math.round((completed / allItems.length) * 100);
-    }
-
-    const getProgressColor = (progress: number) => {
-        if (progress >= 75) return 'bg-green-500';
-        if (progress >= 50) return 'bg-blue-500';
-        if (progress >= 25) return 'bg-yellow-500';
-        return 'bg-slate-400';
-    };
-
-    return (
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-600">
-                    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
-                    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
-                    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
-                    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
-                </svg>
-                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-xs uppercase tracking-wider">ONGOING PROJECTS</h3>
-            </div>
-            
-            {projects.length === 0 ? (
-                <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">No ongoing projects</p>
-            ) : (
-                <div className="space-y-3">
-                    {projects.map(project => (
-                        <button 
-                            key={project.id}
-                            onClick={() => {
-                                const note = notes.find(n => n.id === project.id);
-                                if (note) onNoteClick(note);
-                            }}
-                            className="w-full text-left group"
-                        >
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary-600 transition-colors">
-                                    {project.title}
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-2">
-                                    {project.progress}%
-                                </span>
-                            </div>
-                            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                <div 
-                                    className={`h-full ${getProgressColor(project.progress)} rounded-full transition-all duration-300`}
-                                    style={{ width: `${project.progress}%` }}
-                                />
-                            </div>
-                        </button>
-                    ))}
-                </div>
+                <button onClick={() => onDateClick(null)} className="w-full mt-2 text-[10px] font-bold hover:underline" style={{ color: darkTheme.accent }}>Clear Date Filter</button>
             )}
         </div>
     );
@@ -403,32 +283,34 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className={`w-full lg:w-72 flex-shrink-0 space-y-6 ${className}`}>
+    <aside className={`w-full lg:w-72 flex-shrink-0 space-y-4 ${className}`} style={{ background: 'transparent' }}>
       
-      {/* Today's Things Section */}
-      <TodaysThings notes={notes} onNoteClick={onNoteClick} />
-      
-      {/* Ongoing Projects Section */}
-      <OngoingProjects notes={notes} onNoteClick={onNoteClick} />
-
+      {/* Calendar - at top like Weavenote */}
       <Calendar activeDate={activeDate} onDateClick={onDateClick} notes={notes} />
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="flex justify-between items-center mb-4 border-b border-slate-50 dark:border-slate-700 pb-2">
-          <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 text-xs uppercase tracking-wider">⚡ Quick References</h3>
-          <button onClick={() => setShowTemplateForm(prev => !prev)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors" title="Add Template">
+      {/* Quick References Section */}
+      <div className="rounded-xl p-4" style={{ background: darkTheme.bgCard, border: `1px solid ${darkTheme.border}` }}>
+        <div className="flex justify-between items-center mb-3 pb-2" style={{ borderBottom: `1px solid ${darkTheme.border}` }}>
+          <h3 className="font-bold flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: darkTheme.textSecondary }}>
+            {/* Lightning bolt icon */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: darkTheme.accent }}>
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            QUICK REFERENCES
+          </h3>
+          <button onClick={() => setShowTemplateForm(prev => !prev)} className="p-1 rounded hover:bg-white/10 transition-colors" style={{ color: darkTheme.textMuted }} title="Add Template">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
         </div>
 
         {showTemplateForm && (
           <form onSubmit={handleCreateTemplate} className="space-y-2 mb-3">
-            <input value={newTemplateTitle} onChange={(e) => setNewTemplateTitle(e.target.value)} placeholder="Template title" className="w-full px-2 py-1.5 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500" />
-            <select value={newTemplateType} onChange={(e) => setNewTemplateType(e.target.value as NoteType)} className="w-full px-2 py-1.5 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500">
+            <input value={newTemplateTitle} onChange={(e) => setNewTemplateTitle(e.target.value)} placeholder="Template title" className="w-full px-2 py-1.5 text-sm rounded outline-none focus:ring-1" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }} />
+            <select value={newTemplateType} onChange={(e) => setNewTemplateType(e.target.value as NoteType)} className="w-full px-2 py-1.5 text-sm rounded outline-none focus:ring-1" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }}>
               {(['quick', 'notebook', 'deep', 'code', 'project', 'document'] as NoteType[]).map(type => <option key={type} value={type}>{type}</option>)}
             </select>
-            <textarea value={newTemplateSteps} onChange={(e) => setNewTemplateSteps(e.target.value)} placeholder="One workflow step per line" className="w-full h-24 px-2 py-1.5 text-xs border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500" />
-            <button type="submit" className="w-full px-3 py-1.5 rounded bg-primary-600 text-white text-[11px] font-bold uppercase tracking-widest">Save Template</button>
+            <textarea value={newTemplateSteps} onChange={(e) => setNewTemplateSteps(e.target.value)} placeholder="One workflow step per line" className="w-full h-24 px-2 py-1.5 text-xs rounded outline-none focus:ring-1" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }} />
+            <button type="submit" className="w-full px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-widest text-white" style={{ background: darkTheme.accent }}>Save Template</button>
           </form>
         )}
 
@@ -437,36 +319,36 @@ const Sidebar: React.FC<SidebarProps> = ({
             const isExpanded = expandedTemplates.has(template.id);
             const isEditing = editingTemplateId === template.id;
             return (
-              <div key={template.id} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                <button onClick={() => toggleTemplateExpansion(template.id)} className="w-full px-3 py-2 text-left text-xs font-bold flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/40 text-slate-700 dark:text-slate-200">
+              <div key={template.id} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${darkTheme.border}` }}>
+                <button onClick={() => toggleTemplateExpansion(template.id)} className="w-full px-3 py-2 text-left text-xs font-bold flex items-center justify-between hover:bg-white/5 transition-colors" style={{ color: darkTheme.textPrimary }}>
                   <span className="truncate pr-2">{template.title}</span>
                   <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m9 18 6-6-6-6"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ color: darkTheme.textMuted }}><path d="m9 18 6-6-6-6"/></svg>
                   </span>
                 </button>
 
                 {isExpanded && (
-                  <div className="px-3 pb-3 pt-1 bg-slate-50/70 dark:bg-slate-900/40">
+                  <div className="px-3 pb-3 pt-1" style={{ background: 'rgba(0,0,0,0.2)' }}>
                     {isEditing ? (
                       <form onSubmit={handleSaveTemplateEdit} className="space-y-2">
-                        <input value={editingTemplateTitle} onChange={(e) => setEditingTemplateTitle(e.target.value)} placeholder="Template title" className="w-full px-2 py-1.5 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500" />
-                        <select value={editingTemplateType} onChange={(e) => setEditingTemplateType(e.target.value as NoteType)} className="w-full px-2 py-1.5 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500">
+                        <input value={editingTemplateTitle} onChange={(e) => setEditingTemplateTitle(e.target.value)} placeholder="Template title" className="w-full px-2 py-1.5 text-sm rounded outline-none" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }} />
+                        <select value={editingTemplateType} onChange={(e) => setEditingTemplateType(e.target.value as NoteType)} className="w-full px-2 py-1.5 text-sm rounded outline-none" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }}>
                           {(['quick', 'notebook', 'deep', 'code', 'project', 'document'] as NoteType[]).map(type => <option key={`${template.id}-${type}`} value={type}>{type}</option>)}
                         </select>
-                        <textarea value={editingTemplateSteps} onChange={(e) => setEditingTemplateSteps(e.target.value)} placeholder="One workflow step per line" className="w-full h-24 px-2 py-1.5 text-xs border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500" />
+                        <textarea value={editingTemplateSteps} onChange={(e) => setEditingTemplateSteps(e.target.value)} placeholder="One workflow step per line" className="w-full h-24 px-2 py-1.5 text-xs rounded outline-none" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }} />
                         <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={handleCancelTemplateEdit} className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-600 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-200">Cancel</button>
-                          <button type="submit" className="px-3 py-1.5 rounded bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest">Save</button>
+                          <button type="button" onClick={handleCancelTemplateEdit} className="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest" style={{ border: `1px solid ${darkTheme.border}`, color: darkTheme.textSecondary }}>Cancel</button>
+                          <button type="submit" className="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest text-white" style={{ background: darkTheme.accent }}>Save</button>
                         </div>
                       </form>
                     ) : (
                       <>
                         <ol className="space-y-1 mb-3">
-                          {template.workflowSteps.map((step, index) => <li key={`${template.id}-${index}`} className="text-[11px] text-slate-500 dark:text-slate-300">{index + 1}. {step}</li>)}
+                          {template.workflowSteps.map((step, index) => <li key={`${template.id}-${index}`} className="text-[11px]" style={{ color: darkTheme.textSecondary }}>{index + 1}. {step}</li>)}
                         </ol>
                         <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => onApplyTemplate(template)} className="px-3 py-1.5 rounded bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest">Use Template</button>
-                          <button onClick={() => handleStartEditTemplate(template)} className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-600 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-200">Edit</button>
+                          <button onClick={() => onApplyTemplate(template)} className="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest text-white" style={{ background: darkTheme.accent }}>Use Template</button>
+                          <button onClick={() => handleStartEditTemplate(template)} className="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest" style={{ border: `1px solid ${darkTheme.border}`, color: darkTheme.textSecondary }}>Edit</button>
                         </div>
                       </>
                     )}
@@ -478,10 +360,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex justify-between items-center mb-4 border-b border-slate-50 dark:border-slate-700 pb-2">
-            <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 text-xs uppercase tracking-wider">🗂️ Folders</h3>
-            <button onClick={() => setIsCreatingFolder(true)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors">
+      {/* Folders Section */}
+      <div className="rounded-xl p-4" style={{ background: darkTheme.bgCard, border: `1px solid ${darkTheme.border}` }}>
+          <div className="flex justify-between items-center mb-3 pb-2" style={{ borderBottom: `1px solid ${darkTheme.border}` }}>
+            <h3 className="font-bold flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: darkTheme.textSecondary }}>
+              {/* Folder icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: darkTheme.accent }}>
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              FOLDERS
+            </h3>
+            <button onClick={() => setIsCreatingFolder(true)} className="p-1 rounded hover:bg-white/10 transition-colors" style={{ color: darkTheme.textMuted }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
           </div>
@@ -495,7 +384,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onChange={e => setNewFolderName(e.target.value)}
                 placeholder="Folder name..."
                 onBlur={() => !newFolderName && setIsCreatingFolder(false)}
-                className="w-full px-2 py-1.5 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full px-2 py-1.5 text-sm rounded outline-none focus:ring-1"
+                style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${darkTheme.border}`, color: darkTheme.textPrimary }}
               />
             </form>
           )}
@@ -506,11 +396,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onDragOver={(e) => handleDragOver(e, null)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, undefined)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all group/all-notes ${activeFolderId === null ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'} ${dragOverFolderId === 'null' ? 'ring-2 ring-primary-500 ring-inset bg-primary-100/50' : ''}`}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all group/all-notes ${activeFolderId === null ? 'bg-white/10' : 'hover:bg-white/5'} ${dragOverFolderId === 'null' ? 'ring-2 ring-inset' : ''}`}
+                  style={{ color: activeFolderId === null ? darkTheme.textPrimary : darkTheme.textSecondary, borderColor: dragOverFolderId === 'null' ? darkTheme.accent : 'transparent' }}
                >
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: darkTheme.accent }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                  All Notes
-                 {dragOverFolderId === 'null' && <span className="ml-auto text-[10px] font-bold text-primary-600 animate-pulse text-right">Move</span>}
+                 {dragOverFolderId === 'null' && <span className="ml-auto text-[10px] font-bold animate-pulse text-right" style={{ color: darkTheme.accent }}>Move</span>}
                </button>
                {folders.map(folder => {
                    const isExpanded = expandedFolders.has(folder.id);
@@ -523,28 +414,30 @@ const Sidebar: React.FC<SidebarProps> = ({
                          onDragOver={(e) => handleDragOver(e, folder.id)}
                          onDragLeave={handleDragLeave}
                          onDrop={(e) => handleDrop(e, folder.id)}
-                         className={`w-full flex items-center rounded-lg transition-all ${activeFolderId === folder.id ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'} ${isDragOver ? 'ring-2 ring-primary-500 ring-inset bg-primary-100/50 scale-[1.02] shadow-md' : ''}`}
+                         className={`w-full flex items-center rounded-lg transition-all ${activeFolderId === folder.id ? 'bg-white/10' : 'hover:bg-white/5'} ${isDragOver ? 'ring-2 ring-inset bg-white/5' : ''}`}
+                         style={{ borderColor: isDragOver ? darkTheme.accent : 'transparent' }}
                        >
                            <button 
                              onClick={(e) => toggleFolderExpansion(e, folder.id)}
                              className={`p-2 transition-transform duration-200 transform ${isExpanded ? 'rotate-90' : ''}`}
                              title={isExpanded ? "Collapse" : "Expand"}
                            >
-                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m9 18 6-6 6-6"/></svg>
+                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ color: darkTheme.textMuted }}><path d="m9 18 6-6 6-6"/></svg>
                            </button>
                            
                            <button 
                               onClick={() => onFolderClick(folder.id)} 
                               className="flex-1 text-left py-2 text-sm font-medium truncate"
+                              style={{ color: activeFolderId === folder.id ? darkTheme.textPrimary : darkTheme.textSecondary }}
                            >
                              {folder.name}
                            </button>
                            
                            <div className="flex items-center gap-1.5 pr-2">
-                             <span className="text-[10px] opacity-40 font-mono text-right min-w-[14px]">{folderNotes.length}</span>
+                             <span className="text-[10px] font-mono text-right min-w-[14px]" style={{ color: darkTheme.textMuted }}>{folderNotes.length}</span>
                              <button 
                                onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); }}
-                               className="opacity-0 group-hover/folder:opacity-100 p-1 hover:text-red-500 transition-opacity"
+                               className="opacity-0 group-hover/folder:opacity-100 p-1 transition-opacity hover:text-red-400"
                                title="Delete Folder"
                              >
                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -553,17 +446,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                        </div>
                        
                        {isExpanded && (
-                         <div className="ml-5 space-y-0.5 border-l-2 border-slate-100 dark:border-slate-700 pl-2 animate-[fadeIn_0.1s_ease-out]">
+                         <div className="ml-5 space-y-0.5 pl-2" style={{ borderLeft: `2px solid ${darkTheme.border}` }}>
                            {folderNotes.map(note => (
                              <button 
                                 key={note.id}
                                 onClick={() => onNoteClick(note)}
-                                className="w-full text-left px-2 py-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+                                className="w-full text-left px-2 py-1 text-[11px] transition-colors truncate hover:text-white"
+                                style={{ color: darkTheme.textSecondary }}
                              >
                                • {note.title}
                              </button>
                            ))}
-                           {folderNotes.length === 0 && <p className="px-2 py-1 text-[10px] text-slate-300 italic">No notes in folder</p>}
+                           {folderNotes.length === 0 && <p className="px-2 py-1 text-[10px] italic" style={{ color: darkTheme.textMuted }}>No notes in folder</p>}
                          </div>
                        )}
                      </div>
@@ -572,27 +466,38 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex justify-between items-center mb-4 border-b border-slate-50 dark:border-slate-700 pb-2">
-            <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 text-xs uppercase tracking-wider">🏷️ Popular Tags</h3>
+      {/* Popular Tags Section */}
+      <div className="rounded-xl p-4" style={{ background: darkTheme.bgCard, border: `1px solid ${darkTheme.border}` }}>
+          <div className="flex justify-between items-center mb-3 pb-2" style={{ borderBottom: `1px solid ${darkTheme.border}` }}>
+            <h3 className="font-bold flex items-center gap-2 text-xs uppercase tracking-wider" style={{ color: darkTheme.textSecondary }}>
+              {/* Tag icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: darkTheme.accent }}>
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              POPULAR TAGS
+            </h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {popularTags.map(([tag, count]) => {
                 const isActive = activeTag === tag;
-                const style = getTagStyle(tag, isActive);
                 return (
                     <button 
                         key={tag} 
                         onClick={() => onTagClick(tag)}
-                        style={style}
                         className={`px-3 py-1 text-[10px] font-black uppercase tracking-tight rounded-full border transition-all flex items-center gap-2 hover:scale-110 active:scale-95`}
+                        style={{
+                          background: isActive ? darkTheme.accent : 'rgba(255,255,255,0.05)',
+                          borderColor: isActive ? darkTheme.accent : 'rgba(255,255,255,0.1)',
+                          color: isActive ? 'white' : darkTheme.textSecondary
+                        }}
                     >
                         <span>#{tag}</span>
-                        <span className={`text-[8px] opacity-60 font-mono`}>{count}</span>
+                        <span className="text-[8px] opacity-60 font-mono">{count}</span>
                     </button>
                 );
             })}
-            {popularTags.length === 0 && <p className="text-[10px] italic text-slate-400 py-4 w-full text-center">AI generating tags in background...</p>}
+            {popularTags.length === 0 && <p className="text-[10px] italic py-4 w-full text-center" style={{ color: darkTheme.textMuted }}>AI generating tags in background...</p>}
           </div>
       </div>
     </aside>
