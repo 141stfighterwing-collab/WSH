@@ -96,7 +96,7 @@ $script:Config = @{
     # Database Configuration (placeholder values - to be changed in production)
     DbName            = "wsh_db"
     DbUser            = "wsh"
-    DbPassword        = "wsh_secure_password_CHANGE_ME"
+    DbPassword        = "wsh_secure_password"
     
     # Default Admin Credentials (CHANGE THESE!)
     AdminEmail        = "admin@wsh.local"
