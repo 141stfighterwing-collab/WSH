@@ -64,9 +64,6 @@ upload/
 # Installer files (not needed in container)
 installer/
 
-# Services not used in container
-services/
-
 # Misc
 bun.lock
 *.docx
