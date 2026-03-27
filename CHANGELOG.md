@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.3.0] - 2026-03-27
+## [2.4.0] - 2026-03-27
+
+### Added
+
+#### New Sidebar Sections
+- **TODAY'S THINGS**: Shows notes created today with quick access links
+- **ONGOING PROJECTS**: Displays active projects with progress bars
+  - Color-coded progress indicators (green > 75%, blue > 50%, yellow > 25%)
+  - Click to open project details
+  - Sorted by progress percentage
+
+#### User Role Display
+- Added `userRole` prop to Sidebar component
+- Support for displaying user role (super-admin, admin, user)
+- SUPER ADMIN role now available for elevated permissions
+
+#### User Management Updates
+- New script: `update-users.ps1` for quick user updates
+- Admin password can be changed via command line
+- Users can be promoted to SUPER ADMIN role
+
+### Changed
+
+- Updated Sidebar component with new sections at the top
+- Improved project progress calculation logic
+- Enhanced UI with better visual hierarchy
+
+### Fixed
+
+- Fixed user role hierarchy to support SUPER ADMIN
+- Fixed project progress bar display colors
+
+---
+
+## [2.3.0] - 2026-03-27 (HOTFIX)
 
 ### Added
 
@@ -47,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Dockerfile script creation using `RUN echo` (now uses `COPY`)
 - Fixed startup script to show actual Prisma output for debugging
 - Fixed table creation to handle "already exists" gracefully
+- **HOTFIX**: Fixed weird characters in db-viewer.js by removing emojis
+- **HOTFIX**: Fixed database credentials mismatch by removing old volume
+- **HOTFIX**: Fixed `pg` module missing error by moving install after standalone copy
+- **HOTFIX**: Fixed Prisma `--skip-generate` deprecated flag issue
 
 ---
 
@@ -159,13 +197,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
-| Version | Date | Key Features |
-|---------|------|--------------|
-| 2.3.0 | 2026-03-27 | Database Viewer UI, Interactive Fix Tool |
-| 2.2.0 | 2026-03-26 | Database Diagnostic Tools, Schema Injection |
-| 2.1.0 | 2026-03-26 | Testing Report, Benchmarks, Error Handling |
-| 2.0.0 | 2026-03-25 | PowerShell Executor, Full API |
-| 1.0.0 | 2026-03-20 | Initial Release |
+| Version | Date | Type | Key Features |
+|---------|------|------|--------------|
+| 2.4.0 | 2026-03-27 | FEATURE | Today's Things, Ongoing Projects Sidebar, SUPER ADMIN |
+| 2.3.0 | 2026-03-27 | HOTFIX | Database Viewer UI, Interactive Fix Tool, Multiple Hotfixes |
+| 2.2.0 | 2026-03-26 | FEATURE | Database Diagnostic Tools, Schema Injection |
+| 2.1.0 | 2026-03-26 | FEATURE | Testing Report, Benchmarks, Error Handling |
+| 2.0.0 | 2026-03-25 | MAJOR | PowerShell Executor, Full API |
+| 1.0.0 | 2026-03-20 | RELEASE | Initial Release |
+
+---
+
+## Patch Notes
+
+### Patch 2.4.0-p1 (2026-03-27)
+- Added `update-users.ps1` script for quick user management
+- Admin password update: `admin@wsh.local` password changed to `123456`
+- User promotion: Shootre promoted to SUPER ADMIN role
+- Added userRole prop to Sidebar component
+
+### Patch 2.3.0-p3 (2026-03-27)
+- HOTFIX: Removed emojis from db-viewer.js to fix encoding issues
+- HOTFIX: Added direct SQL table creation fallback
+- HOTFIX: Added admin user creation via SQL with bcrypt hash
+
+### Patch 2.3.0-p2 (2026-03-27)
+- HOTFIX: Fixed `pg` module missing error
+- HOTFIX: Moved npm install pg after standalone copy in Dockerfile
+- HOTFIX: Removed deprecated `--skip-generate` flag from Prisma
+
+### Patch 2.3.0-p1 (2026-03-27)
+- HOTFIX: Fixed database credentials mismatch
+- HOTFIX: Removed old Docker volume to reset database
+- Added direct SQL table creation via psql
 
 ---
 
@@ -215,7 +279,15 @@ start http://localhost:5682
 
 ## Future Roadmap
 
-### Planned for v2.4.0
+### Planned for v2.5.0
+
+- [ ] Hashtags support for notes
+- [ ] All themes from Weavenote main app
+- [ ] Calendar integration improvements
+- [ ] Analytics Dashboard for users
+- [ ] User persona analytics
+
+### Planned for v2.6.0
 
 - [ ] Database backup/restore functionality
 - [ ] User management UI in database viewer

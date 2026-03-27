@@ -81,10 +81,9 @@ COPY . .
 # Copy PowerShell modules and scripts
 COPY pwsh/modules/ /modules/
 COPY pwsh/app/ /app/pwsh/
-COPY pwsh/scripts/ /scripts/
 
 # Set permissions for PowerShell scripts
-RUN chmod -R 755 /modules /app/pwsh /scripts
+RUN chmod -R 755 /modules /app/pwsh
 
 # Generate Prisma Client again for this stage
 RUN npx prisma generate
@@ -134,24 +133,26 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 # This adds pg to the existing node_modules
 RUN npm install pg --save || true
 
-# Copy PowerShell modules and scripts
+# Copy PowerShell modules and pwsh scripts
 COPY --from=builder /modules/ /modules/
 COPY --from=builder /app/pwsh/ /app/pwsh/
-COPY --from=builder /scripts/ /scripts/
 
-# Copy startup and healthcheck scripts from the scripts directory
+# Copy all management scripts from scripts directory
 COPY scripts/start.ps1 /app/start.ps1
 COPY scripts/healthcheck.ps1 /app/healthcheck.ps1
 COPY scripts/db-diagnostic.ps1 /scripts/db-diagnostic.ps1
 COPY scripts/db-inject-schema.ps1 /scripts/db-inject-schema.ps1
 COPY scripts/db-fix-tool.ps1 /scripts/db-fix-tool.ps1
+COPY scripts/user-management.ps1 /scripts/user-management.ps1
+COPY scripts/update-users.ps1 /scripts/update-users.ps1
 COPY scripts/db-viewer.js /app/db-viewer.js
 COPY scripts/inject-schema.js /app/inject-schema.js
+COPY pwsh/scripts/*.ps1 /scripts/
 COPY schema/tables.json /schema/tables.json
 
 # Set permissions
 RUN chmod -R 755 /modules /app/pwsh /scripts /logs /output /config /data /app /schema && \
-    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /app/inject-schema.js /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 /scripts/db-fix-tool.ps1 && \
+    chmod +x /app/start.ps1 /app/healthcheck.ps1 /app/db-viewer.js /app/inject-schema.js /scripts/db-diagnostic.ps1 /scripts/db-inject-schema.ps1 /scripts/db-fix-tool.ps1 /scripts/user-management.ps1 /scripts/update-users.ps1 && \
     chown -R nextjs:nodejs /app /logs /output /config /scripts /data /schema
 
 # Health check configuration

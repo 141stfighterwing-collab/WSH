@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Note, Folder, NoteType, QuickReferenceTemplate } from '../types';
+import { Note, Folder, NoteType, QuickReferenceTemplate, ProjectData } from '../types';
 import { getTagStyle } from '../utils/styleUtils';
 
 interface SidebarProps {
@@ -18,6 +18,7 @@ interface SidebarProps {
   onDateClick: (date: Date | null) => void;
   onApplyTemplate: (template: QuickReferenceTemplate) => void;
   className?: string;
+  userRole?: string;
 }
 
 const DEFAULT_TEMPLATES: QuickReferenceTemplate[] = [
@@ -112,10 +113,147 @@ const Calendar: React.FC<{ activeDate: Date | null; onDateClick: (d: Date | null
     );
 };
 
+// Today's Things Component
+const TodaysThings: React.FC<{ notes: Note[]; onNoteClick: (note: Note) => void }> = ({ notes, onNoteClick }) => {
+    const today = new Date();
+    const todayStr = today.toDateString();
+    
+    const todaysNotes = useMemo(() => {
+        return notes.filter(n => {
+            const noteDate = new Date(n.createdAt).toDateString();
+            return noteDate === todayStr;
+        }).slice(0, 5);
+    }, [notes, todayStr]);
+
+    const formatDate = (date: Date) => {
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-600">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-xs uppercase tracking-wider">TODAY'S THINGS</h3>
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-3">{formatDate(today)}</p>
+            
+            {todaysNotes.length === 0 ? (
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">Nothing for today yet</p>
+            ) : (
+                <div className="space-y-2">
+                    {todaysNotes.map(note => (
+                        <button 
+                            key={note.id}
+                            onClick={() => onNoteClick(note)}
+                            className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors truncate"
+                        >
+                            <span className="font-medium">{note.title}</span>
+                            <span className="text-slate-400 dark:text-slate-500 ml-2">#{note.type}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Ongoing Projects Component
+const OngoingProjects: React.FC<{ notes: Note[]; onNoteClick: (note: Note) => void }> = ({ notes, onNoteClick }) => {
+    const projects = useMemo(() => {
+        return notes
+            .filter(n => n.type === 'project' && n.projectData)
+            .map(n => ({
+                id: n.id,
+                title: n.title,
+                progress: calculateProgress(n.projectData!),
+                isCompleted: n.projectData?.isCompleted
+            }))
+            .filter(p => !p.isCompleted)
+            .sort((a, b) => b.progress - a.progress)
+            .slice(0, 5);
+    }, [notes]);
+
+    function calculateProgress(data: ProjectData): number {
+        if (data.manualProgress !== undefined) return data.manualProgress;
+        
+        const objectives = data.objectives || [];
+        const deliverables = data.deliverables || [];
+        const allItems = [...objectives, ...deliverables];
+        
+        if (allItems.length === 0) return 0;
+        
+        const completed = allItems.filter(i => i.status === 'completed').length;
+        return Math.round((completed / allItems.length) * 100);
+    }
+
+    const getProgressColor = (progress: number) => {
+        if (progress >= 75) return 'bg-green-500';
+        if (progress >= 50) return 'bg-blue-500';
+        if (progress >= 25) return 'bg-yellow-500';
+        return 'bg-slate-400';
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-600">
+                    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+                    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+                </svg>
+                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-xs uppercase tracking-wider">ONGOING PROJECTS</h3>
+            </div>
+            
+            {projects.length === 0 ? (
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">No ongoing projects</p>
+            ) : (
+                <div className="space-y-3">
+                    {projects.map(project => (
+                        <button 
+                            key={project.id}
+                            onClick={() => {
+                                const note = notes.find(n => n.id === project.id);
+                                if (note) onNoteClick(note);
+                            }}
+                            className="w-full text-left group"
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary-600 transition-colors">
+                                    {project.title}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-2">
+                                    {project.progress}%
+                                </span>
+                            </div>
+                            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full ${getProgressColor(project.progress)} rounded-full transition-all duration-300`}
+                                    style={{ width: `${project.progress}%` }}
+                                />
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({ 
     notes, folders, onTagClick, onNoteClick, onFolderClick, 
     onCreateFolder, onDeleteFolder, onReorderFolders, onMoveNote,
-    activeTag, activeFolderId, activeDate, onDateClick, onApplyTemplate, className = "" 
+    activeTag, activeFolderId, activeDate, onDateClick, onApplyTemplate, className = "",
+    userRole = "user"
 }) => {
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -267,6 +405,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className={`w-full lg:w-72 flex-shrink-0 space-y-6 ${className}`}>
       
+      {/* Today's Things Section */}
+      <TodaysThings notes={notes} onNoteClick={onNoteClick} />
+      
+      {/* Ongoing Projects Section */}
+      <OngoingProjects notes={notes} onNoteClick={onNoteClick} />
+
       <Calendar activeDate={activeDate} onDateClick={onDateClick} notes={notes} />
 
       <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
