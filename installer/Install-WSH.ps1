@@ -1409,10 +1409,13 @@ function Start-ApplicationDeployment {
         Write-SubStep "Waiting for application to start..." -Status running
         
         $retries = 0
-        $maxRetries = $script:Config.MaxRetries
+        $maxRetries = 60  # Increased from 30
         $ready = $false
         
         while ($retries -lt $maxRetries) {
+            # First check if container is still running
+            $containerStatus = docker ps --filter "name=$($script:Config.AppContainer)" --format "{{.Status}}" 2>&1
+            
             try {
                 $response = Invoke-WebRequest -Uri "http://localhost:$AppPort/api/health" -TimeoutSec 5 -ErrorAction SilentlyContinue
                 if ($response.StatusCode -eq 200) {
@@ -1420,18 +1423,52 @@ function Start-ApplicationDeployment {
                     break
                 }
             } catch {
-                # Continue waiting
+                # Check if app is running on port directly
+                try {
+                    $response = Invoke-WebRequest -Uri "http://localhost:$AppPort" -TimeoutSec 5 -ErrorAction SilentlyContinue
+                    if ($response.StatusCode -eq 200) {
+                        $ready = $true
+                        break
+                    }
+                } catch {
+                    # Continue waiting
+                }
             }
             
             $retries++
-            Write-ProgressDetail -Activity "Deploying Application" -Status "Waiting for application... ($retries/$maxRetries)" -PercentComplete (75 + ($retries / $maxRetries * 20))
-            Start-Sleep -Seconds $script:Config.RetryDelaySeconds
+            
+            # Show progress and container status
+            $progressPercent = 75 + [math]::Round(($retries / $maxRetries) * 20)
+            Write-ProgressDetail -Activity "Deploying Application" -Status "Waiting for application... ($retries/$maxRetries) - $containerStatus" -PercentComplete $progressPercent
+            
+            # Every 10 retries, show container logs
+            if ($retries % 10 -eq 0) {
+                Write-Host "  Container Status: $containerStatus" -ForegroundColor DarkGray
+                Write-Host "  --- Last 5 log lines ---" -ForegroundColor DarkGray
+                docker logs $script:Config.AppContainer --tail 5 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+                Write-Host "  ------------------------" -ForegroundColor DarkGray
+            }
+            
+            Start-Sleep -Seconds 3
         }
         
         if (-not $ready) {
             Write-SubStep "Application failed to become ready after $maxRetries attempts" -Status error
             Write-Log "Application failed to become ready after $maxRetries attempts" -Level ERROR
-            return @{ Success = $false; Message = "Application failed to become ready" }
+            
+            # Show full container logs for debugging
+            Write-Host ""
+            Write-Host "  ========== CONTAINER LOGS (for debugging) ==========" -ForegroundColor Red
+            docker logs $script:Config.AppContainer 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+            Write-Host "  ===================================================" -ForegroundColor Red
+            Write-Host ""
+            
+            # Write logs to file
+            $containerLogPath = Join-Path $InstallPath "container-error.log"
+            docker logs $script:Config.AppContainer 2>&1 | Out-File -FilePath $containerLogPath -Encoding UTF8
+            Write-Host "  Container logs saved to: $containerLogPath" -ForegroundColor Yellow
+            
+            return @{ Success = $false; Message = "Application failed to become ready. Check container logs above or in: $containerLogPath" }
         }
         
         Write-SubStep "WSH application is ready!" -Status success
