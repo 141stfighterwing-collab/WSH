@@ -1249,18 +1249,127 @@ function Start-ApplicationDeployment {
             Write-SubStep "Dockerfile patched: using 'npm install' instead of 'npm ci'" -Status success
         }
         
-        # Build Docker image locally - show output for debugging
+        # Build Docker image locally - STREAM OUTPUT IN REAL-TIME
         Write-ProgressDetail -Activity "Deploying Application" -Status "Building WSH Docker image (this may take 3-5 minutes)..." -PercentComplete 30
         Write-SubStep "Building WSH Docker image locally..." -Status running
-        Write-Host "  --- Docker Build Output ---" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "  ========================================" -ForegroundColor Cyan
+        Write-Host "  DOCKER BUILD - REAL-TIME OUTPUT" -ForegroundColor Cyan
+        Write-Host "  (This takes 3-5 minutes, please wait...)" -ForegroundColor DarkGray
+        Write-Host "  ========================================" -ForegroundColor Cyan
+        Write-Host ""
         
         Push-Location $repoPath
-        $buildOutput = docker build -t wsh-app:latest . 2>&1
+        
+        # Define build stages for progress tracking
+        $buildStages = @(
+            @{Name="Base image pull"; Percent=35},
+            @{Name="Install dependencies"; Percent=50},
+            @{Name="Prisma generate"; Percent=65},
+            @{Name="Next.js build"; Percent=80},
+            @{Name="Finalizing image"; Percent=90}
+        )
+        $currentStage = 0
+        $startTime = Get-Date
+        
+        # Run docker build and stream output line by line
+        $buildProcess = Start-Process -FilePath "docker" -ArgumentList "build -t wsh-app:latest ." -RedirectStandardOutput "docker-build.out" -RedirectStandardError "docker-build.err" -NoNewWindow -PassThru
+        
+        # Stream output while process runs
+        $lastOutputTime = Get-Date
+        $outputFile = "docker-build.out"
+        $errorFile = "docker-build.err"
+        $lastLines = 0
+        
+        while (-not $buildProcess.HasExited) {
+            # Read new output
+            if (Test-Path $outputFile) {
+                $output = Get-Content $outputFile -ErrorAction SilentlyContinue
+                $currentLines = ($output | Measure-Object -Line).Lines
+                
+                if ($currentLines -gt $lastLines) {
+                    $newLines = $output | Select-Object -Skip $lastLines
+                    foreach ($line in $newLines) {
+                        if ($line -match "^\[(\d+)/(\d+)\]") {
+                            # Docker build step format [1/10] STEP...
+                            $stepNum = $matches[1]
+                            $totalSteps = $matches[2]
+                            $stepPercent = [math]::Round(($stepNum / $totalSteps) * 100)
+                            
+                            # Update stage based on content
+                            if ($line -match "npm install" -or $line -match "npm ci") {
+                                $currentStage = 1
+                            } elseif ($line -match "prisma") {
+                                $currentStage = 2
+                            } elseif ($line -match "next build" -or $line -match "build") {
+                                $currentStage = 3
+                            }
+                            
+                            $elapsed = ((Get-Date) - $startTime).TotalSeconds
+                            Write-Host "  [$stepPercent%] $line (Elapsed: $([math]::Round($elapsed))s)" -ForegroundColor DarkGray
+                            Write-Log "Build: $line" -Level INFO -NoConsole
+                        } else {
+                            Write-Host "  $line" -ForegroundColor DarkGray
+                        }
+                    }
+                    $lastLines = $currentLines
+                    $lastOutputTime = Get-Date
+                }
+            }
+            
+            # Check for timeout (no output for 60 seconds = likely hung)
+            $secondsSinceOutput = ((Get-Date) - $lastOutputTime).TotalSeconds
+            if ($secondsSinceOutput -gt 60) {
+                Write-Host "  [!] No output for 60 seconds - build may be slow or stuck" -ForegroundColor Yellow
+                Write-Log "Build: No output for 60 seconds" -Level WARNING
+                $lastOutputTime = Get-Date  # Reset to avoid spam
+            }
+            
+            # Show heartbeat every 10 seconds
+            $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds)
+            if ($elapsed % 10 -eq 0 -and $elapsed -gt 0) {
+                $stageName = if ($currentStage -lt $buildStages.Count) { $buildStages[$currentStage].Name } else { "Finishing" }
+                $buildPercent = 30 + [math]::Round($elapsed / 300 * 60)  # 30-90% over 5 min
+                if ($buildPercent -gt 90) { $buildPercent = 90 }
+                Write-Host "  [BUILD IN PROGRESS] Stage: $stageName | Elapsed: ${elapsed}s | Progress: ~$buildPercent%" -ForegroundColor Cyan
+            }
+            
+            Start-Sleep -Milliseconds 500
+        }
+        
+        # Show remaining output
+        if (Test-Path $outputFile) {
+            $output = Get-Content $outputFile -ErrorAction SilentlyContinue
+            $currentLines = ($output | Measure-Object -Line).Lines
+            if ($currentLines -gt $lastLines) {
+                $newLines = $output | Select-Object -Skip $lastLines
+                foreach ($line in $newLines) {
+                    Write-Host "  $line" -ForegroundColor DarkGray
+                }
+            }
+        }
+        
+        # Show errors if any
+        if (Test-Path $errorFile) {
+            $errors = Get-Content $errorFile -ErrorAction SilentlyContinue
+            if ($errors) {
+                Write-Host "  Build Errors:" -ForegroundColor Red
+                Write-Host $errors -ForegroundColor Red
+            }
+        }
+        
+        # Cleanup temp files
+        Remove-Item "docker-build.out" -ErrorAction SilentlyContinue
+        Remove-Item "docker-build.err" -ErrorAction SilentlyContinue
+        
         Pop-Location
         
-        # Show build output
-        Write-Host $buildOutput -ForegroundColor DarkGray
-        Write-Host "  --- End Build Output ---" -ForegroundColor DarkGray
+        $totalElapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds)
+        Write-Host ""
+        Write-Host "  ========================================" -ForegroundColor Cyan
+        Write-Host "  BUILD COMPLETE (Total time: ${totalElapsed}s)" -ForegroundColor Green
+        Write-Host "  ========================================" -ForegroundColor Cyan
+        Write-Host ""
         
         # Check if image was created
         $imageCheck = docker images wsh-app:latest --format "{{.ID}}" 2>&1
@@ -1271,6 +1380,7 @@ function Start-ApplicationDeployment {
         }
         
         Write-SubStep "WSH Docker image built successfully (Image ID: $imageCheck)" -Status success
+        Write-Log "WSH Docker image built successfully in ${totalElapsed}s" -Level SUCCESS
         
         # Update docker-compose to use local image
         Write-ProgressDetail -Activity "Deploying Application" -Status "Updating configuration..." -PercentComplete 40
