@@ -84,6 +84,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Patch Notes
 
+### Patch 3.1.0-p2 (2026-03-28)
+- DOCS: Added Mind Map documentation to README
+- DOCS: Added Patching Guide section to README
+- DOCS: Added Git merge troubleshooting
+- FIX: Added RightSidebar integration to main page
+- FIX: Added Settings modal with gear icon
+
 ### Patch 3.1.0-p1 (2026-03-28)
 - BUILD FIX: Renamed benchmark files from .ts/.tsx to .ts.txt/.tsx.txt
 - BUILD FIX: Prevents "Cannot find module @testing-library/react" error during build
@@ -319,6 +326,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Upgrading
+
+### From 3.0.0 to 3.1.0
+
+```powershell
+# Pull latest changes
+git pull origin main
+
+# If git errors with "unrelated histories"
+git fetch origin
+git reset --hard origin/main
+
+# Rebuild containers (preserves database)
+docker-compose down
+docker-compose up -d --build
+
+# Check logs
+docker-compose logs -f app
+```
+
+### New Features in 3.1.0
+
+1. **Mind Map View** - Click 🗺️ icon to visualize notes as graph
+2. **Right Sidebar** - Today's Things and Ongoing Projects now visible
+3. **Settings Modal** - Click ⚙️ icon for settings and preferences
+4. **Password Management** - Change user passwords in Database Viewer
+
+### Database Schema Changes
+
+v3.1.0 adds the `note_links` table for explicit note relationships:
+
+```sql
+-- New table created automatically
+CREATE TABLE note_links (
+    id UUID PRIMARY KEY,
+    "fromNoteId" UUID REFERENCES notes(id),
+    "toNoteId" UUID REFERENCES notes(id),
+    "linkType" VARCHAR(50) DEFAULT 'related',
+    weight INT DEFAULT 1,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "createdBy" VARCHAR(255)
+);
+```
 
 ### From 2.2.0 to 2.3.0
 

@@ -14,12 +14,30 @@
 
 ## 🆕 What's New in v3.1.0
 
+### Mind Map View
+- **Interactive Visual Graph**: Visualize notes as connected nodes on a zoomable canvas
+  - Notes displayed as color-coded nodes by type (Quick=amber, Deep=blue, Project=green, Notebook=purple)
+  - Edges connect notes that share tags or are in the same folder
+  - Zoom in/out with mouse wheel, pan by dragging
+  - Click nodes to open note details
+  - Fullscreen mode support
+  - Filter by folder, tag, or note type
+  - Cluster nodes by folder, tag, or type
+  - Legend showing node colors and edge types
+
 ### Today's Things & Ongoing Projects Sidebar
 - **TODAY'S THINGS**: Shows notes created today with quick access links
 - **ONGOING PROJECTS**: Displays active projects with progress bars
   - Color-coded progress indicators (green > 75%, blue > 50%, yellow > 25%)
   - Click to open project details
   - Sorted by progress percentage
+
+### Settings Modal
+- **Gear Icon (⚙️)**: Quick access to settings from header
+- User profile display with role badge
+- Dark mode toggle
+- View mode switcher (Grid/List/Mind Map)
+- Quick links to Database Viewer and Health API
 
 ### Database Viewer Enhancements (Port 5682)
 - **Password Change**: Admins can now change any user's password directly
@@ -150,6 +168,136 @@ docker-compose up -d
 # If still failing, remove all WSH containers and volumes
 docker rm -f wsh-app wsh-postgres
 docker volume rm wsh_postgres-data
+docker-compose up -d --build
+```
+
+### Git Merge Issues
+
+If you see `fatal: refusing to merge unrelated histories`:
+
+```powershell
+# Option 1: Allow unrelated histories merge
+git pull origin main --allow-unrelated-histories
+
+# Option 2: Force sync with remote (recommended)
+git fetch origin
+git reset --hard origin/main
+
+# Option 3: Fresh clone (if all else fails)
+cd C:\Users\admin
+Rename-Item WSH WSH-backup
+git clone https://github.com/141stfighterwing-collab/WSH.git
+cd WSH
+```
+
+---
+
+## 🗺️ Mind Map View
+
+The Mind Map provides a visual way to explore your notes as a connected graph.
+
+### Accessing Mind Map
+
+Click the **🗺️** icon in the header, or use the Settings modal → View Mode → Mind Map.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Zoom** | Mouse wheel to zoom in/out |
+| **Pan** | Click and drag on empty canvas |
+| **Select Node** | Click on a node to open the note |
+| **Fullscreen** | Click fullscreen button for immersive view |
+| **Reset View** | Click ↺ to reset zoom and pan |
+
+### Node Colors
+
+| Note Type | Color |
+|-----------|-------|
+| Quick | 🟡 Amber |
+| Deep | 🔵 Blue |
+| Project | 🟢 Green |
+| Notebook | 🟣 Purple |
+
+### Connection Types
+
+| Edge Type | Color | Meaning |
+|-----------|-------|---------|
+| Explicit | 🔴 Red | Manually linked notes |
+| Tag | 🟡 Amber | Shared tags between notes |
+| Folder | ⚫ Gray | Notes in same folder |
+
+### Filters
+
+Use the top filter bar to:
+- **Folder**: Show only notes in selected folder
+- **Tag**: Show only notes with selected tag
+- **Type**: Show only specific note type
+
+### Clustering
+
+Cluster mode groups related nodes together:
+- **By Folder**: Notes in same folder appear together
+- **By Tag**: Notes with same tags appear together
+- **By Type**: Notes of same type appear together
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Esc` | Exit fullscreen |
+| `Scroll` | Zoom in/out |
+
+---
+
+## 🩹 Patching Guide
+
+### Applying Patches
+
+WSH uses semantic versioning with patch releases for bug fixes.
+
+```powershell
+# Check current version
+docker exec wsh-app pwsh -Command "Write-Host $env:POWERSHELL_EXECUTOR_VERSION"
+
+# Apply latest patch
+git pull origin main
+docker-compose down
+docker-compose up -d --build
+```
+
+### Patch History
+
+| Patch | Date | Description |
+|-------|------|-------------|
+| 3.1.0-p1 | 2026-03-28 | Fixed benchmark build error |
+| 2.4.0-p1 | 2026-03-27 | Added update-users.ps1 script |
+| 2.3.0-p3 | 2026-03-27 | Fixed encoding issues in db-viewer.js |
+| 2.3.0-p2 | 2026-03-27 | Fixed pg module missing error |
+| 2.3.0-p1 | 2026-03-27 | Fixed database credentials mismatch |
+
+### Database Schema Patches
+
+If database schema changes are needed:
+
+```powershell
+# Run inside container
+docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
+
+# Or use the fix tool
+docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1
+```
+
+### Manual Patch Files
+
+To apply a manual patch:
+
+```powershell
+# Download patch file
+# Apply patch
+git apply patchfile.patch
+
+# Rebuild
 docker-compose up -d --build
 ```
 
