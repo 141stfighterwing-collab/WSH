@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted
 
-> **Version 2.3.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
+> **Version 2.5.0** | Self-hosted notes application with PostgreSQL and robust PowerShell execution engine
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)](https://www.postgresql.org/)
@@ -12,24 +12,23 @@
 
 ---
 
-## 🆕 What's New in v2.3.0
+## 🆕 What's New in v2.5.0
 
-### Database Viewer Web UI (Port 5682)
-- **Read-only web interface** to view database tables
-- View table schemas and column definitions
-- Run SQL SELECT queries directly
-- No authentication required for viewing
+### Critical Docker Fixes
+- **Fixed Next.js standalone server binding** - Server now correctly binds to 0.0.0.0 for Docker container accessibility
+- **Fixed database password consistency** - Unified password across all configuration files
+- **Fixed Prisma database setup** - Uses Prisma db push instead of psql commands for reliable schema creation
+- **Fixed HOST environment variable** - Correct variable name for Next.js standalone (HOST, not HOSTNAME)
 
-### Interactive Database Fix Tool
-- **Menu-driven tool** to fix database issues
-- Option to create all tables manually
-- Option to open PSQL shell
-- Option to restart database with fresh schema
+### Improved Database Setup
+- **Prisma-based schema creation** - More reliable than psql commands
+- **Automatic admin user creation** - Pre-hashed password for immediate login
+- **Better error handling** - Clear logging during startup
 
-### Improved Schema Push
-- Automatic fallback to inline SQL when Prisma fails
-- Detailed error output for debugging
-- Table verification after creation
+### Windows Installer Improvements
+- **One-click installation** - `.\install-WSH.ps1 -force` handles everything
+- **Automatic cleanup** - Removes old volumes and containers
+- **Progress tracking** - Visual progress bar during installation
 
 ---
 
@@ -47,9 +46,18 @@
 ```powershell
 # Clone the repository
 git clone https://github.com/141stfighterwing-collab/WSH.git
-cd WSH
+cd WSH\installer
 
-# Run Docker Compose directly
+# Run the installer
+.\install-WSH.ps1 -force
+```
+
+### Manual Docker Compose
+
+```powershell
+# Clone and run
+git clone https://github.com/141stfighterwing-collab/WSH.git
+cd WSH
 docker-compose up -d --build
 ```
 
@@ -58,16 +66,15 @@ docker-compose up -d --build
 | Service | URL | Description |
 |---------|-----|-------------|
 | Web UI | http://localhost:3000 | Main application |
-| **Database Viewer** | http://localhost:5682 | **NEW: View tables & run queries** |
+| **Database Viewer** | http://localhost:5682 | View tables & run queries |
 | Health API | http://localhost:3000/api/health | Health check endpoint |
-| PowerShell Health | http://localhost:8080/health | PowerShell executor status |
 | pgAdmin | http://localhost:5050 | Database management (optional) |
 
 ### Default Credentials
 
 ```
 Email: admin@wsh.local
-Password: admin123
+Password: 123456
 ```
 
 ---
@@ -80,7 +87,7 @@ Open **http://localhost:5682** in your browser to:
 - View all database tables
 - Check table schemas
 - Run SELECT queries
-- View row counts
+- Manage users (promote/demote/ban)
 
 ### Option 2: Interactive Fix Tool
 
@@ -104,14 +111,6 @@ docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1
 docker exec -it wsh-postgres psql -U wsh -d wsh_db
 ```
 
-### Option 4: Create Tables Manually
-
-If the automatic schema creation fails, run:
-
-```powershell
-docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
-```
-
 ---
 
 ## 📊 Benchmarks & Performance Metrics
@@ -129,13 +128,11 @@ docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
 
 | Operation | Target | Typical | Notes |
 |-----------|--------|---------|-------|
-| Container Startup | < 30s | 15-25s | First run may be longer |
+| Container Startup | < 60s | 30-50s | Including database setup |
 | API Response (cached) | < 50ms | 10-30ms | Health endpoint |
 | API Response (DB query) | < 200ms | 50-150ms | Notes listing |
 | Database Query | < 100ms | 20-80ms | Simple queries |
-| Script Execution Overhead | < 500ms | 100-300ms | PowerShell module load |
-| Memory Usage (idle) | < 512MB | 200-400MB | All containers |
-| Memory Usage (active) | < 2GB | 500MB-1.5GB | Under normal load |
+| Docker Build | < 5min | 3-4min | First build |
 
 ---
 
@@ -158,36 +155,15 @@ docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
 │   - Graceful degradation for non-critical failures               │
 ├─────────────────────────────────────────────────────────────────┤
 │ Layer 3: Database Error Handling                                 │
-│   - Connection pooling with retry logic                          │
+│   - Prisma connection pooling with retry logic                   │
+│   - Automatic schema creation on startup                         │
 │   - Transaction rollback on failure                              │
-│   - Automatic reconnection with exponential backoff              │
 ├─────────────────────────────────────────────────────────────────┤
 │ Layer 4: PowerShell Execution Safety                             │
 │   - Pre-flight validation (syntax, permissions, modules)         │
 │   - Timeout enforcement (configurable)                           │
 │   - Retry with exponential backoff for transient errors          │
-│   - Isolated execution context                                   │
 └─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🏥 Health Monitoring
-
-### Health Check Endpoints
-
-```powershell
-# Application health
-Invoke-WebRequest http://localhost:3000/api/health
-
-# PowerShell executor health
-Invoke-WebRequest http://localhost:8080/health
-
-# Database health
-docker exec wsh-postgres pg_isready -U wsh -d wsh_db
-
-# View database tables
-Start-Process "http://localhost:5682"
 ```
 
 ---
@@ -196,11 +172,15 @@ Start-Process "http://localhost:5682"
 
 ### Environment Variables
 
-Create a `.env` file in the project root (see `.env.example`):
+Create a `.env` file in the project root:
 
 ```env
 # Database
 DATABASE_URL="postgresql://wsh:wsh_secure_password@postgres:5432/wsh_db?schema=public"
+
+# Server (CRITICAL for Docker)
+HOST="0.0.0.0"
+PORT="3000"
 
 # Authentication
 JWT_SECRET="your-super-secret-jwt-key-change-in-production"
@@ -208,14 +188,13 @@ JWT_EXPIRES_IN="7d"
 
 # Admin User (created on first run)
 ADMIN_EMAIL="admin@wsh.local"
-ADMIN_PASSWORD="admin123"
+ADMIN_PASSWORD="123456"
 
 # PowerShell Executor
 LOG_LEVEL="INFO"
 MAX_RETRIES="3"
 RETRY_DELAY="5"
 STRICT_MODE="true"
-ERROR_ACTION="Stop"
 ```
 
 ### Docker Compose Services
@@ -223,8 +202,7 @@ ERROR_ACTION="Stop"
 | Service | Description | Ports | Resources |
 |---------|-------------|-------|-----------|
 | `postgres` | PostgreSQL 16 database | 5432 | 512MB-2GB |
-| `app` | Main WSH application | 3000, 8080, 5682 | 512MB-2GB |
-| `scheduler` | Optional script scheduler | - | 256MB-1GB |
+| `app` | Main WSH application | 3000, 5682 | 512MB-2GB |
 | `pgadmin` | Optional database UI | 5050 | 256MB |
 
 ---
@@ -239,8 +217,7 @@ WSH/
 │   │   │   ├── auth/        # Authentication endpoints
 │   │   │   ├── notes/       # Notes CRUD
 │   │   │   ├── folders/     # Folders CRUD
-│   │   │   ├── health/      # Health check
-│   │   │   └── executor/    # PowerShell executor API
+│   │   │   └── health/      # Health check
 │   │   ├── page.tsx         # Main page
 │   │   └── layout.tsx       # Root layout
 │   └── lib/
@@ -255,45 +232,67 @@ WSH/
 │   │   ├── SafeExecutor/    # Safe script execution
 │   │   ├── HealthCheck/     # Health monitoring
 │   │   └── ConfigManager/   # Configuration management
-│   ├── scripts/             # Example scripts
-│   └── app/                 # Entry points
+│   └── scripts/             # Example scripts
 ├── scripts/
-│   ├── db-fix-tool.ps1      # Interactive database fix tool
-│   ├── db-inject-schema.ps1 # Manual schema injection
-│   ├── db-diagnostic.ps1    # Database diagnostics
-│   ├── db-viewer.js         # Web UI database viewer
 │   ├── start.ps1            # Container startup script
-│   └── healthcheck.ps1      # Health check script
+│   ├── healthcheck.ps1      # Health check script
+│   ├── db-viewer.js         # Web UI database viewer
+│   └── db-fix-tool.ps1      # Database fix tool
 ├── installer/
-│   └── Install-WSH-Windows.ps1  # Windows installer
-├── docs/
-│   └── WSH_Testing_Report.docx  # Comprehensive testing report
+│   └── Install-WSH.ps1      # Windows installer
 ├── Dockerfile               # Multi-stage Docker build
 ├── docker-compose.yml       # Service orchestration
-├── next.config.js           # Next.js configuration
-├── tsconfig.json            # TypeScript configuration
-├── CHANGELOG.md             # Version history
-└── .env.example             # Environment template
+└── CHANGELOG.md             # Version history
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
+### Application Not Accessible
+
+If you can't access http://localhost:3000:
+
+```powershell
+# Check container status
+docker ps -a
+
+# Check container logs
+docker logs wsh-app
+
+# Verify HOST environment variable
+docker exec wsh-app printenv HOST
+# Should output: 0.0.0.0
+```
+
 ### Database Tables Not Created
 
 If you see "relation public.users does not exist":
 
 ```powershell
-# Option 1: Use the interactive fix tool
+# Check database logs
+docker logs wsh-postgres
+
+# Run Prisma push manually
+docker exec -it wsh-app npx prisma db push
+
+# Or use the fix tool
 docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1
-# Then select option 2 to create tables
+```
 
-# Option 2: Run schema injection directly
-docker exec -it wsh-app pwsh /scripts/db-inject-schema.ps1
+### Password Authentication Failed
 
-# Option 3: Connect to PSQL and create manually
-docker exec -it wsh-postgres psql -U wsh -d wsh_db
+If PostgreSQL reports password authentication failed:
+
+```powershell
+# Stop and remove everything
+docker stop wsh-app wsh-postgres
+docker rm wsh-app wsh-postgres
+docker volume rm wsh_postgres_data
+
+# Reinstall
+cd WSH\installer
+.\install-WSH.ps1 -force
 ```
 
 ### Docker Build Fails
@@ -303,29 +302,6 @@ docker exec -it wsh-postgres psql -U wsh -d wsh_db
 docker system prune -af
 docker-compose build --no-cache
 docker-compose up -d
-```
-
-### Database Connection Errors
-
-```powershell
-# Check PostgreSQL container status
-docker logs wsh-postgres
-
-# Verify database credentials
-docker exec -it wsh-postgres psql -U wsh -d wsh_db -c "SELECT 1"
-
-# Restart containers
-docker-compose restart
-```
-
-### Container Health Check Failures
-
-```powershell
-# Inspect container health
-docker inspect wsh-app --format='{{json .State.Health}}' | ConvertFrom-Json
-
-# Manual health check
-docker exec wsh-app pwsh -File /app/healthcheck.ps1
 ```
 
 ---

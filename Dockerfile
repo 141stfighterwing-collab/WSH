@@ -1,6 +1,6 @@
 # WSH - Weavenote Self Hosted with PowerShell Executor
 # Unified Dockerfile with Node.js + PowerShell support
-# Version: 2.5.1 - Robust build with proper validation
+# Version: 2.5.0 - Robust build with proper Docker networking
 
 # ============================================================================
 # Stage 1: Base with Node.js + PowerShell
@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/powershell:lts-ubuntu-22.04 AS base
 
 LABEL maintainer="WSH - Weavenote Self Hosted"
 LABEL description="Self-hosted notes with PostgreSQL and robust PowerShell execution"
-LABEL version="2.5.1"
+LABEL version="2.5.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Set environment variables
-ENV POWERSHELL_EXECUTOR_VERSION="2.5.1" \
+ENV POWERSHELL_EXECUTOR_VERSION="2.5.0" \
     LOG_LEVEL="INFO" \
     MAX_RETRIES="3" \
     RETRY_DELAY_SECONDS="5" \
@@ -126,7 +126,7 @@ WORKDIR /app
 
 ENV NODE_ENV="production" \
     NEXT_TELEMETRY_DISABLED=1 \
-    POWERSHELL_EXECUTOR_VERSION="2.5.1" \
+    POWERSHELL_EXECUTOR_VERSION="2.5.0" \
     HOST=0.0.0.0 \
     PORT=3000
 

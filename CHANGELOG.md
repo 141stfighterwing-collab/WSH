@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.0] - 2026-03-28
+
+### Added
+
+#### Docker Infrastructure
+- **HOST environment variable** - Added `HOST=0.0.0.0` to Dockerfile, docker-compose.yml, and installer for proper container networking
+- **Prisma-based database setup** - Replaced psql commands with `prisma generate` and `prisma db push` for reliable schema creation
+- **Automatic admin user creation** - Uses pre-hashed bcrypt password via Prisma client on startup
+
+#### Configuration
+- **Unified database credentials** - Consistent `wsh_secure_password` across all configuration files
+- **Environment variable parsing** - DATABASE_URL parsing with regex for credential extraction
+
+### Changed
+
+- **start.ps1** - Completely rewritten to use Prisma instead of psql for database initialization
+- **Dockerfile** - Added bcryptjs to npm install for password hashing support
+- **docker-compose.yml** - Added HOST environment variable for Next.js standalone server
+
+### Fixed
+
+- **CRITICAL: Next.js server binding** - Fixed server binding to 0.0.0.0 instead of localhost (container accessibility)
+- **CRITICAL: HOST vs HOSTNAME** - Corrected environment variable name for Next.js standalone (uses HOST, not HOSTNAME)
+- **CRITICAL: Database password mismatch** - Unified password across PostgreSQL, docker-compose, and start.ps1
+- **CRITICAL: Prisma connection** - Fixed Prisma client availability in standalone build
+- **Database schema creation** - Now uses Prisma db push instead of unreliable psql commands
+- **Admin user creation** - Pre-hashed password ensures immediate login capability
+
+---
+
 ## [2.4.0] - 2026-03-27
 
 ### Added
@@ -199,6 +229,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Type | Key Features |
 |---------|------|------|--------------|
+| 2.5.0 | 2026-03-28 | MINOR | Docker fixes, Prisma setup, HOST binding |
 | 2.4.0 | 2026-03-27 | FEATURE | Today's Things, Ongoing Projects Sidebar, SUPER ADMIN |
 | 2.3.0 | 2026-03-27 | HOTFIX | Database Viewer UI, Interactive Fix Tool, Multiple Hotfixes |
 | 2.2.0 | 2026-03-26 | FEATURE | Database Diagnostic Tools, Schema Injection |
@@ -209,6 +240,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Patch Notes
+
+### Patch 2.5.0-p1 (2026-03-28)
+- CRITICAL: Fixed Next.js standalone server binding (HOST=0.0.0.0)
+- CRITICAL: Fixed database password consistency
+- Replaced psql commands with Prisma db push
+- Added automatic admin user creation via Prisma
 
 ### Patch 2.4.0-p1 (2026-03-27)
 - Added `update-users.ps1` script for quick user management
@@ -221,39 +258,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HOTFIX: Added direct SQL table creation fallback
 - HOTFIX: Added admin user creation via SQL with bcrypt hash
 
-### Patch 2.3.0-p2 (2026-03-27)
-- HOTFIX: Fixed `pg` module missing error
-- HOTFIX: Moved npm install pg after standalone copy in Dockerfile
-- HOTFIX: Removed deprecated `--skip-generate` flag from Prisma
-
-### Patch 2.3.0-p1 (2026-03-27)
-- HOTFIX: Fixed database credentials mismatch
-- HOTFIX: Removed old Docker volume to reset database
-- Added direct SQL table creation via psql
-
 ---
 
 ## Upgrading
 
-### From 2.2.0 to 2.3.0
+### From 2.4.0 to 2.5.0
 
 ```powershell
-# Pull latest changes
-git pull
+# Stop and clean
+docker stop wsh-app wsh-postgres
+docker rm wsh-app wsh-postgres
+docker volume rm wsh_postgres_data
 
-# Rebuild containers
-docker-compose down -v
-docker-compose build --no-cache app
-docker-compose up -d
+# Pull and rebuild
+git pull
+cd WSH\installer
+.\install-WSH.ps1 -force
 ```
+
+**IMPORTANT**: Version 2.5.0 includes critical fixes. You MUST remove the old PostgreSQL volume to avoid password mismatch issues.
 
 ### Database Migration
 
-Version 2.3.0 includes automatic database schema creation. If tables are missing after upgrade:
+Version 2.5.0 uses Prisma for automatic database schema creation. If tables are missing after upgrade:
 
 ```powershell
-# Run the fix tool
-docker exec -it wsh-app pwsh /scripts/db-fix-tool.ps1
+# Run Prisma push manually
+docker exec -it wsh-app npx prisma db push
 
 # Or open the database viewer
 start http://localhost:5682
@@ -271,23 +302,20 @@ start http://localhost:5682
 
 ### Database Schema
 
-- Prisma `db push` may fail silently on fresh database
-- Use the database fix tool if tables are not created automatically
-- PSQL shell access available for manual schema creation
+- Old PostgreSQL volumes may have password mismatch - remove with `docker volume rm wsh_postgres_data`
 
 ---
 
 ## Future Roadmap
 
-### Planned for v2.5.0
+### Planned for v2.6.0
 
 - [ ] Hashtags support for notes
 - [ ] All themes from Weavenote main app
 - [ ] Calendar integration improvements
 - [ ] Analytics Dashboard for users
-- [ ] User persona analytics
 
-### Planned for v2.6.0
+### Planned for v2.7.0
 
 - [ ] Database backup/restore functionality
 - [ ] User management UI in database viewer
