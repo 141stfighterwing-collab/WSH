@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for MindMap to avoid SSR issues
+const MindMap = dynamic(() => import('../../components/MindMap'), { ssr: false });
+import RightSidebar from '../../components/RightSidebar';
 
 // Types
 interface User {
@@ -41,7 +46,7 @@ interface Folder {
   createdAt: string;
 }
 
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'grid' | 'list' | 'mindmap';
 type NoteType = 'quick' | 'deep' | 'project' | 'notebook';
 
 // Note colors
@@ -358,6 +363,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showMindMap, setShowMindMap] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   
   // Login state
   const [showLogin, setShowLogin] = useState(false);
@@ -791,6 +798,15 @@ export default function Home() {
               className="bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-sm outline-none w-full max-w-xs dark:text-white border border-transparent focus:border-red-400 transition-all"
             />
 
+            {/* Mind Map Button */}
+            <button
+              onClick={() => setShowMindMap(!showMindMap)}
+              className={`p-2 rounded-lg transition-colors ${showMindMap ? 'bg-primary-500 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500'}`}
+              title="Mind Map View"
+            >
+              🗺️
+            </button>
+            
             {/* Analytics Button */}
             <button
               onClick={() => setShowAnalytics(true)}
@@ -798,6 +814,15 @@ export default function Home() {
               title="Analytics"
             >
               📊
+            </button>
+            
+            {/* Settings Button */}
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-primary-500"
+              title="Settings"
+            >
+              ⚙️
             </button>
             
             {/* Dark mode toggle */}
@@ -825,6 +850,18 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Mind Map View */}
+      {showMindMap ? (
+        <div className="fixed inset-0 z-40 bg-slate-900">
+          <MindMap
+            notes={notes}
+            folders={folders}
+            onNoteClick={(note) => setEditingNote(note)}
+            onClose={() => setShowMindMap(false)}
+          />
+        </div>
+      ) : (
+      <>
       <main className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
         {/* Sidebar */}
         <aside className="w-64 shrink-0 hidden lg:block space-y-4">
@@ -1081,7 +1118,16 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Right Sidebar */}
+        <RightSidebar
+          notes={notes}
+          onNoteClick={(note) => setEditingNote(note)}
+          className="hidden xl:block"
+        />
       </main>
+      </>
+      )}
 
       {/* Edit note modal */}
       {editingNote && (
@@ -1144,6 +1190,119 @@ export default function Home() {
         onClose={() => setShowAnalytics(false)}
         notes={notes}
       />
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <span>⚙️</span> Settings
+                </h2>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* User Info */}
+              <div className="bg-slate-100 dark:bg-slate-700 rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold">
+                    {user?.username?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-800 dark:text-white">{user?.username}</p>
+                    <p className="text-sm text-slate-500">{user?.email}</p>
+                  </div>
+                </div>
+                <RoleBadge role={user?.role || 'user'} />
+              </div>
+
+              {/* Display Settings */}
+              <div>
+                <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">Display</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-slate-700 dark:text-slate-200">Dark Mode</span>
+                    <button
+                      onClick={() => setDarkMode(!darkMode)}
+                      className={`w-12 h-6 rounded-full transition-colors ${darkMode ? 'bg-primary-500' : 'bg-slate-300'}`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${darkMode ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                    </button>
+                  </label>
+                </div>
+              </div>
+
+              {/* View Settings */}
+              <div>
+                <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">View Mode</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'grid' ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                  >
+                    📱 Grid
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                  >
+                    📋 List
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMindMap(true);
+                      setShowSettings(false);
+                    }}
+                    className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-primary-500 hover:text-white transition-colors"
+                  >
+                    🗺️ Mind Map
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Links */}
+              <div>
+                <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">Quick Links</h3>
+                <div className="space-y-2">
+                  <a
+                    href="http://localhost:5682"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-primary-500 hover:text-white transition-colors"
+                  >
+                    🗄️ Database Viewer (Port 5682)
+                  </a>
+                  <a
+                    href="/api/health"
+                    target="_blank"
+                    className="block p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-primary-500 hover:text-white transition-colors"
+                  >
+                    🏥 Health Check API
+                  </a>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-3 px-6 text-xs text-slate-400 text-center">
