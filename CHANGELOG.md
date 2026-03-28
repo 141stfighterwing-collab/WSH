@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced SettingsPanel for admins with version management
 - Improved patch documentation in README
 
+### Fixed
+- **BUILD FIX**: Added `examples` folder to tsconfig.json exclude list
+- **BUILD FIX**: Added `examples` folder to .dockerignore
+- **BUILD FIX**: Updated next.config.js webpack to ignore examples/benchmarks
+- Prevents "Cannot find module 'socket.io-client'" error during build
+
 ---
 
 ## [3.1.0] - 2026-03-28

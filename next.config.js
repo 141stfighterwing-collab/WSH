@@ -22,6 +22,11 @@ const nextConfig = {
     if (isServer) {
       config.externals = [...(config.externals || []), '@prisma/client'];
     }
+    // Exclude examples and benchmarks from compilation
+    config.ignoreWarnings = [
+      { module: /examples/ },
+      { module: /benchmarks/ },
+    ];
     return config;
   },
   // Exclude benchmarks and test files from build

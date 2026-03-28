@@ -15,6 +15,10 @@ benchmarks
 **/*.spec.ts
 **/*.spec.tsx
 
+# Examples (not needed in production)
+examples
+**/examples/**
+
 # Development files
 .env
 .env.local
