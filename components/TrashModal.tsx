@@ -1,5 +1,5 @@
 import React from 'react';
-import { Note, NOTE_COLORS } from '../types';
+import { Note, NOTE_COLORS, NoteColor } from '../types';
 
 interface TrashModalProps {
   isOpen: boolean;
@@ -52,9 +52,10 @@ const TrashModal: React.FC<TrashModalProps> = ({
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {trashedNotes.map(note => {
-                        const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - (note.deletedAt || 0)) / (1000 * 60 * 60 * 24)));
+                        const deletedTs = typeof note.deletedAt === 'string' ? new Date(note.deletedAt).getTime() : (note.deletedAt || 0);
+                        const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - deletedTs) / (1000 * 60 * 60 * 24)));
                         return (
-                            <div key={note.id} className={`p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col ${NOTE_COLORS[note.color]} bg-opacity-30`}>
+                            <div key={note.id} className={`p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col ${NOTE_COLORS[note.color as NoteColor] || NOTE_COLORS[NoteColor.Yellow]} bg-opacity-30`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <h4 className="font-bold text-slate-800 dark:text-white truncate pr-2">{note.title || 'Untitled'}</h4>
                                     <span className="text-[10px] font-bold bg-white/50 px-1.5 py-0.5 rounded text-slate-500 shrink-0">{daysLeft}d left</span>

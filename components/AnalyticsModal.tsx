@@ -57,8 +57,9 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ notes, isOpen, onClose 
     let last30Days = 0;
 
     const words = notes.reduce((sum, note) => {
-      if (note.createdAt >= weekThreshold) last7Days += 1;
-      if (note.createdAt >= monthThreshold) last30Days += 1;
+      const createdTs = typeof note.createdAt === 'string' ? new Date(note.createdAt).getTime() : note.createdAt;
+      if (createdTs >= weekThreshold) last7Days += 1;
+      if (createdTs >= monthThreshold) last30Days += 1;
       return sum + (note.wordCount !== undefined ? note.wordCount : (note.rawContent || "").trim().split(/\s+/).filter(Boolean).length);
     }, 0);
 
@@ -86,7 +87,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ notes, isOpen, onClose 
     const counts: Record<NoteType, number> = {
         quick: 0, notebook: 0, deep: 0, code: 0, project: 0, contact: 0, document: 0
     };
-    notes.forEach(n => { if (counts[n.type] !== undefined) counts[n.type]++; });
+    notes.forEach(n => { if (n.type in counts) counts[n.type as NoteType]++; });
     return counts;
   }, [notes]);
 
@@ -103,7 +104,11 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ notes, isOpen, onClose 
   }, [notes]);
 
   const trendData = useMemo(() => {
-     const deepNotes = notes.filter(n => n.type === 'deep' || n.type === 'document' || n.type === 'project' || n.type === 'code').sort((a, b) => a.createdAt - b.createdAt);
+     const deepNotes = notes.filter(n => n.type === 'deep' || n.type === 'document' || n.type === 'project' || n.type === 'code').sort((a, b) => {
+       const aTs = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt;
+       const bTs = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt;
+       return aTs - bTs;
+     });
      if (deepNotes.length === 0) return [];
      const dataPoints: { date: Date, value: number }[] = [];
      let cumulative = 0;

@@ -152,7 +152,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
       onDragEnd={() => setIsDragging(false)}
       onClick={() => onExpand(note)}
       style={cardStyle}
-      className={`relative group p-6 rounded-2xl shadow-lg transition-all ${!note.backgroundColor ? NOTE_COLORS[note.color] : ''} min-h-[280px] flex flex-col cursor-pointer border border-black/5 hover:shadow-xl hover:-translate-y-1 ${isDragging ? 'opacity-40 scale-95' : 'opacity-100'} ${isFinished ? 'ring-2 ring-emerald-500/50' : ''} ${isMatrix ? 'font-mono' : ''} ${note.isSynthesized ? 'ring-2 ring-primary-400 ring-offset-2 dark:ring-offset-slate-800' : ''}`}
+      className={`relative group p-6 rounded-2xl shadow-lg transition-all ${!note.backgroundColor ? (NOTE_COLORS[note.color as NoteColor] || NOTE_COLORS[NoteColor.Yellow]) : ''} min-h-[280px] flex flex-col cursor-pointer border border-black/5 hover:shadow-xl hover:-translate-y-1 ${isDragging ? 'opacity-40 scale-95' : 'opacity-100'} ${isFinished ? 'ring-2 ring-emerald-500/50' : ''} ${isMatrix ? 'font-mono' : ''} ${note.isSynthesized ? 'ring-2 ring-primary-400 ring-offset-2 dark:ring-offset-slate-800' : ''}`}
     >
       <div className="flex justify-between items-start mb-4 border-b border-black/5 pb-2">
         <div className="flex-1 min-w-0 pr-2">

@@ -29,14 +29,14 @@ interface Note {
   backgroundColor?: string;
   folderId?: string;
   isDeleted: boolean;
-  deletedAt?: string;
+  deletedAt?: string | number;
   isSynthesized: boolean;
   accessCount: number;
   wordCount: number;
   projectData?: any;
   attachments: string[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | number;
+  updatedAt?: string | number;
 }
 
 interface Folder {

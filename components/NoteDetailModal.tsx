@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { customSanitizeSchema } from '../services/security';
-import { Note, NOTE_COLORS, ProjectData, Folder } from '../types';
+import { Note, NOTE_COLORS, ProjectData, Folder, NoteColor } from '../types';
 import { getTagStyle } from '../utils/styleUtils';
 import GanttChart from './GanttChart';
 import WorkflowEditor from './WorkflowEditor';
@@ -47,7 +47,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
   checkboxCounter.current = 0;
   
-  const colorClass = NOTE_COLORS[note.color];
+  const colorClass = NOTE_COLORS[note.color as NoteColor] || NOTE_COLORS[NoteColor.Yellow];
   const isMatrix = note.color === 'matrix' || note.type === 'code';
   const isCompleted = note.projectData?.isCompleted;
 

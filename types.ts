@@ -55,23 +55,24 @@ export interface Note {
   id: string;
   title: string;
   content: string; 
-  rawContent: string; 
+  rawContent?: string; 
   category: string;
   tags: string[];
-  color: NoteColor;
-  createdAt: number;
-  type: NoteType;
-  attachments?: string[]; 
-  accessCount?: number; 
+  color: NoteColor | string;
+  createdAt: number | string;
+  updatedAt?: number | string;
+  type: NoteType | string;
+  attachments: string[]; 
+  accessCount: number; 
   folderId?: string; 
   projectData?: ProjectData;
   userId?: string; // Owner ID for Firebase
-  isDeleted?: boolean;
-  deletedAt?: number;
-  isSynthesized?: boolean;
+  isDeleted: boolean;
+  deletedAt?: number | string;
+  isSynthesized: boolean;
   textColor?: string;
   backgroundColor?: string;
-  wordCount?: number;
+  wordCount: number;
 }
 
 export enum NoteColor {
