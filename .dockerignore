@@ -19,6 +19,21 @@ benchmarks
 examples
 **/examples/**
 
+# Prisma seed files
+prisma/seed.ts
+prisma/seed.js
+**/*.seed.ts
+**/seed.ts
+**/seed.js
+
+# Prisma folder typescript files (schema will be copied separately)
+prisma/*.ts
+prisma/*.js
+
+# Prevent nested WSH folders
+WSH
+**/WSH/**
+
 # Development files
 .env
 .env.local

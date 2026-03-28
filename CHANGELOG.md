@@ -38,7 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BUILD FIX**: Added `examples` folder to tsconfig.json exclude list
 - **BUILD FIX**: Added `examples` folder to .dockerignore
 - **BUILD FIX**: Updated next.config.js webpack to ignore examples/benchmarks
+- **BUILD FIX**: Added prisma seed files to exclusions
+- **BUILD FIX**: Added nested WSH folder to .dockerignore
 - Prevents "Cannot find module 'socket.io-client'" error during build
+- Prevents "name does not exist in type" seed.ts errors
 
 ---
 
