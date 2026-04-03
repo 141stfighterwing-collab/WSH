@@ -7,8 +7,8 @@ import Tags from './Tags';
 
 export default function LeftSidebar() {
   return (
-    <aside className="hidden lg:block w-72 min-w-[288px] border-r border-border overflow-y-auto max-h-[calc(100vh-4rem-3rem)]">
-      <div className="p-4 space-y-6">
+    <aside className="hidden lg:block w-60 min-w-[240px] border-r border-border overflow-y-auto max-h-[calc(100vh-4rem-3rem)]">
+      <div className="p-3 space-y-4">
         <Calendar />
         <div className="border-t border-border/50 pt-4" />
         <QuickReferences />

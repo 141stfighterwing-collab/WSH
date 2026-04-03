@@ -275,7 +275,7 @@ export default function NoteEditor() {
       </div>
 
       {/* Title */}
-      <div className="px-5 pt-3">
+      <div className="px-3 pt-2">
         <input
           type="text"
           value={editorTitle}
@@ -286,7 +286,7 @@ export default function NoteEditor() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-3 py-2 border-b border-border/50 overflow-x-auto">
+      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/50 overflow-x-auto">
         {/* Font selector */}
         <select className="bg-transparent text-xs text-muted-foreground px-1.5 py-1 rounded-md hover:bg-secondary focus:outline-none cursor-pointer">
           <option value="inter">Inter</option>
@@ -418,7 +418,7 @@ export default function NoteEditor() {
       </div>
 
       {/* Content Editor */}
-      <div className="px-5 py-3">
+      <div className="px-3 py-2">
         <div
           ref={editorRef}
           contentEditable
@@ -430,7 +430,7 @@ export default function NoteEditor() {
       </div>
 
       {/* Hashtags */}
-      <div className="px-5 pb-3">
+      <div className="px-3 pb-2">
         <div
           onClick={() => tagInputRef.current?.focus()}
           className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-800/30 rounded-xl px-3 py-2 min-h-[48px] border border-transparent focus-within:border-pri-500/30 transition-colors cursor-text"
@@ -465,7 +465,7 @@ export default function NoteEditor() {
       </div>
 
       {/* Status Bar */}
-      <div className="flex items-center justify-between px-5 py-3 bg-secondary/30 border-t border-border/30">
+      <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-t border-border/30">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-muted-foreground">
             Engine: {engineStatus}

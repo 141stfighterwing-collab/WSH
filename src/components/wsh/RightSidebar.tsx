@@ -26,7 +26,7 @@ function LiveClock() {
   });
 
   return (
-    <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
+    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
       <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
         <Clock className="w-3.5 h-3.5 text-pri-400" />
         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -65,7 +65,7 @@ function ProjectsSection() {
   };
 
   return (
-    <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
+    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
       <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
         <div className="flex items-center gap-2">
           <Briefcase className="w-3.5 h-3.5 text-pink-400" />
@@ -180,7 +180,7 @@ function TodaySection() {
   };
 
   return (
-    <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
+    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
       <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
@@ -229,7 +229,7 @@ function TodaySection() {
 
 export default function RightSidebar() {
   return (
-    <aside className="w-full lg:w-72 flex-shrink-0 space-y-4 order-1 lg:order-1 overflow-y-auto max-h-[calc(100vh-4rem-3rem)] p-2">
+    <aside className="w-full lg:w-60 flex-shrink-0 space-y-3 order-1 lg:order-1 overflow-y-auto max-h-[calc(100vh-4rem-3rem)] px-2 py-1">
       {/* Live Clock */}
       <LiveClock />
 
