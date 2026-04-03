@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   Edit3,
 } from 'lucide-react';
-import type { EnvVar } from '../types';
+import type { EnvVar } from './types';
 
 const QUICK_ADD_KEYS = [
   { key: 'PORT', value: '3000', category: 'System' },
@@ -184,7 +184,7 @@ export default function EnvSettingsSection() {
           <input
             type="text"
             placeholder="KEY_NAME"
-            value={newEnvKey === '__show_form__' ? '' : newEnvKey}
+            value=""
             onChange={(e) => setNewEnvKey(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-secondary border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
           />

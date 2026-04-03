@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FileCheck, RefreshCw, Loader2 } from 'lucide-react';
-import type { SystemData } from '../types';
+import type { SystemData } from './types';
 
 export default function VersioningSection() {
   const [systemData, setSystemData] = useState<SystemData | null>(null);
@@ -20,7 +20,7 @@ export default function VersioningSection() {
         version: '3.2.0',
         uptime: '0s',
         memory: { rss: '0 B', heapTotal: '0 B', heapUsed: '0 B', external: '0 B' },
-        nodeVersion: process.version || 'v20.x',
+        nodeVersion: 'v20.x',
         platform: 'linux',
         nextjs: '15.x',
         buildDate: '2025-01-01T00:00:00Z',
@@ -32,9 +32,9 @@ export default function VersioningSection() {
   }, []);
 
   // Auto-fetch on mount
-  if (!systemData && !loading) {
+  useEffect(() => {
     fetchSystem();
-  }
+  }, []);
 
   return (
     <div className="space-y-3 animate-fadeIn">

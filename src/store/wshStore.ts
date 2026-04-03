@@ -277,12 +277,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       darkMode: state.darkMode,
       viewMode: state.viewMode,
       user: state.user,
-      adminPanelOpen: state.adminPanelOpen,
       aiUsageCount: state.aiUsageCount,
-      trashOpen: state.trashOpen,
-      mindMapOpen: state.mindMapOpen,
-      notebookOpen: state.notebookOpen,
-      dbViewerOpen: state.dbViewerOpen,
     };
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -306,12 +301,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         }
         if (data.viewMode) set({ viewMode: data.viewMode });
         if (data.user) set({ user: { ...defaultUser, ...data.user } });
-        if (typeof data.adminPanelOpen === 'boolean') set({ adminPanelOpen: data.adminPanelOpen });
         if (typeof data.aiUsageCount === 'number') set({ aiUsageCount: data.aiUsageCount });
-        if (typeof data.trashOpen === 'boolean') set({ trashOpen: data.trashOpen });
-        if (typeof data.mindMapOpen === 'boolean') set({ mindMapOpen: data.mindMapOpen });
-        if (typeof data.notebookOpen === 'boolean') set({ notebookOpen: data.notebookOpen });
-        if (typeof data.dbViewerOpen === 'boolean') set({ dbViewerOpen: data.dbViewerOpen });
       } catch {
         console.error('Failed to load WSH state from localStorage');
       }

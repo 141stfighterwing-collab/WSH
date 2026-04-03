@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Users, Plus, Loader2 } from 'lucide-react';
-import type { UserData } from '../types';
+import type { UserData } from './types';
 
 export default function UsersSection() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -25,9 +25,9 @@ export default function UsersSection() {
   }, []);
 
   // Auto-fetch on mount
-  if (!fetched && !loading) {
+  useEffect(() => {
     fetchUsers();
-  }
+  }, []);
 
   const handleCreateUser = async () => {
     if (!newUser.username || !newUser.email) return;

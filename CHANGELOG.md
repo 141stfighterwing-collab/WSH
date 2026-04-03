@@ -5,6 +5,32 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-04-04
+
+### Changed
+- Refactored AdminPanel from 1,105-line monolith into 7 focused sub-components (AdminPanel, EnvSettingsSection, VersioningSection, UsersSection, CloudSetupSection, LogsSection, DBViewerSection)
+- Calendar redesigned to compact layout (6px day cells, 9px font) to fix oversized calendar in right sidebar
+- Right sidebar now matches WeaveNote layout: Calendar → Quick References → Folders → Popular Tags
+- Added FarRightSidebar component with Today's Things, Ongoing Projects, Quick Stats (visible on xl+ screens)
+- Page layout is now 4-column: LeftSidebar | RightSidebar | Main Content | FarRightSidebar
+
+### Added
+- Neon tag color system with 10 vibrant colors (cyan, fuchsia, lime, yellow, rose, violet, emerald, orange, sky, pink)
+- Tag glow effect using box-shadow for bright neon appearance
+- Deterministic tag color assignment based on name hash
+- HTML sanitization for user-generated content (strips script/iframe/event handlers)
+
+### Fixed
+- **CRITICAL**: Fixed broken import paths in 4 admin sub-components (`'../types'` → `'./types'`)
+- **CRITICAL**: Fixed render-phase side effects in UsersSection and VersioningSection (moved fetch calls from render body into useEffect)
+- **CRITICAL**: Fixed XSS vulnerability via dangerouslySetInnerHTML in NoteDetailModal and NotebookView (added HTML sanitizer)
+- **CRITICAL**: Fixed modal overlay states persisting to localStorage (adminPanelOpen, trashOpen, mindMapOpen, notebookOpen, dbViewerOpen now excluded from persistence)
+- Removed unused `process.version` client-side reference in VersioningSection
+- Removed unused imports (CheckCircle2, Plus, Minus) in FarRightSidebar
+- Fixed redundant ternary in EnvSettingsSection new-key input
+- Fixed stale `today` dependency breaking useMemo in FarRightSidebar
+- Fixed `React.useState` inconsistency in NotebookView (now uses `useState` from imports)
+
 ## [3.2.0] - 2026-04-04
 
 ### Added

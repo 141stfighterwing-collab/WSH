@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import { X, ChevronRight, Tag, Calendar } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
@@ -16,7 +16,7 @@ const typeColors: Record<string, string> = {
 export default function NotebookView() {
   const { notebookOpen, setNotebookOpen, notes } = useWSHStore();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = React.useState(-1);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const sortedNotes = useMemo(() => {
     return notes
@@ -143,6 +143,19 @@ export default function NotebookView() {
   );
 }
 
+function sanitizeHTML(html: string) {
+  if (typeof window === 'undefined') return html;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
+  tmp.querySelectorAll('*').forEach((el) => {
+    [...el.attributes].forEach((attr) => {
+      if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+    });
+  });
+  return tmp.innerHTML;
+}
+
 function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLast: boolean }) {
   const createdDate = new Date(note.createdAt).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -175,7 +188,7 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
       <div
         className="prose prose-sm prose-invert max-w-none mb-4 text-sm text-foreground/80 leading-relaxed"
         dangerouslySetInnerHTML={{
-          __html: note.content || '<p class="text-muted-foreground/40 italic">No content</p>',
+          __html: sanitizeHTML(note.content) || '<p class="text-muted-foreground/40 italic">No content</p>',
         }}
       />
 

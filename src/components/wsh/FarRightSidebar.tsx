@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { CheckCircle2, Circle, ChevronRight, Plus, Minus } from 'lucide-react';
+import { useMemo } from 'react';
+import { Circle, ChevronRight } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 export default function FarRightSidebar() {
   const { notes } = useWSHStore();
-  const today = new Date().toISOString().split('T')[0];
-
-  // Extract today's tasks from notes
   const todayTasks = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
     return notes
-      .filter((n) => !n.isDeleted && n.createdAt && n.createdAt.startsWith(today))
+      .filter((n) => !n.isDeleted && n.createdAt && n.createdAt.startsWith(todayStr))
       .slice(0, 5);
-  }, [notes, today]);
+  }, [notes]);
 
   // Extract project-type notes
   const ongoingProjects = useMemo(() => {
@@ -21,6 +19,8 @@ export default function FarRightSidebar() {
       .filter((n) => !n.isDeleted && n.type === 'project')
       .slice(0, 5);
   }, [notes]);
+
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <aside className="w-full lg:w-72 flex-shrink-0 space-y-6 hidden xl:block order-3 lg:order-3 overflow-y-auto max-h-[calc(100vh-4rem-3rem)] p-2">

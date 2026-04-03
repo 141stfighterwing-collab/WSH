@@ -55,6 +55,19 @@ export default function NoteDetailModal() {
     minute: '2-digit',
   });
 
+  const sanitizeHTML = (html: string) => {
+    if (typeof window === 'undefined') return html;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
+    tmp.querySelectorAll('*').forEach((el) => {
+      [...el.attributes].forEach((attr) => {
+        if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+      });
+    });
+    return tmp.innerHTML;
+  };
+
   const handleEdit = () => {
     setActiveNoteId(note.id);
     setEditorTitle(note.title);
@@ -142,7 +155,7 @@ export default function NoteDetailModal() {
           <div
             className="prose prose-sm prose-invert max-w-none text-sm text-foreground/80 leading-relaxed"
             dangerouslySetInnerHTML={{
-              __html: note.content || '<p class="text-muted-foreground/40 italic">No content</p>',
+              __html: sanitizeHTML(note.content) || '<p class="text-muted-foreground/40 italic">No content</p>',
             }}
           />
 

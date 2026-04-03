@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ScrollText, Download, Trash2, Loader2 } from 'lucide-react';
-import type { LogEntry } from '../types';
+import type { LogEntry } from './types';
 
 export default function LogsSection() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
