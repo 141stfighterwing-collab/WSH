@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Shield, ShieldCheck } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 interface LoginWidgetProps {
@@ -17,11 +17,18 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    let role = 'user';
+    if (username.toLowerCase() === 'superadmin') {
+      role = 'super-admin';
+    } else if (username.toLowerCase() === 'admin') {
+      role = 'admin';
+    }
     setUser({
       isLoggedIn: true,
       username: username || 'User',
       email: email || `${username || 'user'}@wsh.local`,
       token: token || 'local-token',
+      role,
     });
     onClose();
   };
@@ -32,11 +39,33 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
       username: '',
       email: '',
       token: '',
+      role: 'user',
     });
     onClose();
   };
 
   const rect = anchorEl.getBoundingClientRect();
+
+  const getRoleBadge = () => {
+    switch (user.role) {
+      case 'super-admin':
+        return (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <ShieldCheck className="w-2.5 h-2.5" />
+            Super Admin
+          </span>
+        );
+      case 'admin':
+        return (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20">
+            <Shield className="w-2.5 h-2.5" />
+            Admin
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -69,9 +98,12 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
               <div className="w-10 h-10 rounded-full bg-pri-600 flex items-center justify-center text-white font-bold">
                 {user.username.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{user.username}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground truncate">{user.username}</p>
+                  {getRoleBadge()}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
             <button

@@ -20,6 +20,12 @@ import {
   Sparkles,
   Save,
   Type,
+  Loader2,
+  ChevronDown,
+  FileText,
+  Maximize2,
+  Hash,
+  ListTree,
 } from 'lucide-react';
 import { useWSHStore, type NoteType } from '@/store/wshStore';
 
@@ -32,6 +38,16 @@ const NOTE_TYPES: { type: NoteType; label: string }[] = [
   { type: 'document', label: 'Document' },
 ];
 
+type SynthesisMode = 'summarize' | 'expand' | 'improve' | 'tags' | 'outline';
+
+const synthesisModes: { mode: SynthesisMode; label: string; icon: React.ReactNode }[] = [
+  { mode: 'summarize', label: 'Summarize', icon: <FileText className="w-3 h-3" /> },
+  { mode: 'expand', label: 'Expand', icon: <Maximize2 className="w-3 h-3" /> },
+  { mode: 'improve', label: 'Improve', icon: <Sparkles className="w-3 h-3" /> },
+  { mode: 'tags', label: 'Generate Tags', icon: <Hash className="w-3 h-3" /> },
+  { mode: 'outline', label: 'Create Outline', icon: <ListTree className="w-3 h-3" /> },
+];
+
 export default function NoteEditor() {
   const {
     activeNoteType,
@@ -41,6 +57,7 @@ export default function NoteEditor() {
     editorContent,
     setEditorContent,
     editorTags,
+    setEditorTags,
     addEditorTag,
     removeEditorTag,
     activeNoteId,
@@ -48,13 +65,18 @@ export default function NoteEditor() {
     updateNote,
     setEditorRawContent,
     saveToLocalStorage,
+    setAiUsageCount,
   } = useWSHStore();
 
   const editorRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const synthesisMenuRef = useRef<HTMLDivElement>(null);
   const [tagInput, setTagInput] = useState('');
   const [engineStatus, setEngineStatus] = useState('Intelligence Idle');
   const [saveStatus, setSaveStatus] = useState('');
+  const [synthesisMode, setSynthesisMode] = useState<SynthesisMode>('summarize');
+  const [showSynthesisMenu, setShowSynthesisMenu] = useState(false);
+  const [synthesisLoading, setSynthesisLoading] = useState(false);
 
   // Sync content from active note
   useEffect(() => {
@@ -64,6 +86,19 @@ export default function NoteEditor() {
       }
     }
   }, [activeNoteId]);
+
+  // Close synthesis menu on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (synthesisMenuRef.current && !synthesisMenuRef.current.contains(e.target as Node)) {
+        setShowSynthesisMenu(false);
+      }
+    };
+    if (showSynthesisMenu) {
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
+    }
+  }, [showSynthesisMenu]);
 
   const handleContentInput = useCallback(() => {
     if (editorRef.current) {
@@ -124,12 +159,100 @@ export default function NoteEditor() {
     }, 300);
   };
 
-  const handleSynthesis = () => {
-    setEngineStatus('Processing...');
-    setTimeout(() => {
-      setEngineStatus('Synthesis Complete');
+  const handleSynthesis = async () => {
+    const rawContent = editorRef.current?.innerText || '';
+    if (!rawContent.trim()) {
+      setEngineStatus('No content to process');
+      setTimeout(() => setEngineStatus('Intelligence Idle'), 2000);
+      return;
+    }
+
+    setSynthesisLoading(true);
+    setEngineStatus(`Processing ${synthesisMode}...`);
+
+    try {
+      const res = await fetch('/api/synthesis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: rawContent,
+          action: synthesisMode,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        setEngineStatus(`Error: ${data.error}`);
+        setTimeout(() => setEngineStatus('Intelligence Idle'), 3000);
+        setSynthesisLoading(false);
+        return;
+      }
+
+      if (synthesisMode === 'tags') {
+        try {
+          const tags = JSON.parse(data.result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+          if (Array.isArray(tags)) {
+            tags.forEach((tag: string) => addEditorTag(tag.trim()));
+            setEditorTags(tags.map((tag: string) => tag.trim()));
+          }
+        } catch {
+          const fallbackTags = data.result
+            .replace(/[[\]"]/g, '')
+            .split(',')
+            .map((t: string) => t.trim())
+            .filter(Boolean);
+          fallbackTags.forEach((tag: string) => addEditorTag(tag));
+        }
+        setEngineStatus('Tags Generated');
+      } else if (synthesisMode === 'outline') {
+        const outlineHtml = data.result
+          .replace(/```markdown\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim()
+          .split('\n')
+          .map((line: string) => {
+            if (line.startsWith('## ')) return `<h2 style="font-size:16px;font-weight:700;margin:8px 0 4px">${line.slice(3)}</h2>`;
+            if (line.startsWith('### ')) return `<h3 style="font-size:14px;font-weight:600;margin:6px 0 3px">${line.slice(4)}</h3>`;
+            if (line.startsWith('- ')) return `<div style="padding-left:16px">• ${line.slice(2)}</div>`;
+            if (line.match(/^\d+\. /)) return `<div style="padding-left:16px">${line}</div>`;
+            return `<p>${line}</p>`;
+          })
+          .join('');
+        if (editorRef.current) {
+          editorRef.current.innerHTML = outlineHtml;
+          setEditorContent(outlineHtml);
+          setEditorRawContent(data.result);
+        }
+        setEngineStatus('Outline Created');
+      } else {
+        const resultHtml = data.result
+          .replace(/```markdown\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim()
+          .split('\n')
+          .map((line: string) => `<p>${line}</p>`)
+          .join('');
+        if (editorRef.current) {
+          editorRef.current.innerHTML = resultHtml;
+          setEditorContent(resultHtml);
+          setEditorRawContent(data.result);
+        }
+        setEngineStatus(`${synthesisMode.charAt(0).toUpperCase() + synthesisMode.slice(1)} Complete`);
+      }
+
+      if (data.tokensUsed) {
+        setAiUsageCount((prev: number) => prev + data.tokensUsed);
+      }
+
+      setShowSynthesisMenu(false);
       setTimeout(() => setEngineStatus('Intelligence Idle'), 3000);
-    }, 2000);
+    } catch {
+      setEngineStatus('Synthesis Failed');
+      setTimeout(() => setEngineStatus('Intelligence Idle'), 3000);
+    }
+
+    setSynthesisLoading(false);
   };
 
   return (
@@ -359,13 +482,58 @@ export default function NoteEditor() {
             <Save className="w-3 h-3" />
             {saveStatus || 'Save Raw'}
           </button>
-          <button
-            onClick={handleSynthesis}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg"
-          >
-            <Sparkles className="w-3 h-3" />
-            Synthesis
-          </button>
+
+          {/* Synthesis Button with Dropdown */}
+          <div className="relative" ref={synthesisMenuRef}>
+            <button
+              onClick={() => setShowSynthesisMenu(!showSynthesisMenu)}
+              disabled={synthesisLoading}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg disabled:opacity-50"
+            >
+              {synthesisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              Synthesis
+              <ChevronDown className="w-2.5 h-2.5" />
+            </button>
+
+            {showSynthesisMenu && (
+              <div className="absolute bottom-full right-0 mb-2 w-48 bg-card border border-border rounded-xl shadow-2xl p-1.5 animate-fadeIn z-50">
+                {synthesisModes.map(({ mode, label, icon }) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      setSynthesisMode(mode);
+                      setShowSynthesisMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all active:scale-95 ${
+                      synthesisMode === mode
+                        ? 'bg-pri-600/15 text-pri-400'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    {icon}
+                    <span>{label}</span>
+                    {synthesisMode === mode && (
+                      <span className="ml-auto text-[9px] font-bold">Active</span>
+                    )}
+                  </button>
+                ))}
+                <div className="border-t border-border/50 my-1" />
+                <button
+                  onClick={handleSynthesis}
+                  disabled={synthesisLoading}
+                  className="w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {synthesisLoading ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    `Run ${synthesisModes.find((m) => m.mode === synthesisMode)?.label}`
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

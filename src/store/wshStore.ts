@@ -33,6 +33,7 @@ export interface UserState {
   username: string;
   email: string;
   token: string;
+  role: string;
 }
 
 interface WSHState {
@@ -84,6 +85,8 @@ interface WSHState {
   setAnalyticsOpen: (open: boolean) => void;
   loginOpen: boolean;
   setLoginOpen: (open: boolean) => void;
+  adminPanelOpen: boolean;
+  setAdminPanelOpen: (open: boolean) => void;
 
   // User
   user: UserState;
@@ -105,6 +108,7 @@ const defaultUser: UserState = {
   username: '',
   email: '',
   token: '',
+  role: 'user',
 };
 
 const STORAGE_KEY = 'wsh-state';
@@ -194,6 +198,8 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   setAnalyticsOpen: (open) => set({ analyticsOpen: open }),
   loginOpen: false,
   setLoginOpen: (open) => set({ loginOpen: open }),
+  adminPanelOpen: false,
+  setAdminPanelOpen: (open) => set({ adminPanelOpen: open }),
 
   // User
   user: defaultUser,
@@ -217,6 +223,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       darkMode: state.darkMode,
       viewMode: state.viewMode,
       user: state.user,
+      adminPanelOpen: state.adminPanelOpen,
       aiUsageCount: state.aiUsageCount,
     };
     if (typeof window !== 'undefined') {
@@ -241,6 +248,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         }
         if (data.viewMode) set({ viewMode: data.viewMode });
         if (data.user) set({ user: { ...defaultUser, ...data.user } });
+        if (typeof data.adminPanelOpen === 'boolean') set({ adminPanelOpen: data.adminPanelOpen });
         if (typeof data.aiUsageCount === 'number') set({ aiUsageCount: data.aiUsageCount });
       } catch {
         console.error('Failed to load WSH state from localStorage');

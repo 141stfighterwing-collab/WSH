@@ -8,6 +8,7 @@ import {
   Grid3X3,
   Focus,
   LogIn,
+  Shield,
 } from 'lucide-react';
 import Logo from './Logo';
 import LoginWidget from './LoginWidget';
@@ -19,6 +20,7 @@ export default function Header() {
     setViewMode,
     setSettingsOpen,
     setAnalyticsOpen,
+    setAdminPanelOpen,
     searchQuery,
     setSearchQuery,
     user,
@@ -38,6 +40,8 @@ export default function Header() {
   const handleLoginClose = useCallback(() => {
     setLoginAnchorEl(null);
   }, []);
+
+  const isAdmin = mounted && user.isLoggedIn && (user.role === 'admin' || user.role === 'super-admin');
 
   return (
     <header className="sticky top-0 z-50 h-16 glass border-b border-border">
@@ -77,6 +81,17 @@ export default function Header() {
           <BarChart3 className="w-3.5 h-3.5" />
           <span>Analytics</span>
         </button>
+
+        {/* Admin */}
+        {isAdmin && (
+          <button
+            onClick={() => setAdminPanelOpen(true)}
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 transition-all duration-200 active:scale-95"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Admin</span>
+          </button>
+        )}
 
         {/* Search */}
         <div className="flex-1 max-w-xs mx-2">

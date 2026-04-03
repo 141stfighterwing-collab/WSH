@@ -9,6 +9,7 @@ import RightSidebar from '@/components/wsh/RightSidebar';
 import Footer from '@/components/wsh/Footer';
 import SettingsPanel from '@/components/wsh/SettingsPanel';
 import AnalyticsPanel from '@/components/wsh/AnalyticsPanel';
+import AdminPanel from '@/components/wsh/AdminPanel';
 import { useWSHStore } from '@/store/wshStore';
 
 export default function Home() {
@@ -46,6 +47,7 @@ export default function Home() {
       {/* Slide-over Panels */}
       <SettingsPanel />
       <AnalyticsPanel />
+      <AdminPanel />
     </div>
   );
 }
