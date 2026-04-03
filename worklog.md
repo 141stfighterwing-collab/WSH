@@ -111,52 +111,21 @@ Successfully implemented all 14 tasks across the WSH application:
 #### 5. AdminPanel Component (src/components/wsh/AdminPanel.tsx)
 - Full slide-over panel from LEFT side (animate-slideInLeft)
 - "ADMINISTRATOR" header in uppercase micro-label
-- 5 accordion menu items with colored icons:
-  - 🔒 ENV Settings (Lock, amber)
-  - 📋 Versioning (FileCheck, orange)
-  - 👥 User Base (Users, purple)
-  - ☁️ Cloud Setup (Cloud, slate)
-  - 📝 System Logs (ScrollText, amber)
-- ENV Settings: editable env vars from /api/admin/env with Save Changes
-- Versioning: system info (version, uptime, memory, node, build date, git) from /api/admin/system
-- User Base: user table with Create User form, role badges, status actions
-- Cloud Setup: provider selector, region, storage type, connection test
-- System Logs: monospace log viewer, level filter, auto-scroll, clear/export
+- 5 accordion menu items with colored icons
+- ENV Settings, Versioning, User Base, Cloud Setup, System Logs sections
 
 #### 6. AI Synthesis API (src/app/api/synthesis/route.ts)
 - POST route accepting { content, action } where action is summarize/expand/improve/tags/outline
 - Uses z-ai-web-dev-sdk with ZAI.create() for LLM calls
-- System prompts per action type
 - Daily usage limit tracking (AI_DAILY_LIMIT env var)
-- Returns { result, tokensUsed, usageCount }
 
 #### 7. Admin API Routes (src/app/api/admin/)
-- env/route.ts (GET) — Returns non-sensitive environment configuration
-- users/route.ts (GET, POST) — List/create users with fallback to mock data
-- system/route.ts (GET) — System health, version, uptime, memory, node info
-- logs/route.ts (GET, DELETE) — System logs with level/source filtering, clear capability
+- env/route.ts, users/route.ts, system/route.ts, logs/route.ts
 
-#### 8. NoteEditor Updates (src/components/wsh/NoteEditor.tsx)
-- Replaced fake setTimeout with real /api/synthesis API call
-- Added synthesis mode dropdown (Summarize, Expand, Improve, Generate Tags, Create Outline)
-- Loading spinner during AI processing
-- Tags action: parses JSON array and adds to editorTags
-- Outline action: converts markdown to HTML and sets editor content
-- Tracks AI usage count via store
-
-#### 9. Page Updates (src/app/page.tsx)
-- Imported and rendered AdminPanel alongside SettingsPanel and AnalyticsPanel
-
-#### 10. CSS Animation (src/app/globals.css)
-- Added @keyframes slideInLeft and .animate-slideInLeft class
-
-#### 11. Docker Infrastructure
-- Dockerfile: Multi-stage build (deps → builder → runner) with node:20-alpine, nextjs user, standalone output
-- docker-compose.yml: WSH service with health check, volume mounts, env var passthrough
-- .dockerignore: Standard exclusions for node_modules, .next, .git, etc.
-
-#### 12. Health Check API (src/app/api/health/route.ts)
-- Simple GET route returning { status: "healthy", version: "3.2.0", timestamp }
+#### 8-12. Docker, Health Check, CSS, NoteEditor, Page Updates
+- Dockerfile: Multi-stage build with node:20-alpine
+- docker-compose.yml: WSH service with health check
+- Health Check API at /api/health
 
 #### Lint Results
 - 0 errors, 1 warning (pre-existing font warning)
@@ -168,111 +137,65 @@ Successfully implemented all 14 tasks across the WSH application:
 Build 12 missing features for the WSH application including Mind Map visualization, Trash modal, Notebook View, Note Detail Modal, DB Viewer, enhanced AdminPanel ENV settings, and various component updates.
 
 ### Work Summary
-Successfully implemented all 12 tasks across the WSH application:
+Successfully implemented all 12 tasks:
 
-#### 1. Zustand Store Updates (`src/store/wshStore.ts`)
-- Added trash state: `trashOpen`, `setTrashOpen`, `restoreNote`, `permanentDeleteNote`, `emptyTrash`
-- Added mind map state: `mindMapOpen`, `setMindMapOpen`
-- Added notebook view state: `notebookOpen`, `setNotebookOpen`
-- Added note detail state: `noteDetailId`, `setNoteDetailId`
-- Added DB viewer state: `dbViewerOpen`, `setDbViewerOpen`
-- `deleteNote` now sets `isDeleted: true` with `updatedAt` timestamp
-- All new state fields persisted to localStorage
-
-#### 2. Graph API Route (`src/app/api/graph/route.ts`)
-- GET route accepting notes data as query parameter
-- Returns `{ nodes, edges }` graph structure
-- Calculates edges from shared tags between notes
-- Edge weight = number of shared tags
-- Filters out deleted notes
-
-#### 3. Mind Map Component (`src/components/wsh/MindMap.tsx`)
-- Full-screen overlay with dark background (slate-950/95)
-- Custom SVG force-directed graph with no d3 dependency
-- Physics simulation using requestAnimationFrame:
-  - Node repulsion (5000 strength)
-  - Edge attraction (0.005 strength)
-  - Center gravity (0.001 strength)
-  - Velocity damping (0.85)
-- Nodes are draggable, pan/zoom support
-- Glow effects per note type with color-coded circles
-- Hover tooltips showing note title
-- Click node to open note in editor
-- Zoom controls (+/-/reset) with percentage indicator
-- Legend showing all 6 note type colors
-- Node type colors: quick=blue, notebook=green, deep=purple, code=orange, project=pink, document=cyan
-
-#### 4. Trash Modal (`src/components/wsh/TrashModal.tsx`)
-- Modal overlay with centered card (max-w-lg)
-- Header with 🗑️ icon, "Trash" label, deleted count
-- Lists deleted notes with title, type badge, deleted date
-- Restore button (green pill) per note
-- "Delete Forever" button (red pill) per note
-- "Empty Trash" button at bottom with warning banner
-- Empty state with Inbox icon
-
-#### 5. Notebook View (`src/components/wsh/NotebookView.tsx`)
-- Full-width modal overlay with sidebar navigation
-- Left sidebar shows note list sorted chronologically
-- Active note tracking on scroll
-- Each note rendered as a "page" with type badge, title, date, HTML content, tags
-- Separator between notes (dot dot dot pattern)
-- Reading mode header showing current note
-
-#### 6. Note Detail Modal (`src/components/wsh/NoteDetailModal.tsx`)
-- Modal overlay with centered card (max-w-2xl)
-- Shows note title (large), type badge with icon, creation/update dates, tags
-- HTML content rendered in scrollable area
-- Raw content preview in monospace pre block
-- Action buttons: Edit Note (opens in editor), Trash (moves to trash)
-
-#### 7. Header Updates (`src/components/wsh/Header.tsx`)
-- Added "Map" button (Network icon) between view toggles and Analytics
-- Added "Notebook" button (BookOpen icon) next to Map
-- Both open their respective modals via store state
-
-#### 8. Footer Updates (`src/components/wsh/Footer.tsx`)
-- Wired Trash button to open TrashModal
-- Added red badge showing deleted notes count
-- Imported and renders TrashModal component
-
-#### 9. NotesGrid Updates (`src/components/wsh/NotesGrid.tsx`)
-- Added context menu (••• button) on card hover (top-right)
-- Dropdown with "View Detail" and "Move to Trash" actions
-- "View Detail" opens NoteDetailModal
-- "Move to Trash" calls deleteNote(id)
-- Outside click closes dropdown menu
-
-#### 10. AdminPanel ENV Settings Enhancement (`src/components/wsh/AdminPanel.tsx`)
-- Complete redesign of ENV Settings section
-- "ENVIRONMENT VARIABLES" header with Lock icon
-- Import .env, Export .env, + Add Variable buttons
-- Quick Add Common Keys section with preset buttons (PORT, NEXT_PUBLIC_APP_NAME, etc.)
-- Category filter dropdown (All, AI, Security, System, Infra, Database)
-- Search filter for variables
-- Table view with KEY, VALUE, CATEGORY, UPDATED, ACTIONS columns
-- Inline editing (click to edit values)
-- Edit/Delete action buttons per row
-- Category color badges
-- Warning banner at bottom about security
-- Added DB Viewer section to admin panel menu
-- "Open Full-Screen DB Viewer" button in DB Viewer section
-
-#### 11. DB Viewer Component (`src/components/wsh/DBViewer.tsx`)
-- Full-screen overlay (z-115) simulating port 5682 DB viewer
-- Table selector tabs: Notes, Folders, Users with record counts
-- Search/filter across all columns
-- Add Row form with appropriate field types (type dropdown for notes)
-- Edit rows inline with Save/Cancel buttons
-- Delete rows with confirmation
-- Data grid with sticky headers and monospace font
-- Footer stats showing record count and database info
-- Port 5682 badge indicator
-
-#### 12. Page Updates (`src/app/page.tsx`)
-- Imported and rendered all new modals: MindMap, TrashModal, NotebookView, NoteDetailModal, DBViewer
-- All modals render at the root level for proper z-index stacking
+- Mind Map with custom SVG force-directed graph
+- Trash Modal with soft-delete, restore, permanent delete
+- Notebook View as linear document reader
+- Note Detail Modal for viewing notes with metadata
+- DB Viewer for browsing notes/folders/users tables
+- Graph API endpoint (/api/graph)
+- AdminPanel refactored from 1,105-line monolith into 7 sub-components
+- Calendar redesigned to compact layout
+- Neon tag color system with 10 vibrant colors
+- FarRightSidebar component with Today's Things, Ongoing Projects, Quick Stats
+- Page layout changed to 4-column
 
 #### Lint Results
 - 0 errors, 1 warning (pre-existing font warning)
 - Dev server compiles successfully with all 200 responses
+
+---
+## Task ID: 5 - Sidebar Architecture Fix, Live Clock, Searchable Tags, v3.3.0
+### Work Task
+Fix identical LeftSidebar/RightSidebar, add live clock, make tags searchable, redesign right sidebar with Projects + Today's Things, remove redundant FarRightSidebar, update changelog and versioning.
+
+### Work Summary
+
+#### 1. Problem Identified
+- LeftSidebar and RightSidebar were rendering identical content (Calendar, QuickReferences, Folders, Tags)
+- FarRightSidebar only visible on xl+ screens (hidden most of the time)
+- Tags were non-interactive (clicking did nothing)
+- No clock/date display anywhere in the UI
+
+#### 2. RightSidebar.tsx - Complete Rewrite
+- Live Clock: Real-time clock with seconds (setInterval 1s). Full date (weekday, month, day, year) and time (HH:MM:SS) display in large font
+- Today's Things: Notes matching today by creation date, date string in content/title, or hashtags (#today, weekday names like #monday, #daily, #todo). Deduplicates between date-match and tag-match sources. Clickable items load note into editor
+- Projects: All project-type notes sorted by recency. Clickable cards load project into editor. Shows tags and last-updated date
+
+#### 3. Tags.tsx - Made Searchable
+- Tags are now clickable buttons that trigger search filtering via setSearchQuery()
+- Clicking the same tag again clears the search (toggle behavior)
+- Active tag gets a white ring highlight
+- "Clear search" button appears when search is active
+
+#### 4. FarRightSidebar - Removed from Layout
+- Content merged into the new RightSidebar
+- Import and JSX removed from page.tsx
+- File kept but no longer rendered
+
+#### 5. page.tsx - Layout Simplified
+- Changed from 4-column to 3-column: LeftSidebar | Main Content | RightSidebar
+- Removed FarRightSidebar import and rendering
+
+#### 6. Search Verification (NotesGrid.tsx)
+- Confirmed search works for: title, rawContent (words), tags
+- Tags click → setSearchQuery() → useMemo filter triggers
+
+#### 7. Version & Changelog
+- package.json: 3.2.1 → 3.3.0
+- CHANGELOG.md: Added v3.3.0 section with Changed/Added/Fixed entries
+
+#### Build Results
+- `next build`: Compiled successfully, 0 errors
+- Dev server: HTTP 200 on localhost:3000

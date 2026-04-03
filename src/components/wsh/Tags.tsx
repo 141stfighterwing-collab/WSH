@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Tag } from 'lucide-react';
+import { Tag, Search } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 const NEON_COLORS = [
@@ -27,7 +27,7 @@ function getTagColor(tag: string) {
 }
 
 export default function Tags() {
-  const { notes } = useWSHStore();
+  const { notes, searchQuery, setSearchQuery } = useWSHStore();
 
   const tagCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -42,6 +42,15 @@ export default function Tags() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12);
   }, [notes]);
+
+  const handleTagClick = (tag: string) => {
+    if (searchQuery === tag) {
+      // Toggle off if already searching this tag
+      setSearchQuery('');
+    } else {
+      setSearchQuery(tag);
+    }
+  };
 
   if (tagCounts.length === 0) {
     return (
@@ -60,14 +69,28 @@ export default function Tags() {
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2 border-b border-border/50 pb-2">
         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">🏷️ Popular Tags</span>
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="text-[9px] text-pri-400 hover:text-pri-300 font-bold flex items-center gap-1 transition-colors"
+          >
+            <Search className="w-2.5 h-2.5" />
+            Clear search
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         {tagCounts.map(([tag, count]) => {
           const color = getTagColor(tag);
+          const isActive = searchQuery === tag;
           return (
             <button
               key={tag}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${color.bg} ${color.text} ${color.border} border ${color.glow} hover:scale-105 transition-all duration-200 active:scale-95`}
+              onClick={() => handleTagClick(tag)}
+              title={`Click to filter by #${tag}`}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${color.bg} ${color.text} ${color.border} border ${color.glow} hover:scale-105 transition-all duration-200 active:scale-95 ${
+                isActive ? 'ring-2 ring-white/30 scale-105' : ''
+              }`}
             >
               <Tag className="w-2.5 h-2.5" />
               <span>#{tag}</span>

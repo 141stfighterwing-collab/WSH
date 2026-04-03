@@ -5,6 +5,27 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-04-04
+
+### Changed
+- **RightSidebar completely redesigned**: Now shows Live Clock → Today's Things → Projects (was identical to LeftSidebar before)
+- **Layout simplified from 4-column to 3-column**: LeftSidebar (Calendar/Refs/Folders/Tags) | Main Content | RightSidebar (Clock/Today/Projects)
+- Removed FarRightSidebar component (its content merged into the new RightSidebar)
+- Tags in the Popular Tags section are now clickable — clicking a tag triggers search filtering, clicking again clears the search
+- Today's Things section now intelligently matches notes by: creation date matching today, today's date string in content/title, or tags like #today, weekday names (#monday, etc.), and #daily/#todo
+
+### Added
+- Live Clock widget in the right sidebar showing real-time hours, minutes, seconds with full date display (weekday, month, day, year)
+- Projects section in right sidebar listing all project-type notes sorted by recency, with clickable cards that load the project into the editor
+- Today's Things section in right sidebar showing notes relevant to today — created today, containing today's date, or tagged with today-related hashtags
+- Active search indicator on tags with ring highlight and "Clear search" button
+- Project and Today's item count badges
+
+### Fixed
+- **CRITICAL**: LeftSidebar and RightSidebar were rendering identical content (Calendar, QuickReferences, Folders, Tags) — now each sidebar has a distinct, non-overlapping purpose
+- Tags were previously non-interactive display-only badges — now they properly trigger search filtering
+- FarRightSidebar was only visible on xl+ screens (hidden most of the time) — its content is now in the always-visible RightSidebar
+
 ## [3.2.1] - 2026-04-04
 
 ### Changed
