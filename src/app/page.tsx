@@ -6,6 +6,7 @@ import LeftSidebar from '@/components/wsh/LeftSidebar';
 import NoteEditor from '@/components/wsh/NoteEditor';
 import NotesGrid from '@/components/wsh/NotesGrid';
 import RightSidebar from '@/components/wsh/RightSidebar';
+import FarRightSidebar from '@/components/wsh/FarRightSidebar';
 import Footer from '@/components/wsh/Footer';
 import SettingsPanel from '@/components/wsh/SettingsPanel';
 import AnalyticsPanel from '@/components/wsh/AnalyticsPanel';
@@ -32,8 +33,11 @@ export default function Home() {
         {/* Left Sidebar */}
         <LeftSidebar />
 
+        {/* Right Sidebar — Calendar, Quick Refs, Folders, Tags */}
+        <RightSidebar />
+
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 min-w-0">
           <div className="max-w-4xl mx-auto">
             {/* Editor */}
             <NoteEditor />
@@ -43,8 +47,8 @@ export default function Home() {
           </div>
         </main>
 
-        {/* Right Sidebar */}
-        <RightSidebar />
+        {/* Far Right Sidebar — Today's Things, Projects, Stats */}
+        <FarRightSidebar />
       </div>
 
       <Footer />
