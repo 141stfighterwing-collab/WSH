@@ -13,6 +13,15 @@ const typeIcons: Record<string, React.ReactNode> = {
   document: <FileText className="w-3.5 h-3.5" />,
 };
 
+const typeDescriptions: Record<string, string> = {
+  quick: 'Quick capture — short notes & ideas',
+  notebook: 'Notebook — organized sections & chapters',
+  deep: 'Deep dive — long-form analysis & research',
+  code: 'Code — snippets, scripts & technical notes',
+  project: 'Project — task tracking & milestones',
+  document: 'Document — formal reports & deliverables',
+};
+
 const typeColors: Record<string, string> = {
   quick: 'bg-blue-500/15 text-blue-400',
   notebook: 'bg-green-500/15 text-green-400',
@@ -48,7 +57,13 @@ function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onCli
   return (
     <div
       onClick={onClick}
-      className="bg-card rounded-2xl border border-border/50 p-4 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:ring-pri-500/20 transition-all duration-300 group relative"
+      className={`bg-card rounded-2xl border p-4 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:ring-pri-500/20 transition-all duration-300 group relative ${
+        note.type === 'project'
+          ? 'border-l-4 border-l-pink-500 border-t-border/50 border-r-border/50 border-b-border/50'
+          : note.type === 'document'
+          ? 'border-l-4 border-l-cyan-500 border-t-border/50 border-r-border/50 border-b-border/50'
+          : 'border-border/50'
+      }`}
     >
       {/* Context menu button */}
       <div
@@ -105,6 +120,13 @@ function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onCli
       <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
         {note.rawContent || note.content?.replace(/<[^>]*>/g, '').slice(0, 150) || 'No content'}
       </p>
+
+      {/* Type description for project/document */}
+      {(note.type === 'project' || note.type === 'document') && (
+        <p className="text-[9px] text-muted-foreground/50 italic mb-2">
+          {typeDescriptions[note.type]}
+        </p>
+      )}
 
       {/* Tags */}
       {note.tags.length > 0 && (

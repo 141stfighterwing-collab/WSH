@@ -2,7 +2,6 @@
 
 import { Trash2, Circle } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
-import TrashModal from './TrashModal';
 
 export default function Footer() {
   const { user, aiUsageCount, trashOpen, setTrashOpen, notes } = useWSHStore();
@@ -47,8 +46,6 @@ export default function Footer() {
         </div>
       </footer>
 
-      {/* Trash Modal */}
-      <TrashModal />
     </>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { X, ChevronRight, Tag, Calendar } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
@@ -142,8 +142,6 @@ export default function NotebookView() {
     </div>
   );
 }
-
-import React from 'react';
 
 function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLast: boolean }) {
   const createdDate = new Date(note.createdAt).toLocaleDateString('en-US', {
