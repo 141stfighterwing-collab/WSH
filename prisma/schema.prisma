@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String
+  password     String
+  role         String   @default("user")
+  status       String   @default("active")
+  aiUsageCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  notes        Note[]
+  folders      Folder[]
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  title      String
+  content    String   @default("")
+  rawContent String   @default("")
+  type       String   @default("quick")
+  tags       String   @default("[]")
+  color      String   @default("yellow")
+  folderId   String?
+  folder     Folder?  @relation(fields: [folderId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  order     Int      @default(0)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  notes     Note[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

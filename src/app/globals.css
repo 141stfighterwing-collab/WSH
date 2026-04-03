@@ -1,0 +1,453 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-fira-code);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* WSH primary color system */
+  --color-pri-50: var(--pri-50);
+  --color-pri-100: var(--pri-100);
+  --color-pri-200: var(--pri-200);
+  --color-pri-300: var(--pri-300);
+  --color-pri-400: var(--pri-400);
+  --color-pri-500: var(--pri-500);
+  --color-pri-600: var(--pri-600);
+  --color-pri-700: var(--pri-700);
+  --color-pri-800: var(--pri-800);
+  --color-pri-900: var(--pri-900);
+}
+
+/* ========== DEFAULT THEME (Indigo) ========== */
+:root,
+body.theme-default {
+  --pri-50: #EEF2FF;
+  --pri-100: #E0E7FF;
+  --pri-200: #C7D2FE;
+  --pri-300: #A5B4FC;
+  --pri-400: #818CF8;
+  --pri-500: #6366F1;
+  --pri-600: #4F46E5;
+  --pri-700: #4338CA;
+  --pri-800: #3730A3;
+  --pri-900: #312E81;
+}
+
+body.theme-ocean {
+  --pri-50: #ECFEFF;
+  --pri-100: #CFFAFE;
+  --pri-200: #A5F3FC;
+  --pri-300: #67E8F9;
+  --pri-400: #22D3EE;
+  --pri-500: #06B6D4;
+  --pri-600: #0891B2;
+  --pri-700: #0E7490;
+  --pri-800: #155E75;
+  --pri-900: #164E63;
+}
+
+body.theme-forest {
+  --pri-50: #ECFDF5;
+  --pri-100: #D1FAE5;
+  --pri-200: #A7F3D0;
+  --pri-300: #6EE7B7;
+  --pri-400: #34D399;
+  --pri-500: #10B981;
+  --pri-600: #059669;
+  --pri-700: #047857;
+  --pri-800: #065F46;
+  --pri-900: #064E3B;
+}
+
+body.theme-sunset {
+  --pri-50: #FFF7ED;
+  --pri-100: #FFEDD5;
+  --pri-200: #FED7AA;
+  --pri-300: #FDBA74;
+  --pri-400: #FB923C;
+  --pri-500: #F97316;
+  --pri-600: #EA580C;
+  --pri-700: #C2410C;
+  --pri-800: #9A3412;
+  --pri-900: #7C2D12;
+}
+
+body.theme-rose {
+  --pri-50: #FFF1F2;
+  --pri-100: #FFE4E6;
+  --pri-200: #FECDD3;
+  --pri-300: #FDA4AF;
+  --pri-400: #FB7185;
+  --pri-500: #F43F5E;
+  --pri-600: #E11D48;
+  --pri-700: #BE123C;
+  --pri-800: #9F1239;
+  --pri-900: #881337;
+}
+
+body.theme-midnight {
+  --pri-50: #EDE9FE;
+  --pri-100: #DDD6FE;
+  --pri-200: #C4B5FD;
+  --pri-300: #A78BFA;
+  --pri-400: #8B5CF6;
+  --pri-500: #7C3AED;
+  --pri-600: #6D28D9;
+  --pri-700: #5B21B6;
+  --pri-800: #4C1D95;
+  --pri-900: #3B0764;
+}
+
+body.theme-coffee {
+  --pri-50: #FFF7ED;
+  --pri-100: #FED7AA;
+  --pri-200: #FDBA74;
+  --pri-300: #F59E0B;
+  --pri-400: #D97706;
+  --pri-500: #B45309;
+  --pri-600: #92400E;
+  --pri-700: #78350F;
+  --pri-800: #6B2710;
+  --pri-900: #431407;
+}
+
+body.theme-neon {
+  --pri-50: #F0FDF4;
+  --pri-100: #DCFCE7;
+  --pri-200: #BBF7D0;
+  --pri-300: #86EFAC;
+  --pri-400: #4ADE80;
+  --pri-500: #22C55E;
+  --pri-600: #16A34A;
+  --pri-700: #15803D;
+  --pri-800: #166534;
+  --pri-900: #14532D;
+}
+
+body.theme-cyberpunk {
+  --pri-50: #FDF4FF;
+  --pri-100: #FAE8FF;
+  --pri-200: #F5D0FE;
+  --pri-300: #F0ABFC;
+  --pri-400: #E879F9;
+  --pri-500: #D946EF;
+  --pri-600: #C026D3;
+  --pri-700: #A21CAF;
+  --pri-800: #86198F;
+  --pri-900: #701A75;
+}
+
+body.theme-nord {
+  --pri-50: #ECEFF4;
+  --pri-100: #E5E9F0;
+  --pri-200: #D8DEE9;
+  --pri-300: #81A1C1;
+  --pri-400: #5E81AC;
+  --pri-500: #4C566A;
+  --pri-600: #434C5E;
+  --pri-700: #3B4252;
+  --pri-800: #2E3440;
+  --pri-900: #242933;
+}
+
+body.theme-dracula {
+  --pri-50: #F8F8F2;
+  --pri-100: #F1FA8C;
+  --pri-200: #50FA7B;
+  --pri-300: #8BE9FD;
+  --pri-400: #BD93F9;
+  --pri-500: #FF79C6;
+  --pri-600: #FF5555;
+  --pri-700: #6272A4;
+  --pri-800: #44475A;
+  --pri-900: #282A36;
+}
+
+body.theme-lavender {
+  --pri-50: #FAF5FF;
+  --pri-100: #F3E8FF;
+  --pri-200: #E9D5FF;
+  --pri-300: #D8B4FE;
+  --pri-400: #C084FC;
+  --pri-500: #A855F7;
+  --pri-600: #9333EA;
+  --pri-700: #7E22CE;
+  --pri-800: #6B21A8;
+  --pri-900: #581C87;
+}
+
+body.theme-earth {
+  --pri-50: #FEFCE8;
+  --pri-100: #FEF9C3;
+  --pri-200: #FEF08A;
+  --pri-300: #FDE047;
+  --pri-400: #FACC15;
+  --pri-500: #EAB308;
+  --pri-600: #CA8A04;
+  --pri-700: #A16207;
+  --pri-800: #854D0E;
+  --pri-900: #713F12;
+}
+
+body.theme-yellow {
+  --pri-50: #FFFBEB;
+  --pri-100: #FEF3C7;
+  --pri-200: #FDE68A;
+  --pri-300: #FCD34D;
+  --pri-400: #FBBF24;
+  --pri-500: #F59E0B;
+  --pri-600: #D97706;
+  --pri-700: #B45309;
+  --pri-800: #92400E;
+  --pri-900: #78350F;
+}
+
+body.theme-hyperblue {
+  --pri-50: #EFF6FF;
+  --pri-100: #DBEAFE;
+  --pri-200: #BFDBFE;
+  --pri-300: #93C5FD;
+  --pri-400: #60A5FA;
+  --pri-500: #3B82F6;
+  --pri-600: #2563EB;
+  --pri-700: #1D4ED8;
+  --pri-800: #1E40AF;
+  --pri-900: #1E3A8A;
+}
+
+/* ========== DARK MODE SYSTEM ========== */
+.dark {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --card: #1e293b;
+  --card-foreground: #e2e8f0;
+  --popover: #1e293b;
+  --popover-foreground: #e2e8f0;
+  --primary: var(--pri-600);
+  --primary-foreground: #ffffff;
+  --secondary: #334155;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #334155;
+  --accent-foreground: #e2e8f0;
+  --destructive: #ef4444;
+  --border: #334155;
+  --input: #334155;
+  --ring: var(--pri-500);
+  --chart-1: var(--pri-500);
+  --chart-2: #06b6d4;
+  --chart-3: #f59e0b;
+  --chart-4: #10b981;
+  --chart-5: #ef4444;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: var(--pri-600);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: #334155;
+  --sidebar-ring: var(--pri-500);
+}
+
+/* Light mode overrides */
+:root:not(.dark) {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: var(--pri-600);
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: var(--pri-500);
+  --chart-1: var(--pri-500);
+  --chart-2: #06b6d4;
+  --chart-3: #f59e0b;
+  --chart-4: #10b981;
+  --chart-5: #ef4444;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: var(--pri-600);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: var(--pri-500);
+}
+
+/* ========== BASE STYLES ========== */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
+
+/* ========== CUSTOM SCROLLBARS ========== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pri-500) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--pri-500);
+  border-radius: 4px;
+  opacity: 0.4;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--pri-600);
+}
+
+/* ========== CUSTOM ANIMATIONS ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px var(--pri-500), 0 0 10px var(--pri-500)33; }
+  50% { box-shadow: 0 0 15px var(--pri-500), 0 0 30px var(--pri-500)33; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.25s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ========== HANDWRITING FONT ========== */
+.font-hand {
+  font-family: 'Kalam', cursive;
+}
+
+/* ========== CONTENT EDITABLE ========== */
+[contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  pointer-events: none;
+  display: block;
+}
+
+[contenteditable]:focus {
+  outline: none;
+}
+
+/* ========== TACTICAL MICRO TEXT ========== */
+.micro-label {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ========== GLOW EFFECTS ========== */
+.glow-primary {
+  box-shadow: 0 0 15px var(--pri-500)33, 0 0 30px var(--pri-500)11;
+}
+
+.glow-primary-strong {
+  box-shadow: 0 0 20px var(--pri-500)66, 0 0 40px var(--pri-500)22;
+}
+
+/* ========== EDITOR INNER SHADOW ========== */
+.editor-inner {
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ========== TRANSITIONS ========== */
+.transition-theme {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== GLASS MORPHISM ========== */
+.glass {
+  backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+:root:not(.dark) .glass {
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+}
