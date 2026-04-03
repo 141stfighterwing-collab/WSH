@@ -161,3 +161,118 @@ Successfully implemented all 14 tasks across the WSH application:
 #### Lint Results
 - 0 errors, 1 warning (pre-existing font warning)
 - Dev server compiles successfully with all 200 responses
+
+---
+## Task ID: 4 - Missing Features: MindMap, Trash, Notebook, DB Viewer & More
+### Work Task
+Build 12 missing features for the WSH application including Mind Map visualization, Trash modal, Notebook View, Note Detail Modal, DB Viewer, enhanced AdminPanel ENV settings, and various component updates.
+
+### Work Summary
+Successfully implemented all 12 tasks across the WSH application:
+
+#### 1. Zustand Store Updates (`src/store/wshStore.ts`)
+- Added trash state: `trashOpen`, `setTrashOpen`, `restoreNote`, `permanentDeleteNote`, `emptyTrash`
+- Added mind map state: `mindMapOpen`, `setMindMapOpen`
+- Added notebook view state: `notebookOpen`, `setNotebookOpen`
+- Added note detail state: `noteDetailId`, `setNoteDetailId`
+- Added DB viewer state: `dbViewerOpen`, `setDbViewerOpen`
+- `deleteNote` now sets `isDeleted: true` with `updatedAt` timestamp
+- All new state fields persisted to localStorage
+
+#### 2. Graph API Route (`src/app/api/graph/route.ts`)
+- GET route accepting notes data as query parameter
+- Returns `{ nodes, edges }` graph structure
+- Calculates edges from shared tags between notes
+- Edge weight = number of shared tags
+- Filters out deleted notes
+
+#### 3. Mind Map Component (`src/components/wsh/MindMap.tsx`)
+- Full-screen overlay with dark background (slate-950/95)
+- Custom SVG force-directed graph with no d3 dependency
+- Physics simulation using requestAnimationFrame:
+  - Node repulsion (5000 strength)
+  - Edge attraction (0.005 strength)
+  - Center gravity (0.001 strength)
+  - Velocity damping (0.85)
+- Nodes are draggable, pan/zoom support
+- Glow effects per note type with color-coded circles
+- Hover tooltips showing note title
+- Click node to open note in editor
+- Zoom controls (+/-/reset) with percentage indicator
+- Legend showing all 6 note type colors
+- Node type colors: quick=blue, notebook=green, deep=purple, code=orange, project=pink, document=cyan
+
+#### 4. Trash Modal (`src/components/wsh/TrashModal.tsx`)
+- Modal overlay with centered card (max-w-lg)
+- Header with 🗑️ icon, "Trash" label, deleted count
+- Lists deleted notes with title, type badge, deleted date
+- Restore button (green pill) per note
+- "Delete Forever" button (red pill) per note
+- "Empty Trash" button at bottom with warning banner
+- Empty state with Inbox icon
+
+#### 5. Notebook View (`src/components/wsh/NotebookView.tsx`)
+- Full-width modal overlay with sidebar navigation
+- Left sidebar shows note list sorted chronologically
+- Active note tracking on scroll
+- Each note rendered as a "page" with type badge, title, date, HTML content, tags
+- Separator between notes (dot dot dot pattern)
+- Reading mode header showing current note
+
+#### 6. Note Detail Modal (`src/components/wsh/NoteDetailModal.tsx`)
+- Modal overlay with centered card (max-w-2xl)
+- Shows note title (large), type badge with icon, creation/update dates, tags
+- HTML content rendered in scrollable area
+- Raw content preview in monospace pre block
+- Action buttons: Edit Note (opens in editor), Trash (moves to trash)
+
+#### 7. Header Updates (`src/components/wsh/Header.tsx`)
+- Added "Map" button (Network icon) between view toggles and Analytics
+- Added "Notebook" button (BookOpen icon) next to Map
+- Both open their respective modals via store state
+
+#### 8. Footer Updates (`src/components/wsh/Footer.tsx`)
+- Wired Trash button to open TrashModal
+- Added red badge showing deleted notes count
+- Imported and renders TrashModal component
+
+#### 9. NotesGrid Updates (`src/components/wsh/NotesGrid.tsx`)
+- Added context menu (••• button) on card hover (top-right)
+- Dropdown with "View Detail" and "Move to Trash" actions
+- "View Detail" opens NoteDetailModal
+- "Move to Trash" calls deleteNote(id)
+- Outside click closes dropdown menu
+
+#### 10. AdminPanel ENV Settings Enhancement (`src/components/wsh/AdminPanel.tsx`)
+- Complete redesign of ENV Settings section
+- "ENVIRONMENT VARIABLES" header with Lock icon
+- Import .env, Export .env, + Add Variable buttons
+- Quick Add Common Keys section with preset buttons (PORT, NEXT_PUBLIC_APP_NAME, etc.)
+- Category filter dropdown (All, AI, Security, System, Infra, Database)
+- Search filter for variables
+- Table view with KEY, VALUE, CATEGORY, UPDATED, ACTIONS columns
+- Inline editing (click to edit values)
+- Edit/Delete action buttons per row
+- Category color badges
+- Warning banner at bottom about security
+- Added DB Viewer section to admin panel menu
+- "Open Full-Screen DB Viewer" button in DB Viewer section
+
+#### 11. DB Viewer Component (`src/components/wsh/DBViewer.tsx`)
+- Full-screen overlay (z-115) simulating port 5682 DB viewer
+- Table selector tabs: Notes, Folders, Users with record counts
+- Search/filter across all columns
+- Add Row form with appropriate field types (type dropdown for notes)
+- Edit rows inline with Save/Cancel buttons
+- Delete rows with confirmation
+- Data grid with sticky headers and monospace font
+- Footer stats showing record count and database info
+- Port 5682 badge indicator
+
+#### 12. Page Updates (`src/app/page.tsx`)
+- Imported and rendered all new modals: MindMap, TrashModal, NotebookView, NoteDetailModal, DBViewer
+- All modals render at the root level for proper z-index stacking
+
+#### Lint Results
+- 0 errors, 1 warning (pre-existing font warning)
+- Dev server compiles successfully with all 200 responses

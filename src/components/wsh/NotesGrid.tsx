@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Clock, Tag, FolderOpen, FileText, Code, Briefcase, BookOpen, Brain, Plus } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { Clock, Tag, FolderOpen, FileText, Code, Briefcase, BookOpen, Brain, Plus, MoreVertical, Eye, Trash2 } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -22,7 +22,10 @@ const typeColors: Record<string, string> = {
   document: 'bg-cyan-500/15 text-cyan-400',
 };
 
-function NoteCard({ note, onClick }: { note: Note; onClick: () => void }) {
+function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onClick: () => void; onViewDetail: () => void; onDelete: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const date = new Date(note.updatedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -30,13 +33,59 @@ function NoteCard({ note, onClick }: { note: Note; onClick: () => void }) {
     minute: '2-digit',
   });
 
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
+
   return (
     <div
       onClick={onClick}
-      className="bg-card rounded-2xl border border-border/50 p-4 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:ring-pri-500/20 transition-all duration-300 group"
+      className="bg-card rounded-2xl border border-border/50 p-4 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:ring-pri-500/20 transition-all duration-300 group relative"
     >
+      {/* Context menu button */}
+      <div
+        ref={menuRef}
+        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="p-1 rounded-full bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Dropdown */}
+        {menuOpen && (
+          <div className="absolute top-full right-0 mt-1 w-36 bg-card rounded-xl border border-border/50 shadow-xl py-1 animate-fadeIn z-20">
+            <button
+              onClick={(e) => { e.stopPropagation(); onViewDetail(); setMenuOpen(false); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-bold text-foreground hover:bg-secondary/50 transition-colors"
+            >
+              <Eye className="w-3 h-3 text-muted-foreground" />
+              View Detail
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-bold text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+              Move to Trash
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 pr-6">
         <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || 'bg-secondary text-muted-foreground'}`}>
           {typeIcons[note.type]}
           {note.type}
@@ -92,6 +141,8 @@ export default function NotesGrid() {
     setEditorTags,
     searchQuery,
     viewMode,
+    deleteNote,
+    setNoteDetailId,
   } = useWSHStore();
 
   const filteredNotes = useMemo(() => {
@@ -122,6 +173,14 @@ export default function NotesGrid() {
     setActiveNoteType(note.type as 'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document');
     setEditorTags(note.tags);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleViewDetail = (note: Note) => {
+    setNoteDetailId(note.id);
+  };
+
+  const handleDelete = (note: Note) => {
+    deleteNote(note.id);
   };
 
   if (viewMode === 'focus') {
@@ -172,7 +231,13 @@ export default function NotesGrid() {
       {filteredNotes.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filteredNotes.map((note) => (
-            <NoteCard key={note.id} note={note} onClick={() => handleNoteClick(note)} />
+            <NoteCard
+              key={note.id}
+              note={note}
+              onClick={() => handleNoteClick(note)}
+              onViewDetail={() => handleViewDetail(note)}
+              onDelete={() => handleDelete(note)}
+            />
           ))}
         </div>
       ) : (

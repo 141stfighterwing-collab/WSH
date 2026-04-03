@@ -88,6 +88,29 @@ interface WSHState {
   adminPanelOpen: boolean;
   setAdminPanelOpen: (open: boolean) => void;
 
+  // Trash
+  trashOpen: boolean;
+  setTrashOpen: (open: boolean) => void;
+  restoreNote: (id: string) => void;
+  permanentDeleteNote: (id: string) => void;
+  emptyTrash: () => void;
+
+  // Mind Map
+  mindMapOpen: boolean;
+  setMindMapOpen: (open: boolean) => void;
+
+  // Notebook View
+  notebookOpen: boolean;
+  setNotebookOpen: (open: boolean) => void;
+
+  // Note Detail
+  noteDetailId: string | null;
+  setNoteDetailId: (id: string | null) => void;
+
+  // DB Viewer
+  dbViewerOpen: boolean;
+  setDbViewerOpen: (open: boolean) => void;
+
   // User
   user: UserState;
   setUser: (user: Partial<UserState>) => void;
@@ -125,7 +148,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   })),
   deleteNote: (id) => set((state) => ({
     notes: state.notes.map((n) =>
-      n.id === id ? { ...n, isDeleted: true } : n
+      n.id === id ? { ...n, isDeleted: true, updatedAt: new Date().toISOString() } : n
     ),
   })),
 
@@ -201,6 +224,37 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   adminPanelOpen: false,
   setAdminPanelOpen: (open) => set({ adminPanelOpen: open }),
 
+  // Trash
+  trashOpen: false,
+  setTrashOpen: (open) => set({ trashOpen: open }),
+  restoreNote: (id) => set((state) => ({
+    notes: state.notes.map((n) =>
+      n.id === id ? { ...n, isDeleted: false, updatedAt: new Date().toISOString() } : n
+    ),
+  })),
+  permanentDeleteNote: (id) => set((state) => ({
+    notes: state.notes.filter((n) => n.id !== id),
+  })),
+  emptyTrash: () => set((state) => ({
+    notes: state.notes.filter((n) => !n.isDeleted),
+  })),
+
+  // Mind Map
+  mindMapOpen: false,
+  setMindMapOpen: (open) => set({ mindMapOpen: open }),
+
+  // Notebook View
+  notebookOpen: false,
+  setNotebookOpen: (open) => set({ notebookOpen: open }),
+
+  // Note Detail
+  noteDetailId: null,
+  setNoteDetailId: (id) => set({ noteDetailId: id }),
+
+  // DB Viewer
+  dbViewerOpen: false,
+  setDbViewerOpen: (open) => set({ dbViewerOpen: open }),
+
   // User
   user: defaultUser,
   setUser: (user) => set((state) => ({
@@ -225,6 +279,10 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       user: state.user,
       adminPanelOpen: state.adminPanelOpen,
       aiUsageCount: state.aiUsageCount,
+      trashOpen: state.trashOpen,
+      mindMapOpen: state.mindMapOpen,
+      notebookOpen: state.notebookOpen,
+      dbViewerOpen: state.dbViewerOpen,
     };
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -250,6 +308,10 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         if (data.user) set({ user: { ...defaultUser, ...data.user } });
         if (typeof data.adminPanelOpen === 'boolean') set({ adminPanelOpen: data.adminPanelOpen });
         if (typeof data.aiUsageCount === 'number') set({ aiUsageCount: data.aiUsageCount });
+        if (typeof data.trashOpen === 'boolean') set({ trashOpen: data.trashOpen });
+        if (typeof data.mindMapOpen === 'boolean') set({ mindMapOpen: data.mindMapOpen });
+        if (typeof data.notebookOpen === 'boolean') set({ notebookOpen: data.notebookOpen });
+        if (typeof data.dbViewerOpen === 'boolean') set({ dbViewerOpen: data.dbViewerOpen });
       } catch {
         console.error('Failed to load WSH state from localStorage');
       }

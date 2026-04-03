@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   X,
   Lock,
@@ -17,19 +17,20 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  Upload,
+  AlertTriangle,
+  Database,
+  Edit3,
 } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
-type AdminSection = 'env' | 'versioning' | 'users' | 'cloud' | 'logs' | null;
+type AdminSection = 'env' | 'versioning' | 'users' | 'cloud' | 'logs' | 'dbviewer' | null;
 
-interface EnvData {
-  AI_SYNTHESIS_MODEL: string;
-  AI_SYNTHESIS_TEMPERATURE: string;
-  AI_SYNTHESIS_MAX_TOKENS: string;
-  AI_DAILY_LIMIT: string;
-  DOCKER_ENABLED: string;
-  NODE_ENV: string;
-  DATABASE_URL: string;
+interface EnvVar {
+  key: string;
+  value: string;
+  category: string;
+  updated: string;
 }
 
 interface SystemData {
@@ -97,6 +98,12 @@ const menuItems: {
     iconColor: 'text-slate-300',
   },
   {
+    id: 'dbviewer',
+    label: 'DB Viewer',
+    icon: <Database className="w-4 h-4" />,
+    iconColor: 'text-cyan-400',
+  },
+  {
     id: 'logs',
     label: 'System Logs',
     icon: <ScrollText className="w-4 h-4" />,
@@ -104,11 +111,36 @@ const menuItems: {
   },
 ];
 
+const DEFAULT_ENV_VARS: EnvVar[] = [
+  { key: 'AI_SYNTHESIS_MODEL', value: 'glm-4-flash', category: 'AI', updated: new Date().toISOString() },
+  { key: 'AI_SYNTHESIS_TEMPERATURE', value: '0.7', category: 'AI', updated: new Date().toISOString() },
+  { key: 'AI_SYNTHESIS_MAX_TOKENS', value: '4096', category: 'AI', updated: new Date().toISOString() },
+  { key: 'AI_DAILY_LIMIT', value: '800', category: 'AI', updated: new Date().toISOString() },
+  { key: 'DOCKER_ENABLED', value: 'true', category: 'Infra', updated: new Date().toISOString() },
+  { key: 'NODE_ENV', value: 'development', category: 'System', updated: new Date().toISOString() },
+  { key: 'DATABASE_URL', value: 'configured', category: 'Database', updated: new Date().toISOString() },
+  { key: 'JWT_SECRET', value: '••••••••', category: 'Security', updated: new Date().toISOString() },
+  { key: 'NEXTAUTH_SECRET', value: '••••••••', category: 'Security', updated: new Date().toISOString() },
+  { key: 'NEXTAUTH_URL', value: 'http://localhost:3000', category: 'System', updated: new Date().toISOString() },
+];
+
+const QUICK_ADD_KEYS = [
+  { key: 'PORT', value: '3000', category: 'System' },
+  { key: 'NEXT_PUBLIC_APP_NAME', value: 'WeaveNote', category: 'System' },
+  { key: 'STORAGE_TYPE', value: 'local', category: 'Infra' },
+  { key: 'BACKUP_INTERVAL', value: '3600', category: 'Infra' },
+  { key: 'LOG_LEVEL', value: 'info', category: 'System' },
+  { key: 'MAX_UPLOAD_SIZE', value: '10485760', category: 'System' },
+];
+
 export default function AdminPanel() {
-  const { adminPanelOpen, setAdminPanelOpen } = useWSHStore();
+  const { adminPanelOpen, setAdminPanelOpen, setDbViewerOpen } = useWSHStore();
   const [activeSection, setActiveSection] = useState<AdminSection>(null);
-  const [envData, setEnvData] = useState<EnvData | null>(null);
-  const [envEdits, setEnvEdits] = useState<Record<string, string>>({});
+  const [envVars, setEnvVars] = useState<EnvVar[]>(DEFAULT_ENV_VARS);
+  const [envSearch, setEnvSearch] = useState('');
+  const [envFilter, setEnvFilter] = useState('all');
+  const [editingEnvKey, setEditingEnvKey] = useState<string | null>(null);
+  const [editingEnvValue, setEditingEnvValue] = useState('');
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -120,37 +152,10 @@ export default function AdminPanel() {
   const [cloudConnected, setCloudConnected] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', email: '', role: 'user' });
   const [showNewUser, setShowNewUser] = useState(false);
+  const [newEnvKey, setNewEnvKey] = useState('');
+  const [newEnvValue, setNewEnvValue] = useState('');
+  const [newEnvCategory, setNewEnvCategory] = useState('System');
   const logsEndRef = useRef<HTMLDivElement>(null);
-
-  const fetchEnv = useCallback(async () => {
-    setLoading((p) => ({ ...p, env: true }));
-    try {
-      const res = await fetch('/api/admin/env');
-      const data = await res.json();
-      setEnvData(data.env);
-      setEnvEdits(data.env);
-    } catch {
-      setEnvData({
-        AI_SYNTHESIS_MODEL: 'glm-4-flash',
-        AI_SYNTHESIS_TEMPERATURE: '0.7',
-        AI_SYNTHESIS_MAX_TOKENS: '4096',
-        AI_DAILY_LIMIT: '800',
-        DOCKER_ENABLED: 'true',
-        NODE_ENV: 'development',
-        DATABASE_URL: 'configured',
-      });
-      setEnvEdits({
-        AI_SYNTHESIS_MODEL: 'glm-4-flash',
-        AI_SYNTHESIS_TEMPERATURE: '0.7',
-        AI_SYNTHESIS_MAX_TOKENS: '4096',
-        AI_DAILY_LIMIT: '800',
-        DOCKER_ENABLED: 'true',
-        NODE_ENV: 'development',
-        DATABASE_URL: 'configured',
-      });
-    }
-    setLoading((p) => ({ ...p, env: false }));
-  }, []);
 
   const fetchSystem = useCallback(async () => {
     setLoading((p) => ({ ...p, system: true }));
@@ -203,7 +208,6 @@ export default function AdminPanel() {
   const handleToggleSection = (section: AdminSection) => {
     const newSection = activeSection === section ? null : section;
     setActiveSection(newSection);
-    if (newSection === 'env') fetchEnv();
     if (newSection === 'versioning') fetchSystem();
     if (newSection === 'users') fetchUsers();
     if (newSection === 'logs') fetchLogs();
@@ -218,8 +222,77 @@ export default function AdminPanel() {
   const handleSaveEnv = async () => {
     setLoading((p) => ({ ...p, saveEnv: true }));
     await new Promise((r) => setTimeout(r, 800));
-    setEnvData({ ...envEdits } as EnvData);
     setLoading((p) => ({ ...p, saveEnv: false }));
+  };
+
+  const handleImportEnv = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.env';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string;
+        const lines = text.split('\n').filter((l) => l.trim() && !l.startsWith('#'));
+        const imported: EnvVar[] = [];
+        for (const line of lines) {
+          const eqIndex = line.indexOf('=');
+          if (eqIndex === -1) continue;
+          const key = line.slice(0, eqIndex).trim();
+          const value = line.slice(eqIndex + 1).trim();
+          if (!envVars.find((v) => v.key === key)) {
+            imported.push({ key, value, category: 'Imported', updated: new Date().toISOString() });
+          }
+        }
+        setEnvVars((prev) => [...prev, ...imported]);
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const handleExportEnv = () => {
+    const text = envVars.map((v) => `${v.key}=${v.value}`).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `.env-${new Date().toISOString().split('T')[0]}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAddEnvVar = () => {
+    if (!newEnvKey.trim()) return;
+    if (envVars.find((v) => v.key === newEnvKey.trim())) return;
+    setEnvVars((prev) => [
+      ...prev,
+      { key: newEnvKey.trim(), value: newEnvValue, category: newEnvCategory, updated: new Date().toISOString() },
+    ]);
+    setNewEnvKey('');
+    setNewEnvValue('');
+    setNewEnvCategory('System');
+  };
+
+  const handleQuickAdd = (preset: { key: string; value: string; category: string }) => {
+    if (envVars.find((v) => v.key === preset.key)) return;
+    setEnvVars((prev) => [
+      ...prev,
+      { key: preset.key, value: preset.value, category: preset.category, updated: new Date().toISOString() },
+    ]);
+  };
+
+  const handleUpdateEnvValue = (key: string) => {
+    setEnvVars((prev) =>
+      prev.map((v) => (v.key === key ? { ...v, value: editingEnvValue, updated: new Date().toISOString() } : v))
+    );
+    setEditingEnvKey(null);
+  };
+
+  const handleDeleteEnvVar = (key: string) => {
+    setEnvVars((prev) => prev.filter((v) => v.key !== key));
   };
 
   const handleCreateUser = async () => {
@@ -238,7 +311,6 @@ export default function AdminPanel() {
         setShowNewUser(false);
       }
     } catch {
-      // mock create
       setUsers((prev) => [
         {
           id: `usr-${Date.now()}`,
@@ -286,6 +358,23 @@ export default function AdminPanel() {
     setCloudConnected(cloudProvider !== 'none');
     setLoading((p) => ({ ...p, testCloud: false }));
   };
+
+  const filteredEnvVars = useMemo(() => {
+    let filtered = envVars;
+    if (envFilter !== 'all') {
+      filtered = filtered.filter((v) => v.category === envFilter);
+    }
+    if (envSearch) {
+      const q = envSearch.toLowerCase();
+      filtered = filtered.filter((v) => v.key.toLowerCase().includes(q) || v.value.toLowerCase().includes(q));
+    }
+    return filtered;
+  }, [envVars, envFilter, envSearch]);
+
+  const envCategories = useMemo(() => {
+    const cats = new Set(envVars.map((v) => v.category));
+    return Array.from(cats).sort();
+  }, [envVars]);
 
   if (!adminPanelOpen) return null;
 
@@ -337,22 +426,198 @@ export default function AdminPanel() {
         <div className="flex-1 overflow-y-auto p-4">
           {/* ENV Settings */}
           {activeSection === 'env' && (
-            <div className="space-y-3 animate-fadeIn">
-              <span className="micro-label text-muted-foreground">Environment Variables</span>
-              {envData &&
-                Object.entries(envData).map(([key, value]) => (
-                  <div key={key} className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      {key}
-                    </label>
-                    <input
-                      type="text"
-                      value={envEdits[key] || value}
-                      onChange={(e) => setEnvEdits((p) => ({ ...p, [key]: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-secondary/50 border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground transition-colors"
-                    />
+            <div className="space-y-4 animate-fadeIn">
+              {/* Header */}
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-400" />
+                <span className="micro-label text-muted-foreground">Environment Variables</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground/60 -mt-2">
+                Manage application configuration. Changes are applied on save.
+              </p>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleImportEnv}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 hover:bg-amber-500/25 transition-all active:scale-95"
+                >
+                  <Upload className="w-2.5 h-2.5" />
+                  Import .env
+                </button>
+                <button
+                  onClick={handleExportEnv}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 hover:bg-amber-500/25 transition-all active:scale-95"
+                >
+                  <Download className="w-2.5 h-2.5" />
+                  Export .env
+                </button>
+                <button
+                  onClick={() => setNewEnvKey('__show_form__')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-pri-600/15 text-pri-400 border border-pri-500/25 hover:bg-pri-600/25 transition-all active:scale-95"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                  Add Variable
+                </button>
+              </div>
+
+              {/* Add new variable form */}
+              {newEnvKey === '__show_form__' && (
+                <div className="p-3 bg-secondary/30 rounded-xl border border-pri-500/20 space-y-2 animate-fadeIn">
+                  <input
+                    type="text"
+                    placeholder="KEY_NAME"
+                    value={newEnvKey === '__show_form__' ? '' : newEnvKey}
+                    onChange={(e) => setNewEnvKey(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-secondary border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
+                  />
+                  <input
+                    type="text"
+                    placeholder="value"
+                    value={newEnvValue}
+                    onChange={(e) => setNewEnvValue(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-secondary border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
+                  />
+                  <select
+                    value={newEnvCategory}
+                    onChange={(e) => setNewEnvCategory(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs bg-secondary border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
+                  >
+                    <option value="System">System</option>
+                    <option value="AI">AI</option>
+                    <option value="Security">Security</option>
+                    <option value="Infra">Infrastructure</option>
+                    <option value="Database">Database</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setNewEnvKey('');
+                        handleAddEnvVar();
+                      }}
+                      className="flex-1 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => { setNewEnvKey(''); setNewEnvValue(''); }}
+                      className="px-3 py-1.5 rounded-full text-[9px] font-bold text-muted-foreground hover:bg-secondary transition-all active:scale-95"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Add Common Keys */}
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 block mb-1.5">
+                  Quick Add Common Keys
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {QUICK_ADD_KEYS.filter((p) => !envVars.find((v) => v.key === p.key)).map((preset) => (
+                    <button
+                      key={preset.key}
+                      onClick={() => handleQuickAdd(preset)}
+                      className="px-2 py-1 rounded-full text-[8px] font-bold bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+                    >
+                      + {preset.key}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filter */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Filter variables..."
+                    value={envSearch}
+                    onChange={(e) => setEnvSearch(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg text-[10px] bg-secondary/50 border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
+                  />
+                </div>
+                <select
+                  value={envFilter}
+                  onChange={(e) => setEnvFilter(e.target.value)}
+                  className="px-2 py-1.5 rounded-lg text-[10px] bg-secondary/50 border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
+                >
+                  <option value="all">All</option>
+                  {envCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Table header */}
+              <div className="grid grid-cols-[1fr_1fr_70px_70px_40px] gap-1 px-2 py-1.5 text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
+                <span>Key</span>
+                <span>Value</span>
+                <span>Category</span>
+                <span>Updated</span>
+                <span></span>
+              </div>
+
+              {/* Table rows */}
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {filteredEnvVars.map((envVar) => (
+                  <div
+                    key={envVar.key}
+                    className="grid grid-cols-[1fr_1fr_70px_70px_40px] gap-1 px-2 py-1.5 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors items-center text-[10px]"
+                  >
+                    <span className="font-mono font-bold text-foreground truncate">{envVar.key}</span>
+                    {editingEnvKey === envVar.key ? (
+                      <input
+                        type="text"
+                        value={editingEnvValue}
+                        onChange={(e) => setEditingEnvValue(e.target.value)}
+                        onBlur={() => handleUpdateEnvValue(envVar.key)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateEnvValue(envVar.key); if (e.key === 'Escape') setEditingEnvKey(null); }}
+                        className="px-1 py-0.5 rounded text-[10px] font-mono bg-secondary border border-pri-500/30 text-foreground focus:outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <span
+                        className="font-mono text-muted-foreground truncate cursor-pointer hover:text-foreground"
+                        onClick={() => { setEditingEnvKey(envVar.key); setEditingEnvValue(envVar.value); }}
+                      >
+                        {envVar.value}
+                      </span>
+                    )}
+                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded-full w-fit ${
+                      envVar.category === 'Security' ? 'bg-red-500/15 text-red-400' :
+                      envVar.category === 'AI' ? 'bg-purple-500/15 text-purple-400' :
+                      envVar.category === 'Infra' ? 'bg-orange-500/15 text-orange-400' :
+                      envVar.category === 'Database' ? 'bg-cyan-500/15 text-cyan-400' :
+                      'bg-secondary text-muted-foreground'
+                    }`}>
+                      {envVar.category}
+                    </span>
+                    <span className="text-[8px] text-muted-foreground/50">
+                      {new Date(envVar.updated).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => { setEditingEnvKey(envVar.key); setEditingEnvValue(envVar.value); }}
+                        className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit"
+                      >
+                        <Edit3 className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEnvVar(envVar.key)}
+                        className="p-0.5 rounded text-muted-foreground hover:text-red-400 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Save */}
               <button
                 onClick={handleSaveEnv}
                 disabled={loading.saveEnv}
@@ -361,6 +626,14 @@ export default function AdminPanel() {
                 {loading.saveEnv ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 Save Changes
               </button>
+
+              {/* Warning */}
+              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-[9px] text-amber-400/70 leading-relaxed">
+                  Environment variables contain sensitive configuration. Never expose your <span className="font-bold">.env</span> file or share secrets. Changes to security variables may require server restart.
+                </p>
+              </div>
             </div>
           )}
 
@@ -594,6 +867,22 @@ export default function AdminPanel() {
             </div>
           )}
 
+          {/* DB Viewer */}
+          {activeSection === 'dbviewer' && (
+            <DBViewerSection />
+          )}
+
+          {/* Full-screen DB Viewer trigger */}
+          {activeSection === 'dbviewer' && (
+            <button
+              onClick={() => { setDbViewerOpen(true); setAdminPanelOpen(false); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all active:scale-95 mt-3"
+            >
+              <Database className="w-3 h-3" />
+              Open Full-Screen DB Viewer
+            </button>
+          )}
+
           {/* System Logs */}
           {activeSection === 'logs' && (
             <div className="space-y-3 animate-fadeIn">
@@ -686,5 +975,131 @@ export default function AdminPanel() {
         </div>
       </div>
     </>
+  );
+}
+
+/* DB Viewer Section Component */
+function DBViewerSection() {
+  const { notes, folders, user } = useWSHStore();
+  const [activeTable, setActiveTable] = useState<'notes' | 'folders' | 'users'>('notes');
+  const [dbSearch, setDbSearch] = useState('');
+
+  const tableData = useMemo(() => {
+    if (activeTable === 'notes') {
+      return notes.map((n) => ({
+        id: n.id,
+        title: n.title,
+        type: n.type,
+        tags: n.tags.join(', '),
+        folderId: n.folderId || '—',
+        isDeleted: n.isDeleted ? 'Yes' : 'No',
+        createdAt: new Date(n.createdAt).toLocaleDateString(),
+        updatedAt: new Date(n.updatedAt).toLocaleDateString(),
+      }));
+    }
+    if (activeTable === 'folders') {
+      return folders.map((f) => ({
+        id: f.id,
+        name: f.name,
+        order: f.order,
+        createdAt: new Date(f.createdAt).toLocaleDateString(),
+        updatedAt: new Date(f.updatedAt).toLocaleDateString(),
+      }));
+    }
+    return [{
+      id: 'local-user',
+      username: user.username || 'guest',
+      email: user.email || '—',
+      role: user.role,
+      status: user.isLoggedIn ? 'active' : 'inactive',
+    }];
+  }, [notes, folders, user]);
+
+  const columns = useMemo(() => {
+    if (tableData.length === 0) return [];
+    return Object.keys(tableData[0]);
+  }, [tableData]);
+
+  const filteredRows = useMemo(() => {
+    if (!dbSearch) return tableData;
+    const q = dbSearch.toLowerCase();
+    return tableData.filter((row) =>
+      Object.values(row).some((v) => String(v).toLowerCase().includes(q))
+    );
+  }, [tableData, dbSearch]);
+
+  return (
+    <div className="space-y-3 animate-fadeIn">
+      <span className="micro-label text-muted-foreground">Database Viewer</span>
+      <p className="text-[10px] text-muted-foreground/60 -mt-2">
+        Browse and inspect local data stored in the application.
+      </p>
+
+      {/* Table selector */}
+      <div className="flex gap-1">
+        {(['notes', 'folders', 'users'] as const).map((table) => (
+          <button
+            key={table}
+            onClick={() => { setActiveTable(table); setDbSearch(''); }}
+            className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 ${
+              activeTable === table
+                ? 'bg-cyan-600/15 text-cyan-400 border border-cyan-500/30'
+                : 'bg-secondary/30 text-muted-foreground border border-transparent hover:bg-secondary'
+            }`}
+          >
+            {table} ({table === 'notes' ? notes.length : table === 'folders' ? folders.length : 1})
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search records..."
+        value={dbSearch}
+        onChange={(e) => setDbSearch(e.target.value)}
+        className="w-full px-3 py-1.5 rounded-lg text-[10px] bg-secondary/50 border border-border/50 focus:border-cyan-500/50 focus:outline-none text-foreground"
+      />
+
+      {/* Data grid */}
+      <div className="rounded-xl border border-border/50 overflow-hidden">
+        <div className="max-h-72 overflow-auto">
+          <table className="w-full text-[9px]">
+            <thead className="sticky top-0">
+              <tr className="bg-secondary/50">
+                {columns.map((col) => (
+                  <th key={col} className="px-2 py-1.5 text-left font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="text-center py-6 text-muted-foreground">
+                    {dbSearch ? 'No matching records' : 'No records'}
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((row, idx) => (
+                  <tr key={idx} className="border-t border-border/30 hover:bg-secondary/20 transition-colors">
+                    {columns.map((col) => (
+                      <td key={col} className="px-2 py-1.5 text-foreground truncate max-w-[120px]" title={String(row[col as keyof typeof row])}>
+                        {String(row[col as keyof typeof row])}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p className="text-[8px] text-muted-foreground/40 text-center">
+        {filteredRows.length} record{filteredRows.length !== 1 ? 's' : ''} shown
+      </p>
+    </div>
   );
 }

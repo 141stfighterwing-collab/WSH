@@ -9,6 +9,8 @@ import {
   Focus,
   LogIn,
   Shield,
+  Network,
+  BookOpen,
 } from 'lucide-react';
 import Logo from './Logo';
 import LoginWidget from './LoginWidget';
@@ -21,6 +23,8 @@ export default function Header() {
     setSettingsOpen,
     setAnalyticsOpen,
     setAdminPanelOpen,
+    setMindMapOpen,
+    setNotebookOpen,
     searchQuery,
     setSearchQuery,
     user,
@@ -70,6 +74,24 @@ export default function Header() {
             }`}
           >
             <Focus className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Map & Notebook buttons */}
+        <div className="hidden lg:flex items-center gap-1">
+          <button
+            onClick={() => setMindMapOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+          >
+            <Network className="w-3.5 h-3.5" />
+            <span>Map</span>
+          </button>
+          <button
+            onClick={() => setNotebookOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Notebook</span>
           </button>
         </div>
 

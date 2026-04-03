@@ -10,6 +10,11 @@ import Footer from '@/components/wsh/Footer';
 import SettingsPanel from '@/components/wsh/SettingsPanel';
 import AnalyticsPanel from '@/components/wsh/AnalyticsPanel';
 import AdminPanel from '@/components/wsh/AdminPanel';
+import MindMap from '@/components/wsh/MindMap';
+import TrashModal from '@/components/wsh/TrashModal';
+import NotebookView from '@/components/wsh/NotebookView';
+import NoteDetailModal from '@/components/wsh/NoteDetailModal';
+import DBViewer from '@/components/wsh/DBViewer';
 import { useWSHStore } from '@/store/wshStore';
 
 export default function Home() {
@@ -48,6 +53,13 @@ export default function Home() {
       <SettingsPanel />
       <AnalyticsPanel />
       <AdminPanel />
+
+      {/* Full-Screen Modals & Overlays */}
+      <MindMap />
+      <TrashModal />
+      <NotebookView />
+      <NoteDetailModal />
+      <DBViewer />
     </div>
   );
 }
