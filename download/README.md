@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.2.0
+# WSH — WeaveNote Self-Hosted v3.4.0
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -286,7 +286,8 @@ A flexible **organizational system** combining hierarchical folders with flat ta
 - **Tag management** — Add, remove, and filter by tags on any note
 - **Multi-tag support** — Each note can have multiple tags for cross-cutting categorization
 - **Folder filtering** — Click a folder in the sidebar to filter the notes grid to that folder's contents
-- **Tag filtering** — Click a tag to see all notes sharing that tag across folders
+- **Tag filtering** — Click a tag to see all notes sharing that tag across folders (neon-colored tags with glow effects)
+- **Searchable tags** — Click any tag in the sidebar to instantly filter the notes grid; click again to clear
 
 ### 🔐 User Authentication
 
@@ -474,10 +475,11 @@ wsh/
 │   │       ├── LoginWidget.tsx    # Authentication UI
 │   │       ├── Header.tsx         # Application header
 │   │       ├── Footer.tsx         # Application footer
-│   │       ├── LeftSidebar.tsx    # Folders & navigation
-│   │       ├── RightSidebar.tsx   # Quick references
-│   │       ├── Calendar.tsx       # Calendar view
-│   │       ├── QuickReferences.tsx # Quick access panel
+│   │       ├── LeftSidebar.tsx    # Calendar, Folders, Tags
+│   │       ├── RightSidebar.tsx   # Live Clock, Today's Things, Projects
+│   │       ├── Calendar.tsx       # Compact calendar view
+│   │       ├── QuickReferences.tsx # Template quick access
+│   │       ├── FarRightSidebar.tsx # Legacy (content merged into RightSidebar)
 │   │       └── Logo.tsx           # WSH logo component
 │   ├── hooks/
 │   │   ├── use-toast.ts      # Toast notification hook
@@ -510,7 +512,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.2.0", "timestamp": "2026-04-04T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.4.0", "timestamp": "2026-04-04T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
@@ -608,6 +610,21 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | Runtime | Bun / Node.js |
 | Containerization | Docker + Docker Compose |
 | Reverse Proxy | Caddy (optional) |
+
+---
+
+## Screenshots
+
+| View | Description |
+|------|-------------|
+| ![Full Layout](download/screenshot-02-full-layout-with-data.png) | **3-Column Layout** — Left sidebar (Calendar, Folders, Tags) + Main Content + Right sidebar (Clock, Today's Things, Projects) |
+| ![Left Sidebar](download/screenshot-03-left-sidebar.png) | **Left Sidebar** — Calendar, Quick References, Folders |
+| ![Right Sidebar](download/screenshot-04-right-sidebar.png) | **Right Sidebar** — Live Clock, Today's Things |
+| ![Projects](download/screenshot-05-right-sidebar-projects.png) | **Projects** — All project-type notes listed in right sidebar |
+| ![Tags](download/screenshot-06-left-sidebar-tags.png) | **Neon Tags** — Clickable tags with search filtering |
+| ![Project Tab](download/screenshot-07-project-tab-selected.png) | **Project Tab** — Selected in the note editor |
+| ![Tag Search](download/screenshot-09-tag-search-deployment.png) | **Tag Search** — Clicking #deployment filters notes |
+| ![Notes Grid](download/screenshot-10-notes-grid-projects.png) | **Notes Grid** — Project cards with pink border |
 
 ---
 

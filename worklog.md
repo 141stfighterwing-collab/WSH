@@ -242,3 +242,65 @@ Fix completely broken website layout where Tailwind v4 responsive classes were n
 #### 6. Documentation
 - package.json: 3.3.0 → 3.4.0
 - CHANGELOG.md: Added v3.4.0 section with CRITICAL fixes documented
+
+---
+## Task ID: 7 - Full E2E Validation, Gap Fix & Version Sync (v3.4.0 final)
+### Work Task
+Comprehensive end-to-end validation: fix remaining gap issue, sync all versions to 3.4.0, verify all installers/Docker/docs, test all API endpoints, take validation screenshots.
+
+### Work Summary
+
+#### 1. Gap Fix (HUGE GAP between editor and sidebars)
+- **Root cause**: `max-w-4xl mx-auto` on main content div limited editor to 896px and centered it
+- **Fix**: Removed `max-w-4xl mx-auto` from page.tsx main content wrapper
+- **VLM verification**: Confirmed no gaps, editor properly fills available space
+
+#### 2. Version Synchronization (all now 3.4.0)
+| File | Before | After |
+|------|--------|-------|
+| package.json | 3.4.0 | 3.4.0 ✅ |
+| src/app/api/health/route.ts | 3.2.0 ❌ | 3.4.0 ✅ |
+| README.md (root) | 3.4.0 | 3.4.0 ✅ |
+| README.md (download) | 3.2.0 ❌ | 3.4.0 ✅ (synced) |
+| CHANGELOG.md | 3.4.0 (inaccurate) | 3.4.0 (corrected) ✅ |
+| install-wsh.ps1 | 3.2.0 ❌ | 3.4.0 ✅ |
+| docs/INDEX.md | 3.3.0 ❌ | 3.4.0 ✅ |
+
+#### 3. CHANGELOG 3.4.0 Corrections
+- Fixed inaccurate claim: "Fixed by using max-w-4xl mx-auto" → "Fixed by removing max-w-4xl mx-auto"
+- Added: API health endpoint version fix
+- Added: Documentation sync note
+- Added: .env.example creation
+
+#### 4. Dockerfile Optimizations
+- Removed redundant COPY lines (public, .next/static already in standalone)
+- All COPY operations now use --chown=nextjs:nodejs consistently
+
+#### 5. .dockerignore Hardening
+- Added `.env` to prevent secrets from being baked into Docker image
+- Added `upload/`, `*.png`, `*.log`, `worklog.md` exclusions
+
+#### 6. .env.example Created
+- Complete environment configuration template with all 15 variables
+- Includes sensible defaults and security comments
+
+#### 7. Full API Endpoint Validation (all PASS ✅)
+| Endpoint | Status |
+|----------|--------|
+| GET /api/health | ✅ v3.4.0 |
+| GET / (Homepage) | ✅ HTTP 200 (51KB) |
+| GET /api/admin/system | ✅ healthy |
+| GET /api/admin/env | ✅ HTTP 200 |
+| GET /api/admin/users | ✅ HTTP 200 |
+| GET /api/admin/logs | ✅ HTTP 200 |
+| GET /api/graph | ✅ nodes/edges JSON |
+| POST /api/synthesis | ✅ AI response |
+
+#### 8. Validation Screenshots
+- v340-home.png: Full layout verified by VLM (3-column, no gaps, no broken elements)
+- v340-health.png: API health response captured
+
+#### 9. Build Validation
+- `npm run build`: Compiled successfully, 0 errors, 11 routes
+- Production server starts and serves all routes correctly
+- Docker runtime not available in CI, but Dockerfile analyzed and corrected

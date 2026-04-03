@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    WSH (WeaveNote Self-Hosted) — Comprehensive PowerShell Installer v3.2.0
+    WSH (WeaveNote Self-Hosted) — Comprehensive PowerShell Installer v3.4.0
 
 .DESCRIPTION
     Automates the full setup of the WSH project: prerequisite checks, repo clone,
@@ -11,7 +11,7 @@
 
 .NOTES
     Project   : WSH — WeaveNote Self-Hosted
-    Version   : 3.2.0
+    Version   : 3.4.0
     GitHub    : https://github.com/141stfighterwing-collab/WSH
     License   : MIT
     Requires  : PowerShell 7+ (recommended), Node.js 20+, Git, Bun
@@ -21,7 +21,7 @@
 #  CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$Script:WSH_VERSION       = "3.2.0"
+$Script:WSH_VERSION       = "3.4.0"
 $Script:REPO_URL          = "https://github.com/141stfighterwing-collab/WSH.git"
 $Script:DEFAULT_BRANCH    = "main"
 $Script:DEFAULT_PORT      = 3000

@@ -1,4 +1,4 @@
-# WSH v3.3.0 — Documentation
+# WSH v3.4.0 — Documentation
 
 Welcome to the WSH (WeaveNote Self-Hosted) documentation. This directory contains detailed guides for installation, configuration, and usage.
 
