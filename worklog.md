@@ -199,3 +199,46 @@ Fix identical LeftSidebar/RightSidebar, add live clock, make tags searchable, re
 #### Build Results
 - `next build`: Compiled successfully, 0 errors
 - Dev server: HTTP 200 on localhost:3000
+
+---
+## Task ID: 6 - Fix Broken 3-Column Layout (v3.4.0)
+### Work Task
+Fix completely broken website layout where Tailwind v4 responsive classes were not generating, causing all elements to stack vertically instead of showing the 3-column sidebar layout.
+
+### Work Summary
+
+#### 1. Root Cause Identified
+- Tailwind v4 PostCSS plugin (`@tailwindcss/postcss` v4) was NOT generating responsive variant classes
+- CSS file (148KB) contained base utilities (.hidden, .flex, .block) but ZERO responsive @media queries for component classes
+- Classes like `hidden lg:flex`, `lg:block`, `lg:w-64`, `lg:w-72` were completely absent from the built CSS
+- Result: all elements rendered as block-level with default display, stacking vertically
+
+#### 2. Attempted Fixes
+- Added `@source` directives in globals.css — did not help (classes still not generated)
+- Tried escaped class selectors in @media rules — caused build to hang/timeout
+- Tried `@config` directive — not applicable
+
+#### 3. Final Solution: Custom CSS Classes
+- Created `wsh-left-sidebar` and `wsh-right-sidebar` custom classes in globals.css
+- Used explicit `@media (min-width: 1024px)` queries for sidebar visibility and sizing
+- Left sidebar: 256px wide, flex column, border-right, hidden below 1024px
+- Right sidebar: 288px wide, flex column, border-left, hidden below 1024px
+- Updated LeftSidebar.tsx and RightSidebar.tsx to use new custom classes
+
+#### 4. Layout Improvements
+- Main content area: `max-w-4xl mx-auto` for comfortable reading width
+- Fixed `min-h-0` on middle flex row to prevent overflow
+- Changed outer container from `min-h-screen` to `h-screen` with `overflow-hidden`
+- Reduced wasted space between editor and sidebars
+
+#### 5. Validation
+- Puppeteer screenshot confirmed 3-column layout:
+  - Left sidebar: 256px at position left:0
+  - Main content: 1376px at position left:256
+  - Right sidebar: 288px at position left:1632
+  - Total: 256 + 1376 + 288 = 1920px (matches viewport)
+- VLM analysis confirmed all elements rendering correctly
+
+#### 6. Documentation
+- package.json: 3.3.0 → 3.4.0
+- CHANGELOG.md: Added v3.4.0 section with CRITICAL fixes documented

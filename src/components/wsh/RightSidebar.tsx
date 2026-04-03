@@ -229,7 +229,7 @@ function TodaySection() {
 
 export default function RightSidebar() {
   return (
-    <aside className="w-full lg:w-60 flex-shrink-0 space-y-3 order-1 lg:order-1 overflow-y-auto max-h-[calc(100vh-4rem-3rem)] px-2 py-1">
+    <aside className="wsh-right-sidebar">
       {/* Live Clock */}
       <LiveClock />
 
