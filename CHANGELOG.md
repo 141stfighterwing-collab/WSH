@@ -5,6 +5,17 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.2] - 2026-04-05
+
+### Fixed
+- **CRITICAL**: Fixed Docker container crash loop caused by Windows-style CRLF line endings in `docker-entrypoint.sh`. The file was authored/committed on Windows and contained `\r\n` line terminators that Linux `sh` cannot parse, producing `: not found` and `illegal option -` errors on every line. File is now strictly LF-only with a `sed` safety net in the Dockerfile
+- **CRITICAL**: Fixed Docker production image missing Prisma CLI — `npx prisma db push` and `npx prisma generate` in the entrypoint script would fail because `@prisma/cli` was not copied to the runner stage. Now copies `node_modules/.prisma/`, `node_modules/@prisma/`, and `package.json` so `npx` can resolve and execute the Prisma CLI at runtime
+- Removed obsolete `version: '3.8'` attribute from `docker-compose.yml` (Docker warning: "the attribute `version` is obsolete, it will be ignored")
+- Aligned all version references to 3.4.2 across `package.json`, `admin/system/route.ts`, `README.md`, and API documentation
+
+### Changed
+- Dockerfile now runs `sed -i 's/\r$//'` on the copied entrypoint script as a build-time safety measure against future CRLF contamination
+
 ## [3.4.1] - 2026-04-04
 
 ### Fixed

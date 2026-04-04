@@ -1,13 +1,13 @@
 FROM node:20-alpine AS base
 
-# ── Stage 1: Install dependencies ──────────────────────────────────────────
+# Stage 1: Install dependencies
 FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json* bun.lock* ./
 RUN npm install
 
-# ── Stage 2: Build application ─────────────────────────────────────────────
+# Stage 2: Build application
 FROM base AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
@@ -23,7 +23,7 @@ RUN npx prisma db push --skip-generate 2>/dev/null || true
 # Build Next.js (standalone output)
 RUN npm run build
 
-# ── Stage 3: Production runner ─────────────────────────────────────────────
+# Stage 3: Production runner
 FROM base AS runner
 RUN apk add --no-cache openssl wget
 
@@ -38,14 +38,20 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema (needed for runtime db init)
+# Copy Prisma schema and CLI (needed for runtime db init in entrypoint)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy entrypoint script
+# Copy entrypoint script (with LF line endings enforced)
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 # Copy public assets (logo, robots.txt)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy package.json so npx can resolve prisma CLI
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Create database directory (owned by nextjs user)
 RUN mkdir -p /app/db && chown nextjs:nodejs /app/db

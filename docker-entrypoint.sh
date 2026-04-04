@@ -1,25 +1,24 @@
 #!/bin/sh
-# ── WSH Docker Entrypoint ───────────────────────────────────────────────────
-# Handles first-run database initialization and server startup.
+# WSH Docker Entrypoint - Handles first-run database initialization and server startup
 
 set -e
 
 DB_DIR="/app/db"
 DB_FILE="$DB_DIR/custom.db"
 
-echo "═══════════════════════════════════════════════════════════"
-echo "  WSH (WeaveNote Self-Hosted) — Starting up..."
-echo "═══════════════════════════════════════════════════════════"
+echo "======================================================="
+echo "  WSH (WeaveNote Self-Hosted) - Starting up..."
+echo "======================================================="
 
-# ── Ensure database directory exists ────────────────────────────────────────
+# Ensure database directory exists
 if [ ! -d "$DB_DIR" ]; then
   echo "[*] Creating database directory: $DB_DIR"
   mkdir -p "$DB_DIR"
 fi
 
-# ── Initialize database on first run ───────────────────────────────────────
+# Initialize database on first run
 if [ ! -f "$DB_FILE" ]; then
-  echo "[*] First run detected — initializing database..."
+  echo "[*] First run detected - initializing database..."
   npx prisma db push --skip-generate 2>&1 || {
     echo "[!] prisma db push failed, retrying with generate..."
     npx prisma generate 2>&1
@@ -30,7 +29,7 @@ else
   echo "[+] Existing database found, skipping initialization."
 fi
 
-# ── Ensure Prisma client is generated ──────────────────────────────────────
+# Ensure Prisma client is generated
 echo "[*] Verifying Prisma client..."
 npx prisma generate 2>&1
 
