@@ -105,6 +105,28 @@ export default function DBViewer() {
   };
 
   const handleSaveEdit = () => {
+    if (activeTable === 'notes') {
+      const fullNote = notes.find((n) => n.id.startsWith(editingRow || ''));
+      if (fullNote) {
+        const updates: Partial<Note> = {};
+        if ('title' in editData) updates.title = editData.title;
+        if ('type' in editData) updates.type = editData.type as Note['type'];
+        if ('tags' in editData) updates.tags = editData.tags.split(',').map((t) => t.trim()).filter(Boolean);
+        if ('folderId' in editData) updates.folderId = editData.folderId && editData.folderId !== '—' ? null : null;
+        if ('isDeleted' in editData) updates.isDeleted = editData.isDeleted === 'true';
+        useWSHStore.getState().updateNote(fullNote.id, updates);
+        useWSHStore.getState().saveToLocalStorage();
+      }
+    } else if (activeTable === 'folders') {
+      const fullFolder = folders.find((f) => f.id.startsWith(editingRow || ''));
+      if (fullFolder) {
+        const updates: Partial<Folder> = {};
+        if ('name' in editData) updates.name = editData.name;
+        if ('order' in editData) updates.order = parseInt(editData.order, 10) || fullFolder.order;
+        useWSHStore.getState().updateFolder(fullFolder.id, updates);
+        useWSHStore.getState().saveToLocalStorage();
+      }
+    }
     setEditingRow(null);
     setEditData({});
   };

@@ -50,8 +50,8 @@ export default function Calendar() {
 
       {/* Day labels */}
       <div className="grid grid-cols-7 gap-0.5 text-center">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => (
-          <div key={d} className="text-[8px] font-bold text-muted-foreground/50 py-0.5">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          <div key={d + i} className="text-[8px] font-bold text-muted-foreground/50 py-0.5">
             {d}
           </div>
         ))}

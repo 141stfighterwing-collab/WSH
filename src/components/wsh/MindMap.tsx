@@ -39,6 +39,8 @@ interface SimEdge {
   weight: number;
 }
 
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 export default function MindMap() {
   const { mindMapOpen, setMindMapOpen, notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -226,7 +228,7 @@ export default function MindMap() {
         // Type initial
         nodesHTML += `<text x="${node.x}" y="${node.y + 1}" text-anchor="middle" dominant-baseline="middle" fill="${color}" font-size="11" font-weight="900" style="pointer-events:none">${node.type.charAt(0).toUpperCase()}</text>`;
         // Title label
-        nodesHTML += `<text x="${node.x}" y="${node.y + radius + 14}" text-anchor="middle" fill="rgba(226,232,240,${isHovered ? 1 : 0.7})" font-size="9" font-weight="700" style="pointer-events:none">${node.title.length > 20 ? node.title.slice(0, 20) + '...' : node.title}</text>`;
+        nodesHTML += `<text x="${node.x}" y="${node.y + radius + 14}" text-anchor="middle" fill="rgba(226,232,240,${isHovered ? 1 : 0.7})" font-size="9" font-weight="700" style="pointer-events:none">${escapeHtml(node.title.length > 20 ? node.title.slice(0, 20) + '...' : node.title)}</text>`;
         nodesHTML += `</g>`;
       }
 

@@ -242,7 +242,8 @@ export default function NoteEditor() {
       }
 
       if (data.tokensUsed) {
-        setAiUsageCount((prev: number) => prev + data.tokensUsed);
+        const currentCount = useWSHStore.getState().aiUsageCount;
+        setAiUsageCount(currentCount + (data.tokensUsed || 0));
       }
 
       setShowSynthesisMenu(false);

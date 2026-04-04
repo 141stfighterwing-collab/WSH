@@ -379,8 +379,8 @@ body.theme-hyperblue {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px var(--pri-500), 0 0 10px var(--pri-500)33; }
-  50% { box-shadow: 0 0 15px var(--pri-500), 0 0 30px var(--pri-500)33; }
+  0%, 100% { box-shadow: 0 0 5px var(--pri-500), 0 0 10px color-mix(in srgb, var(--pri-500) 20%, transparent); }
+  50% { box-shadow: 0 0 15px var(--pri-500), 0 0 30px color-mix(in srgb, var(--pri-500) 20%, transparent); }
 }
 
 @keyframes shimmer {
@@ -436,11 +436,11 @@ body.theme-hyperblue {
 
 /* ========== GLOW EFFECTS ========== */
 .glow-primary {
-  box-shadow: 0 0 15px var(--pri-500)33, 0 0 30px var(--pri-500)11;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--pri-500) 20%, transparent), 0 0 30px color-mix(in srgb, var(--pri-500) 7%, transparent);
 }
 
 .glow-primary-strong {
-  box-shadow: 0 0 20px var(--pri-500)66, 0 0 40px var(--pri-500)22;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--pri-500) 40%, transparent), 0 0 40px color-mix(in srgb, var(--pri-500) 13%, transparent);
 }
 
 /* ========== EDITOR INNER SHADOW ========== */

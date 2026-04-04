@@ -351,19 +351,19 @@ A central **configuration panel** for personalizing your WSH experience.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/wsh.git
-cd wsh
+git clone https://github.com/141stfighterwing-collab/WSH.git
+cd WSH
 
 # Install dependencies
 bun install
 
+# Create your .env file (see Environment Variables table below)
+cp .env.example .env
+# Edit .env with your configuration
+
 # Set up the database
 bun run db:generate
 bun run db:push
-
-# Create your .env file
-cp .env.example .env
-# Edit .env with your configuration
 
 # Start the development server
 bun run dev
@@ -389,14 +389,14 @@ The fastest way to deploy WSH is with Docker Compose:
 
 ```bash
 # Clone and configure
-git clone https://github.com/your-org/wsh.git
-cd wsh
+git clone https://github.com/141stfighterwing-collab/WSH.git
+cd WSH
 
-# Edit environment variables
-cp .env.example .env
-nano .env  # Set JWT_SECRET, ADMIN_DEFAULT_PASSWORD, etc.
+# (Optional) Edit environment variables before starting
+# cp .env.example .env
+# nano .env  # Set JWT_SECRET, ADMIN_DEFAULT_PASSWORD, etc.
 
-# Start the service
+# Start the service (builds and runs)
 docker compose up -d
 
 # View logs

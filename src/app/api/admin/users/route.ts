@@ -52,7 +52,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, email, role } = body as { username: string; email: string; role?: string };
+    const { username, email, password, role } = body as { username: string; email: string; password?: string; role?: string };
 
     if (!username || !email) {
       return NextResponse.json(
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
         data: {
           username,
           email,
+          password: password || 'changeme',
           role: role || 'user',
           status: 'active',
         },

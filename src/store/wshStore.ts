@@ -146,11 +146,14 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n
     ),
   })),
-  deleteNote: (id) => set((state) => ({
-    notes: state.notes.map((n) =>
-      n.id === id ? { ...n, isDeleted: true, updatedAt: new Date().toISOString() } : n
-    ),
-  })),
+  deleteNote: (id) => {
+    set((state) => ({
+      notes: state.notes.map((n) =>
+        n.id === id ? { ...n, isDeleted: true, updatedAt: new Date().toISOString() } : n
+      ),
+    }));
+    get().saveToLocalStorage();
+  },
 
   // Current Editor
   activeNoteId: null,
@@ -227,17 +230,26 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   // Trash
   trashOpen: false,
   setTrashOpen: (open) => set({ trashOpen: open }),
-  restoreNote: (id) => set((state) => ({
-    notes: state.notes.map((n) =>
-      n.id === id ? { ...n, isDeleted: false, updatedAt: new Date().toISOString() } : n
-    ),
-  })),
-  permanentDeleteNote: (id) => set((state) => ({
-    notes: state.notes.filter((n) => n.id !== id),
-  })),
-  emptyTrash: () => set((state) => ({
-    notes: state.notes.filter((n) => !n.isDeleted),
-  })),
+  restoreNote: (id) => {
+    set((state) => ({
+      notes: state.notes.map((n) =>
+        n.id === id ? { ...n, isDeleted: false, updatedAt: new Date().toISOString() } : n
+      ),
+    }));
+    get().saveToLocalStorage();
+  },
+  permanentDeleteNote: (id) => {
+    set((state) => ({
+      notes: state.notes.filter((n) => n.id !== id),
+    }));
+    get().saveToLocalStorage();
+  },
+  emptyTrash: () => {
+    set((state) => ({
+      notes: state.notes.filter((n) => !n.isDeleted),
+    }));
+    get().saveToLocalStorage();
+  },
 
   // Mind Map
   mindMapOpen: false,

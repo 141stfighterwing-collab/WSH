@@ -9,7 +9,6 @@ import {
   Activity,
   Sun,
   Moon,
-  Monitor,
   Check,
 } from 'lucide-react';
 import { useWSHStore, type ThemeName } from '@/store/wshStore';

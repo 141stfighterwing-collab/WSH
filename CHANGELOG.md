@@ -5,6 +5,30 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-04-04
+
+### Fixed
+- **CRITICAL**: Fixed Docker build failure — Dockerfile was missing `prisma generate` step before `next build`, causing Prisma Client initialization errors at runtime. Added `npx prisma generate` and `npx prisma db push` to the builder stage
+- **CRITICAL**: Fixed Docker container crash on first run — no database initialization logic existed. Added `docker-entrypoint.sh` script that automatically creates the SQLite database and runs `prisma db push` on container startup if no database file exists
+- **CRITICAL**: Fixed Dockerfile not copying `.next/static` assets and `public/` directory into the standalone output, causing missing logo and static file 404s
+- **CRITICAL**: Fixed Dockerfile `COPY --from=builder /app/db ./db` failing when `db/` directory doesn't exist in a fresh clone. Replaced with `mkdir -p /app/db` in the runner stage
+- **CRITICAL**: Fixed README.md containing placeholder git clone URL `https://github.com/your-org/wsh.git` — replaced with actual repo URL `https://github.com/141stfighterwing-collab/WSH.git` in both Quick Start and Docker Deployment sections
+- **CRITICAL**: Created missing `.env.example` file that was referenced in README and CHANGELOG but never committed to the repository. Contains all 16 documented environment variables with defaults
+- Fixed `/api/admin/system` endpoint returning stale version `3.2.0` and `nextjs: '15.x'` — now correctly returns `3.4.0` and `16.x`
+- Fixed `/api/admin/users` POST endpoint not including a `password` field when creating users, causing Prisma NOT NULL constraint violations
+- Fixed Docker health check `start_period` too short (40s → 60s) to account for database initialization on first run
+- Fixed docker-compose.yml not exposing `WSH_PORT` variable for configurable port mapping
+
+### Added
+- `docker-entrypoint.sh` — Container startup script that handles first-run database initialization, Prisma client verification, and graceful server startup
+- `.env.example` — Complete environment variable template with all 16 settings and documentation comments
+
+### Changed
+- Dockerfile now installs `openssl` and `wget` in all stages (required by Prisma and health checks)
+- Dockerfile uses `ENTRYPOINT` + `CMD` pattern instead of bare `CMD` for proper init lifecycle
+- docker-compose.yml port mapping now uses `${WSH_PORT:-3000}` for configurable external port
+- README Docker Deployment section updated — `.env.example` copy step is now optional since docker-compose provides all defaults
+
 ## [3.4.0] - 2026-04-04
 
 ### Fixed
