@@ -112,7 +112,7 @@ export default function DBViewer() {
         if ('title' in editData) updates.title = editData.title;
         if ('type' in editData) updates.type = editData.type as Note['type'];
         if ('tags' in editData) updates.tags = editData.tags.split(',').map((t) => t.trim()).filter(Boolean);
-        if ('folderId' in editData) updates.folderId = editData.folderId && editData.folderId !== '—' ? null : null;
+        if ('folderId' in editData) updates.folderId = (editData.folderId && editData.folderId !== '—' && editData.folderId !== 'null') ? editData.folderId : null;
         if ('isDeleted' in editData) updates.isDeleted = editData.isDeleted === 'true';
         useWSHStore.getState().updateNote(fullNote.id, updates);
         useWSHStore.getState().saveToLocalStorage();

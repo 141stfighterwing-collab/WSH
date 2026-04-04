@@ -88,7 +88,7 @@ export default function AnalyticsPanel() {
                 <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Avg/Day</span>
               </div>
               <div className="text-2xl font-bold text-foreground">
-                {activeNotes.length > 0 ? Math.round(activeNotes.length / Math.max(1, Math.ceil((Date.now() - new Date(activeNotes[activeNotes.length - 1]?.createdAt).getTime()) / 86400000))) : 0}
+                {activeNotes.length > 0 ? (() => { const oldest = activeNotes.reduce((a, b) => (a.createdAt < b.createdAt ? a : b)); const days = Math.max(1, Math.ceil((Date.now() - new Date(oldest.createdAt).getTime()) / 86400000)); return Math.round(activeNotes.length / days); })() : 0}
               </div>
             </div>
           </div>

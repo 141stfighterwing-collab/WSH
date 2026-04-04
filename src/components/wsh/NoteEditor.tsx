@@ -152,6 +152,7 @@ export default function NoteEditor() {
           updatedAt: new Date().toISOString(),
         };
         addNote(newNote);
+        setActiveNoteId(newNote.id);
       }
       saveToLocalStorage();
       setSaveStatus('Saved');

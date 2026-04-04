@@ -48,6 +48,7 @@ export default function EnvSettingsSection() {
   const [newEnvKey, setNewEnvKey] = useState('');
   const [newEnvValue, setNewEnvValue] = useState('');
   const [newEnvCategory, setNewEnvCategory] = useState('System');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const filteredEnvVars = useMemo(() => {
     let filtered = envVars;
@@ -170,7 +171,7 @@ export default function EnvSettingsSection() {
           Export .env
         </button>
         <button
-          onClick={() => setNewEnvKey('__show_form__')}
+          onClick={() => { setShowAddForm(true); setNewEnvKey(''); setNewEnvValue(''); }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-pri-600/15 text-pri-400 border border-pri-500/25 hover:bg-pri-600/25 transition-all active:scale-95"
         >
           <Plus className="w-2.5 h-2.5" />
@@ -179,12 +180,12 @@ export default function EnvSettingsSection() {
       </div>
 
       {/* Add new variable form */}
-      {newEnvKey === '__show_form__' && (
+      {showAddForm && (
         <div className="p-3 bg-secondary/30 rounded-xl border border-pri-500/20 space-y-2 animate-fadeIn">
           <input
             type="text"
             placeholder="KEY_NAME"
-            value=""
+            value={newEnvKey}
             onChange={(e) => setNewEnvKey(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-secondary border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
           />
@@ -209,15 +210,17 @@ export default function EnvSettingsSection() {
           <div className="flex gap-2">
             <button
               onClick={() => {
-                setNewEnvKey('');
                 handleAddEnvVar();
+                setNewEnvKey('');
+                setNewEnvValue('');
+                setShowAddForm(false);
               }}
               className="flex-1 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95"
             >
               Add
             </button>
             <button
-              onClick={() => { setNewEnvKey(''); setNewEnvValue(''); }}
+              onClick={() => { setNewEnvKey(''); setNewEnvValue(''); setShowAddForm(false); }}
               className="px-3 py-1.5 rounded-full text-[9px] font-bold text-muted-foreground hover:bg-secondary transition-all active:scale-95"
             >
               Cancel
