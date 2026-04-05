@@ -19,7 +19,7 @@ fi
 # Initialize database on first run
 if [ ! -f "$DB_FILE" ]; then
   echo "[*] First run detected - initializing database..."
-  npx prisma db push --skip-generate 2>&1 || {
+  npx prisma db push 2>&1 || {
     echo "[!] prisma db push failed, retrying with generate..."
     npx prisma generate 2>&1
     npx prisma db push 2>&1

@@ -38,8 +38,11 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema and CLI (needed for runtime db init in entrypoint)
+# Copy Prisma schema, CLI, generated client, and runtime
+# CRITICAL: Must copy node_modules/prisma (the CLI package) to avoid npx
+# downloading Prisma 7.x from npm which has breaking changes (removed url from schema)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
@@ -50,7 +53,7 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 # Copy public assets (logo, robots.txt)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy package.json so npx can resolve prisma CLI
+# Copy package.json so npx can resolve prisma CLI locally
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Create database directory (owned by nextjs user)

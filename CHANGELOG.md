@@ -5,6 +5,16 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.3] - 2026-04-05
+
+### Fixed
+- **CRITICAL**: Fixed Docker container crash loop caused by Prisma CLI version mismatch. The production runner image was missing `node_modules/prisma` (the CLI package), causing `npx prisma` to download Prisma v7.6.0 from npm at runtime. Prisma 7 is a major breaking change that removes the `url` property from `schema.prisma` datasources, causing `P1012` validation errors on every container start. The project uses Prisma v6.x (pinned as `^6.11.1` in package.json). Fix: Dockerfile now copies `node_modules/prisma` to the runner stage so `npx` resolves the local v6.x CLI instead of downloading v7.x from the internet
+- Removed `--skip-generate` flag from `docker-entrypoint.sh` `prisma db push` call for cleaner compatibility across Prisma 6.x minor versions
+- Aligned all version references to 3.4.3
+
+### Changed
+- Dockerfile now explicitly documents why `node_modules/prisma` must be copied to the runner stage (prevents npx from fetching incompatible major version from npm registry)
+
 ## [3.4.2] - 2026-04-05
 
 ### Fixed
