@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.5.0
+# WSH — WeaveNote Self-Hosted v3.5.2
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -63,7 +63,7 @@ Key design principles:
 - **Zero external JS dependencies for visualization** — custom SVG force graph without D3.js
 - **localStorage persistence** — all application state survives page reloads
 - **Role-based access control** — user, admin, and super-admin roles
-- **Extensible architecture** — Prisma ORM with SQLite for easy migration to PostgreSQL
+- **Extensible architecture** — Prisma ORM with PostgreSQL for production-grade data management
 
 ---
 
@@ -310,9 +310,9 @@ WSH includes a production-ready **Docker configuration** for easy deployment on 
 **Capabilities:**
 
 - **Multi-stage Dockerfile** — Three-stage build (deps → builder → runner) for minimal image size
-- **Non-root execution** — Runs as the `nextjs` user (UID 1001) for security
+- **PostgreSQL backend** — Production-grade database with health checks, persistent volume storage, and automatic readiness detection
 - **Health checks** — Built-in health check hitting `/api/health` every 30 seconds
-- **Volume persistence** — SQLite database stored in a named Docker volume (`wsh-data`) for data persistence across container restarts
+- **Volume persistence** — PostgreSQL data stored in a named Docker volume (`postgres-data`) for data persistence across container restarts
 - **Auto-restart** — Configured with `restart: unless-stopped` for high availability
 - **Configurable environment** — All settings configurable via `docker-compose.yml` environment variables
 
@@ -345,7 +345,7 @@ A central **configuration panel** for personalizing your WSH experience.
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 20+ or [Bun](https://bun.sh/) 1.0+
-- [SQLite](https://sqlite.org/) (included via Prisma)
+- [PostgreSQL](https://www.postgresql.org/) 16+ (started automatically via Docker Compose)
 
 ### Installation
 
@@ -468,7 +468,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:3.5.0` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:3.5.2` for cache busting
 
 ---
 
@@ -526,10 +526,8 @@ wsh/
 │   └── store/
 │       └── wshStore.ts       # Zustand global state store
 ├── prisma/
-│   └── schema.prisma         # Database schema (SQLite)
-├── db/
-│   └── custom.db             # SQLite database file
-├── docker-compose.yml        # Docker Compose configuration
+│   └── schema.prisma         # Database schema (PostgreSQL)
+├── docker-compose.yml        # Docker Compose configuration (PostgreSQL + App + DB Viewer + pgAdmin)
 ├── Dockerfile                # Multi-stage Docker build
 ├── docker-entrypoint.sh      # Container startup script (DB init + server)
 ├── install.ps1               # Windows PowerShell auto-nuke & install
@@ -538,8 +536,7 @@ wsh/
 ├── next.config.ts            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
-├── package.json              # Dependencies and scripts
-└── install-wsh.ps1           # PowerShell installer script
+└── package.json              # Dependencies and scripts
 ```
 
 ---
@@ -551,7 +548,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.4.4", "timestamp": "2026-04-05T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.5.2", "timestamp": "2026-04-05T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
@@ -614,7 +611,7 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 |----------|---------|-------------|
 | `PORT` | `3000` | Application listening port |
 | `HOSTNAME` | `0.0.0.0` | Application bind address |
-| `DATABASE_URL` | `file:/app/db/custom.db` | SQLite database connection string |
+| `DATABASE_URL` | `postgresql://wsh:wsh-secret-pw@postgres:5432/weavenote` | PostgreSQL connection string (set by docker-compose) |
 | `JWT_SECRET` | `change-me-in-production` | Secret key for JWT token signing (**change in production!**) |
 | `ADMIN_DEFAULT_USERNAME` | `admin` | Default admin username on first run |
 | `ADMIN_DEFAULT_EMAIL` | `admin@wsh.local` | Default admin email on first run |
@@ -640,7 +637,7 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | Styling | Tailwind CSS 4 |
 | UI Components | shadcn/ui + Radix UI |
 | State Management | Zustand 5 |
-| Database | SQLite via Prisma ORM |
+| Database | PostgreSQL 16 via Prisma ORM |
 | AI Integration | z-ai-web-dev-sdk |
 | Charts | Recharts |
 | Animations | Framer Motion |

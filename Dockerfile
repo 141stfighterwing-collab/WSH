@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 
 # CACHE-BUST: Build version arg forces rebuild when version changes
-ARG BUILD_VERSION=3.4.4
+ARG BUILD_VERSION=3.5.2
 
 # Stage 1: Install dependencies
 FROM base AS deps
@@ -28,7 +28,7 @@ RUN npm run build
 
 # Stage 3: Production runner
 FROM base AS runner
-RUN apk add --no-cache openssl wget
+RUN apk add --no-cache openssl wget netcat-openbsd
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -49,9 +49,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# FIX: Copy the 'effect' module required by @prisma/config at runtime
-# Without this, 'prisma db push' crashes with: Error: Cannot find module 'effect'
+# FIX: Copy transitive dependencies required by Prisma's @prisma/config → effect chain
+# Without these, 'prisma db push' crashes with MODULE_NOT_FOUND at runtime:
+#   @prisma/config → effect → fast-check → pure-rand
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/effect ./node_modules/effect
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-check ./node_modules/fast-check
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pure-rand ./node_modules/pure-rand
 
 # Create node_modules/.bin/prisma symlink as fallback
 # Docker COPY does not preserve symlinks, so we recreate it manually
@@ -75,8 +78,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Copy package.json (used for version info)
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# Create database directory (owned by nextjs user)
-RUN mkdir -p /app/db && chown nextjs:nodejs /app/db
+# Create tmp and db directories for runtime use
+RUN mkdir -p /app/tmp /app/db && chown -R nextjs:nodejs /app/tmp /app/db
 
 # Cache-bust stamp: embedding version so layers invalidate on version change
 RUN echo "BUILD_VERSION=${BUILD_VERSION}" > /app/.build-version
@@ -85,7 +88,7 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV DATABASE_URL="file:/app/db/custom.db"
+# DATABASE_URL is set via docker-compose.yml environment — do NOT hardcode here
 
 ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

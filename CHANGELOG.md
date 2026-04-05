@@ -5,6 +5,38 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.2] - 2026-04-05
+
+### Fixed
+- **CRITICAL**: Fixed `Cannot find module 'fast-check'` crash during `prisma db push` at container startup. This is the continuation of the Prisma transitive dependency chain first identified in v3.5.0 with `effect`. The full runtime dependency chain is: `@prisma/config` → `effect` → `fast-check` → `pure-rand`. While `effect` was copied to the runner stage in v3.5.0, its transitive dependencies `fast-check` and `pure-rand` were not, causing `MODULE_NOT_FOUND` errors. Added `fast-check` (`^3.23.2`) and `pure-rand` (`^6.1.0`) as explicit dependencies in `package.json` and added `COPY --from=builder` directives for both in the Dockerfile runner stage
+
+### Changed
+- Dockerfile updated comment block for Prisma transitive dependencies to document the full chain: `@prisma/config → effect → fast-check → pure-rand`
+- Version bumped to 3.5.2 across all files: `package.json`, `Dockerfile` (BUILD_VERSION), `docker-compose.yml` (image tag + build arg), `install.ps1`, `install.sh`, API routes (`health/route.ts`, `admin/system/route.ts`), `README.md`
+- Removed `next-auth` from production dependencies — WSH uses JWT-based auth, not NextAuth. This was a dead dependency (~5MB wasted in Docker image) never imported anywhere in the codebase
+- Removed `playwright` from production dependencies — browser automation library (~200MB+ of Chromium binaries) never imported in the codebase. Was incorrectly placed in production dependencies instead of devDependencies
+- Replaced stale `NEXTAUTH_SECRET` and `NEXTAUTH_URL` default env vars in `EnvSettingsSection.tsx` with `ADMIN_DEFAULT_USERNAME` and `ADMIN_DEFAULT_PASSWORD` to match the actual JWT-based authentication system
+
+## [3.5.1] - 2026-04-05
+
+### Fixed
+- **CRITICAL**: Fixed `docker-entrypoint.sh` first-run detection still using SQLite file check (`custom.db`). With PostgreSQL migration, this file never exists, causing `prisma db push` to execute on every container start — adding unnecessary delay and potential race conditions. Replaced with a marker file approach (`/app/tmp/.db-initialized`) that persists across restarts. First run creates the marker after successful schema push; subsequent starts skip it
+- **CRITICAL**: Fixed `docker-entrypoint.sh` not waiting for PostgreSQL to be reachable before running Prisma commands. Added a 60-second connectivity check using `netcat` that extracts host and port from `DATABASE_URL` and polls until PostgreSQL responds. Without this, the entrypoint could attempt `prisma db push` before the database accepts connections, causing initialization failures
+- **CRITICAL**: Fixed Dockerfile still hardcoding `ENV DATABASE_URL="file:/app/db/custom.db"` as default — this SQLite connection string would leak through if the container is run outside docker-compose. Removed the hardcoded default; `DATABASE_URL` is now exclusively set via docker-compose environment variables
+- Fixed Dockerfile `ARG BUILD_VERSION=3.4.4` not updated to `3.5.0` — this controls Docker layer cache busting and build version stamps
+- Fixed `package.json` version still `"3.4.4"` instead of `"3.5.0"` — the npm package version must match the release version
+- Fixed 7 stale SQLite references throughout `README.md`: architecture description (line 66), Docker volume description (line 315), prerequisites (line 348), Prisma schema comment (line 529), project structure `db/custom.db` entry (line 531), DATABASE_URL default in environment table (line 617), and tech stack table (line 643). All now correctly reference PostgreSQL
+- Removed obsolete `install-wsh.ps1` (v3.4.0 PowerShell installer with SQLite `DATABASE_URL="file:./db/wsh.db"` and `NEXTAUTH_*` references). This script has been superseded by `install.ps1` (v3.5.0) which handles PostgreSQL, DB Viewer, pgAdmin, and automatic Docker cleanup
+
+### Changed
+- Dockerfile runner stage now installs `netcat-openbsd` package — required by the entrypoint for PostgreSQL connectivity checks
+- Dockerfile replaced `/app/db` directory creation with `/app/tmp` for runtime marker files
+- README Prerequisites updated: SQLite removed, PostgreSQL 16+ listed as requirement (auto-started via Docker Compose)
+- README Docker Support section: added PostgreSQL backend bullet, updated volume persistence description to reference `postgres-data` volume
+- README project structure: removed `db/custom.db` entry, updated `docker-compose.yml` description to mention all 4 services
+- README API health endpoint example: version updated from `3.4.4` to `3.5.0`
+- README environment variables table: `DATABASE_URL` default changed from SQLite file path to PostgreSQL connection string
+
 ## [3.5.0] - 2026-04-05
 
 ### Changed

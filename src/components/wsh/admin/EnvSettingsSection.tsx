@@ -32,8 +32,8 @@ const DEFAULT_ENV_VARS: EnvVar[] = [
   { key: 'NODE_ENV', value: 'development', category: 'System', updated: new Date().toISOString() },
   { key: 'DATABASE_URL', value: 'configured', category: 'Database', updated: new Date().toISOString() },
   { key: 'JWT_SECRET', value: '••••••••', category: 'Security', updated: new Date().toISOString() },
-  { key: 'NEXTAUTH_SECRET', value: '••••••••', category: 'Security', updated: new Date().toISOString() },
-  { key: 'NEXTAUTH_URL', value: 'http://localhost:3000', category: 'System', updated: new Date().toISOString() },
+  { key: 'ADMIN_DEFAULT_USERNAME', value: 'admin', category: 'Security', updated: new Date().toISOString() },
+  { key: 'ADMIN_DEFAULT_PASSWORD', value: '••••••••', category: 'Security', updated: new Date().toISOString() },
 ];
 
 export { DEFAULT_ENV_VARS };
