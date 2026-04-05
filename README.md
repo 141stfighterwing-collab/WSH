@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.4.3
+# WSH — WeaveNote Self-Hosted v3.4.4
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -512,7 +512,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.4.3", "timestamp": "2026-04-05T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.4.4", "timestamp": "2026-04-05T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`

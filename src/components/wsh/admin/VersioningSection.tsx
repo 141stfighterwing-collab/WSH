@@ -17,12 +17,12 @@ export default function VersioningSection() {
     } catch {
       setSystemData({
         status: 'healthy',
-        version: '3.2.0',
+        version: '3.4.4',
         uptime: '0s',
         memory: { rss: '0 B', heapTotal: '0 B', heapUsed: '0 B', external: '0 B' },
         nodeVersion: 'v20.x',
         platform: 'linux',
-        nextjs: '15.x',
+        nextjs: '16.x',
         buildDate: '2025-01-01T00:00:00Z',
         gitCommit: 'local-dev',
         environment: 'development',

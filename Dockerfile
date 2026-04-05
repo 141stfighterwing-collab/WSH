@@ -46,6 +46,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
+# Create node_modules/.bin/prisma symlink as fallback
+# Docker COPY does not preserve symlinks, so we recreate it manually
+RUN mkdir -p /app/node_modules/.bin && \
+    ln -sf ../prisma/build/index.js /app/node_modules/.bin/prisma && \
+    chown -h nextjs:nodejs /app/node_modules/.bin/prisma
+
 # Copy entrypoint script (with LF line endings enforced)
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
@@ -53,7 +59,7 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 # Copy public assets (logo, robots.txt)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy package.json so npx can resolve prisma CLI locally
+# Copy package.json (used for version info)
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Create database directory (owned by nextjs user)

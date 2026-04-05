@@ -5,6 +5,15 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.4] - 2026-04-05
+
+### Fixed
+- **CRITICAL**: Fixed Docker container crash loop with `sh: prisma: not found` (exit code 127). The entrypoint used `npx prisma` which requires `node_modules/.bin/prisma` symlink to resolve the binary. This symlink was not copied to the production runner image (Docker `COPY` does not preserve symlinks), and even when `node_modules/prisma` was present, `npx` could not locate the binary. Replaced all `npx prisma` calls with direct `node /app/node_modules/prisma/build/index.js` invocations, completely bypassing `npx` binary resolution. This is guaranteed to use the pinned Prisma v6.x CLI that was installed during `npm install` in the build stage, with zero possibility of downloading a different version from npm
+- Added pre-flight check in entrypoint that verifies `node_modules/prisma/build/index.js` exists before attempting database operations, with a helpful error message suggesting `docker compose build --no-cache` if the file is missing
+- Added `--schema=./prisma/schema.prisma` flag to all prisma CLI calls in entrypoint for explicit schema resolution (prevents ambiguous schema lookup)
+- Dockerfile now creates `node_modules/.bin/prisma` symlink manually (as secondary fallback) since Docker COPY doesn't preserve symlinks from the builder stage
+- Fixed stale fallback version in `VersioningSection.tsx` catch block (3.2.0 → 3.4.4, nextjs 15.x → 16.x)
+
 ## [3.4.3] - 2026-04-05
 
 ### Fixed
