@@ -1,9 +1,12 @@
 services:
-  wsh:
+  weavenote:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: wsh-app
+      args:
+        BUILD_VERSION: "3.4.4"
+    container_name: weavenote-app
+    image: weavenote:latest
     ports:
       - "${WSH_PORT:-3000}:3000"
     environment:
@@ -18,15 +21,15 @@ services:
       - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-admin123}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - wsh-data:/app/db
+      - weavenote-data:/app/db
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 90s
 
 volumes:
-  wsh-data:
+  weavenote-data:
     driver: local

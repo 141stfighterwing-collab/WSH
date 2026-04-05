@@ -1,5 +1,8 @@
 FROM node:20-alpine AS base
 
+# CACHE-BUST: Build version arg forces rebuild when version changes
+ARG BUILD_VERSION=3.4.4
+
 # Stage 1: Install dependencies
 FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
@@ -52,6 +55,12 @@ RUN mkdir -p /app/node_modules/.bin && \
     ln -sf ../prisma/build/index.js /app/node_modules/.bin/prisma && \
     chown -h nextjs:nodejs /app/node_modules/.bin/prisma
 
+# Create a 'prisma' wrapper script in /usr/local/bin as NUCLEAR fallback
+# This ensures 'prisma' command works even if all else fails
+RUN echo '#!/bin/sh' > /usr/local/bin/prisma && \
+    echo 'exec node /app/node_modules/prisma/build/index.js "$@"' >> /usr/local/bin/prisma && \
+    chmod +x /usr/local/bin/prisma
+
 # Copy entrypoint script (with LF line endings enforced)
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
@@ -64,6 +73,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Create database directory (owned by nextjs user)
 RUN mkdir -p /app/db && chown nextjs:nodejs /app/db
+
+# Cache-bust stamp: embedding version so layers invalidate on version change
+RUN echo "BUILD_VERSION=${BUILD_VERSION}" > /app/.build-version
 
 USER nextjs
 EXPOSE 3000
