@@ -1,6 +1,6 @@
 #!/bin/sh
 # WSH Docker Entrypoint - Handles first-run database initialization and server startup
-# v3.4.4: Uses direct node path to prisma CLI (no npx, no symlinks, no PATH issues)
+# v3.5.0: Uses direct node path to prisma CLI (no npx, no symlinks, no PATH issues)
 # This avoids: Docker COPY not preserving symlinks, npx downloading wrong version,
 # and prisma not being in $PATH.
 
@@ -19,7 +19,7 @@ if [ ! -f "/app/node_modules/prisma/build/index.js" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v3.4.4 - Starting up..."
+echo "  WSH (WeaveNote Self-Hosted) v3.5.0 - Starting up..."
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 

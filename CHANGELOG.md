@@ -5,6 +5,30 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-04-05
+
+### Changed
+- **Migrated from SQLite to PostgreSQL** for production database backend. The `docker-compose.yml` now includes a PostgreSQL 16 service with persistent volume storage, health checks, and automatic initialization. Prisma schema updated from `provider = "sqlite"` to `provider = "postgresql"`. All existing SQLite data must be re-created on first run with the new database
+- Docker Compose stack expanded from 1 service to 4 services: PostgreSQL (internal), WSH App (port 3000), Adminer DB Viewer (port 5682), and pgAdmin (port 5050, optional via `--profile admin`)
+- Added dedicated `wsh-net` bridge network for inter-container communication
+- PostgreSQL credentials now configurable via `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` environment variables
+- pgAdmin credentials configurable via `PGADMIN_EMAIL`, `PGADMIN_PASSWORD` environment variables
+- Install scripts (`install.ps1`, `install.sh`) now include a validation phase that checks all 3 required containers are running after installation, plus optional pgAdmin when `--WithPgAdmin` / `--with-pgadmin` flag is used
+- Install scripts now match and remove `pgadmin`, `postgres`, and `adminer` images/volumes in addition to `wsh`/`weavenote`
+- Build version bumped to 3.5.0 across Dockerfile, docker-compose, and entrypoint
+
+### Added
+- **PostgreSQL 16 service** — Production-grade database with health checks, persistent volume, and automatic readiness detection via `pg_isready`
+- **Adminer DB Viewer** (port 5682) — Lightweight, full-featured web database browser for inspecting tables, running queries, and managing data directly in the browser. Uses the `pepa-linhac` design theme
+- **pgAdmin service** (port 5050) — Full PostgreSQL administration UI, enabled via `docker compose --profile admin up -d` or `.\install.ps1 -WithPgAdmin`
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` environment variables in `.env.example`
+- `DB_VIEWER_PORT` and `PGADMIN_PORT` environment variables for configurable port mapping
+- Container health dependency — WSH app waits for PostgreSQL to be healthy before starting
+
+### Fixed
+- **CRITICAL**: Fixed `Cannot find module 'effect'` crash during `prisma db push` at container startup. Added `effect` as an explicit dependency in `package.json` and added `COPY --from=builder ... /app/node_modules/effect` directive in the Dockerfile runner stage. The `@prisma/config` package (used by Prisma CLI internally) requires the `effect` module at runtime, but it was neither declared in dependencies nor copied to the production image
+- **CRITICAL**: Install scripts now properly remove ALL stale Docker artifacts (containers, images, volumes, networks) including any leftover from previous versions with different naming schemes
+
 ## [3.4.4] - 2026-04-05
 
 ### Fixed

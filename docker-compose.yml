@@ -1,16 +1,37 @@
 services:
+  # ── PostgreSQL Database ────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: wsh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wsh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wsh-secret-pw}
+      POSTGRES_DB: ${POSTGRES_DB:-weavenote}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wsh} -d ${POSTGRES_DB:-weavenote}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - wsh-net
+
+  # ── WSH Application ────────────────────────────────────────────
   weavenote:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_VERSION: "3.4.4"
+        BUILD_VERSION: "3.5.0"
     container_name: weavenote-app
-    image: weavenote:3.4.4
+    image: weavenote:3.5.0
     ports:
       - "${WSH_PORT:-3000}:3000"
     environment:
-      - DATABASE_URL=file:/app/db/custom.db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-wsh}:${POSTGRES_PASSWORD:-wsh-secret-pw}@postgres:5432/${POSTGRES_DB:-weavenote}
       - AI_SYNTHESIS_MODEL=${AI_SYNTHESIS_MODEL:-glm-4-flash}
       - AI_SYNTHESIS_TEMPERATURE=${AI_SYNTHESIS_TEMPERATURE:-0.7}
       - AI_SYNTHESIS_MAX_TOKENS=${AI_SYNTHESIS_MAX_TOKENS:-4096}
@@ -20,6 +41,9 @@ services:
       - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-admin@wsh.local}
       - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-admin123}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - weavenote-data:/app/db
     restart: unless-stopped
@@ -29,7 +53,53 @@ services:
       timeout: 10s
       retries: 3
       start_period: 90s
+    networks:
+      - wsh-net
+
+  # ── Database Viewer (Adminer) on port 5682 ─────────────────────
+  db-viewer:
+    image: adminer:latest
+    container_name: wsh-dbviewer
+    restart: unless-stopped
+    ports:
+      - "${DB_VIEWER_PORT:-5682}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linhac
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wsh-net
+
+  # ── pgAdmin (optional — requires admin profile) ────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: wsh-pgadmin
+    restart: unless-stopped
+    profiles:
+      - admin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@wsh.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wsh-net
 
 volumes:
+  postgres-data:
+    driver: local
   weavenote-data:
     driver: local
+  pgadmin-data:
+    driver: local
+
+networks:
+  wsh-net:
+    driver: bridge

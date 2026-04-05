@@ -49,6 +49,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
+# FIX: Copy the 'effect' module required by @prisma/config at runtime
+# Without this, 'prisma db push' crashes with: Error: Cannot find module 'effect'
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/effect ./node_modules/effect
+
 # Create node_modules/.bin/prisma symlink as fallback
 # Docker COPY does not preserve symlinks, so we recreate it manually
 RUN mkdir -p /app/node_modules/.bin && \

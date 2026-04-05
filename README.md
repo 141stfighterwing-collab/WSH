@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.4.4
+# WSH — WeaveNote Self-Hosted v3.5.0
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -393,27 +393,40 @@ The install scripts automatically detect and **nuke ALL old containers, images, 
 ```powershell
 git clone https://github.com/141stfighterwing-collab/WSH.git
 cd WSH
-.\install.ps1
+.\install.ps1                    # Standard install (App + DB Viewer + PostgreSQL)
+.\install.ps1 -WithPgAdmin        # Include pgAdmin on port 5050
+.\install.ps1 -Port 8080          # Custom app port
+.\install.ps1 -CleanOnly          # Remove everything without reinstalling
 ```
 
 **Linux / macOS:**
 ```bash
 git clone https://github.com/141stfighterwing-collab/WSH.git
 cd WSH
-chmod +x install.sh && ./install.sh
+chmod +x install.sh && ./install.sh                # Standard install
+./install.sh --with-pgadmin                        # Include pgAdmin
+./install.sh 8080                                  # Custom app port
+./install.sh --clean-only                          # Remove without reinstalling
 ```
 
 The install script will:
-1. Auto-detect and remove all existing WSH/WeaveNote containers, images, volumes, and networks
-2. Prune dangling Docker resources
+1. Auto-detect and remove ALL existing WSH/WeaveNote/PostgreSQL/pgAdmin containers, images, volumes, and networks
+2. Prune all dangling Docker resources (including build cache)
 3. Build the Docker image from scratch (no cache)
-4. Start the container
-5. Stream live logs
+4. Start all services (App + PostgreSQL + DB Viewer)
+5. Validate that all 3 required containers are running
+6. Stream live logs
 
 **Custom port:**
 ```powershell
 .\install.ps1 -Port 8080        # Windows
 ./install.sh 8080               # Linux/macOS
+```
+
+**Include pgAdmin:**
+```powershell
+.\install.ps1 -WithPgAdmin      # Windows
+./install.sh --with-pgadmin     # Linux/macOS
 ```
 
 **Clean only (remove without rebuilding):**
@@ -422,7 +435,15 @@ The install script will:
 ./install.sh --clean-only       # Linux/macOS
 ```
 
-The application will be available at [http://localhost:3000](http://localhost:3000).
+### Available URLs
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **WSH App** | http://localhost:3000 | Main application |
+| **DB Viewer** | http://localhost:5682 | Adminer — browse database tables, run SQL queries |
+| **pgAdmin** | http://localhost:5050 | Full PostgreSQL admin UI (requires `-WithPgAdmin` / `--with-pgadmin`) |
+
+**pgAdmin login:** `admin@wsh.local` / `admin123` (configurable via `PGADMIN_EMAIL` / `PGADMIN_PASSWORD`)
 
 ### Manual Docker Commands
 
@@ -438,11 +459,16 @@ docker compose logs -f weavenote
 
 The `docker-compose.yml` includes:
 
-- **Health checks** — Automatic container health monitoring via `/api/health`
-- **Persistent storage** — SQLite database stored in the `weavenote-data` Docker volume
-- **Environment passthrough** — All configuration via environment variables
-- **Auto-restart** — Container automatically restarts on failure
-- **Version-tagged image** — Image tagged as `weavenote:3.4.4` for cache busting
+- **PostgreSQL 16** — Production database with health checks and persistent volume storage
+- **Health checks** — All services have automatic health monitoring (PostgreSQL: `pg_isready`, App: `/api/health`)
+- **Container dependency ordering** — App and DB Viewer wait for PostgreSQL to be healthy before starting
+- **Persistent storage** — PostgreSQL data in `postgres-data` volume, app data in `weavenote-data` volume
+- **Dedicated network** — All services communicate via the `wsh-net` bridge network
+- **Adminer DB Viewer** — Lightweight web database browser on port 5682 with `pepa-linhac` design theme
+- **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
+- **Environment passthrough** — All configuration via environment variables (see `.env.example`)
+- **Auto-restart** — All containers configured with `restart: unless-stopped`
+- **Version-tagged image** — Image tagged as `weavenote:3.5.0` for cache busting
 
 ---
 
