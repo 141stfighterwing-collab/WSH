@@ -6,7 +6,7 @@ services:
       args:
         BUILD_VERSION: "3.4.4"
     container_name: weavenote-app
-    image: weavenote:latest
+    image: weavenote:3.4.4
     ports:
       - "${WSH_PORT:-3000}:3000"
     environment:

@@ -385,54 +385,64 @@ bun run start
 
 ## Docker Deployment
 
-The fastest way to deploy WSH is with Docker Compose:
+### One-Command Install (Recommended)
 
-```bash
-# Clone and configure
+The install scripts automatically detect and **nuke ALL old containers, images, volumes, and networks** before rebuilding from scratch. No manual cleanup needed.
+
+**Windows (PowerShell):**
+```powershell
 git clone https://github.com/141stfighterwing-collab/WSH.git
 cd WSH
+.\install.ps1
+```
 
-# (Optional) Edit environment variables before starting
-# cp .env.example .env
-# nano .env  # Set JWT_SECRET, ADMIN_DEFAULT_PASSWORD, etc.
+**Linux / macOS:**
+```bash
+git clone https://github.com/141stfighterwing-collab/WSH.git
+cd WSH
+chmod +x install.sh && ./install.sh
+```
 
-# Start the service (builds and runs)
-docker compose up -d
+The install script will:
+1. Auto-detect and remove all existing WSH/WeaveNote containers, images, volumes, and networks
+2. Prune dangling Docker resources
+3. Build the Docker image from scratch (no cache)
+4. Start the container
+5. Stream live logs
 
-# View logs
-docker compose logs -f wsh
+**Custom port:**
+```powershell
+.\install.ps1 -Port 8080        # Windows
+./install.sh 8080               # Linux/macOS
+```
+
+**Clean only (remove without rebuilding):**
+```powershell
+.\install.ps1 -CleanOnly        # Windows
+./install.sh --clean-only       # Linux/macOS
 ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
+
+### Manual Docker Commands
+
+If you prefer manual control:
+```bash
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d --force-recreate
+docker compose logs -f weavenote
+```
 
 ### Docker Configuration
 
 The `docker-compose.yml` includes:
 
 - **Health checks** — Automatic container health monitoring via `/api/health`
-- **Persistent storage** — SQLite database stored in the `wsh-data` Docker volume
+- **Persistent storage** — SQLite database stored in the `weavenote-data` Docker volume
 - **Environment passthrough** — All configuration via environment variables
 - **Auto-restart** — Container automatically restarts on failure
-
----
-
-## PowerShell Installer
-
-For Windows users, WSH includes a PowerShell installer script:
-
-```powershell
-# Download and run the installer
-.\install-wsh.ps1
-```
-
-The script will:
-
-1. Check for required dependencies (Node.js/Bun, Docker)
-2. Clone the repository
-3. Install dependencies
-4. Set up the database
-5. Configure environment variables
-6. Start the application
+- **Version-tagged image** — Image tagged as `weavenote:3.4.4` for cache busting
 
 ---
 
@@ -495,6 +505,9 @@ wsh/
 │   └── custom.db             # SQLite database file
 ├── docker-compose.yml        # Docker Compose configuration
 ├── Dockerfile                # Multi-stage Docker build
+├── docker-entrypoint.sh      # Container startup script (DB init + server)
+├── install.ps1               # Windows PowerShell auto-nuke & install
+├── install.sh                # Linux/macOS auto-nuke & install
 ├── Caddyfile                 # Caddy reverse proxy config
 ├── next.config.ts            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
