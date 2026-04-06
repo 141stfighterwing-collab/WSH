@@ -5,6 +5,26 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.0] - 2026-04-06
+
+### Changed
+- **Docker architecture completely rewritten to pull-based updates** — eliminated the 3-stage multi-stage Dockerfile (deps → build → runner) that required a full `docker compose build --no-cache` taking 3-5 minutes every time. The new architecture uses a lightweight base image that clones the GitHub repo and builds inside the container on first run. Subsequent updates are done with a single command (`./update.sh` or `.\update.ps1`) that touches an update marker, restarts the container, and the entrypoint automatically runs `git pull → npm install → prisma generate → next build → restart` — all inside the running container. Database data and user notes are preserved across updates because only the app code changes, not the PostgreSQL volume
+- **Dockerfile simplified from 94 lines to 47 lines** — single `FROM node:20-alpine` stage with git, pre-installed npm dependencies, and runtime directories. No more COPY --from=builder for standalone output, node_modules, prisma, or static assets. The build happens at container startup, not at image build time. This means `docker compose build` is now a lightweight ~30 second operation instead of a 3-5 minute multi-stage build
+- **docker-compose.yml updated** — `weavenote-data` volume now maps to `/app/tmp` (holds build markers and git repo) instead of `/app/db`. Added `WSH_GIT_REPO`, `WSH_GIT_BRANCH`, and `WSH_GIT_PAT` environment variables for configuring the git source (supports private repos via PAT). Increased `start_period` to 180s to account for first-run build time
+- **docker-entrypoint.sh rewritten** — 5-step flow: (1) git clone or git pull, (2) build if needed (npm install → prisma generate → next build), (3) verify Prisma client, (4) apply pending schema changes, (5) start server. Uses a marker file (`/app/tmp/.app-built`) to skip rebuild on subsequent starts. Supports forced update via `WSH_UPDATE=true` env var or `/app/tmp/.needs-update` touch file. Removed all the old v3.5.x PostgreSQL connectivity check code (still waits for DB but simplified)
+
+### Added
+- **`update.sh`** (Linux/macOS) — one-command update script that touches the update marker inside the container, restarts it, and polls the health endpoint until the new version is live. Prints progress dots every 5 seconds. Runs in ~1-2 minutes. Usage: `./update.sh` or `./update.sh develop` for a custom branch
+- **`update.ps1`** (Windows PowerShell) — same one-command update for Windows users. Usage: `.\update.ps1` or `.\update.ps1 -Branch develop`
+- **Git source configuration** — three new environment variables for controlling where the container pulls source code from: `WSH_GIT_REPO` (default: `https://github.com/141stfighterwing-collab/WSH.git`), `WSH_GIT_BRANCH` (default: `main`), `WSH_GIT_PAT` (for private repos — injected into the clone URL)
+- **Update instructions in install script output** — both `install.ps1` and `install.sh` now print update instructions (`./update.sh` / `.\update.ps1`) at the end of installation, making it clear that updates don't require a full reinstall
+
+### Removed
+- **Multi-stage Dockerfile** — eliminated the 3-stage builder pattern (deps → build → runner). The old approach required copying standalone Next.js output, entire node_modules, prisma, public assets, and package.json from builder to runner. The new approach builds at runtime, so there's nothing to copy
+- **`npm prune --production`** step — no longer needed since the build happens inside the container and the full node_modules are used as-is
+- **Docker builder cache busting** — `ARG BUILD_VERSION` is still present but no longer controls Docker layer cache invalidation for the build. The version is used for identification only
+- **Complex Prisma transitive dependency workarounds** — the old comments about "NUCLEAR fix for Prisma transitive dependency hell" and "cherry-picking individual packages" are gone because the container now has the full node_modules from `npm install`
+
 ## [3.8.0] - 2026-04-06
 
 ### Added
