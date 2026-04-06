@@ -10,7 +10,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: 'healthy',
-    version: '3.5.2',
+    version: '3.5.3',
     uptime: uptimeFormatted,
     uptimeMs: uptime,
     memory: {
@@ -22,7 +22,7 @@ export async function GET() {
     nodeVersion: process.version,
     platform: process.platform,
     nextjs: '16.x',
-    buildDate: '2026-04-05T00:00:00Z',
+    buildDate: '2026-04-06T00:00:00Z',
     gitCommit: process.env.GIT_SHA || 'local-dev',
     environment: process.env.NODE_ENV || 'development',
   });

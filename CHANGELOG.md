@@ -5,6 +5,18 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.3] - 2026-04-06
+
+### Fixed
+- **CRITICAL**: Fixed PostgreSQL connectivity check silently failing with zero diagnostics. The entrypoint's `nc -z` (netcat) check fails when Docker's internal DNS resolution fails — a known issue on Docker Desktop for Windows and macOS. Netcat gives no error output when DNS fails, printing only "PostgreSQL not ready yet..." 30 times before exiting, making it impossible to diagnose the root cause. Replaced the entire connectivity check with a Node.js-based approach using `dns.resolve4()` and `net.createConnection()` that provides explicit, actionable diagnostics on every failure: DNS failure (with error code like `ENOTFOUND`), TCP connection failure (with error code like `ECONNREFUSED`), or timeout. The first failed attempt prints a full diagnostic block explaining the likely cause and remediation steps. The final failure message includes 5 concrete troubleshooting commands the user can run
+- **CRITICAL**: Fixed entrypoint not validating that `DB_HOST` and `DB_PORT` were successfully extracted from `DATABASE_URL`. If the sed regex failed (e.g., malformed URL), both variables would be empty and the `nc -z` check would silently skip without ever testing connectivity. Now exits immediately with a clear error showing the raw `DATABASE_URL` and what was extracted
+
+### Changed
+- Dockerfile runner stage replaced `netcat-openbsd` with `bind-tools` — netcat is no longer used for connectivity checks (Node.js handles it), but `bind-tools` provides `nslookup` and `dig` for manual DNS debugging inside the container if needed. The Node.js connectivity check does not depend on any external packages — it uses only built-in `dns` and `net` modules
+- Entrypoint now prints the parsed `DB_HOST:DB_PORT` target on startup so users can immediately verify the connection parameters are correct
+- Entrypoint failure message now includes 5 specific troubleshooting commands: check postgres logs, inspect health status, test DNS from inside the app container, restart Docker Desktop, and clean rebuild instructions
+- Version bumped to 3.5.3 across all files: `package.json`, `Dockerfile` (BUILD_VERSION), `docker-compose.yml` (image tag + build arg), `install.ps1`, `install.sh`, `docker-entrypoint.sh`, API routes (`health/route.ts`, `admin/system/route.ts`), `VersioningSection.tsx`, `README.md`
+
 ## [3.5.2] - 2026-04-05
 
 ### Fixed

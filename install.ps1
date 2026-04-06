@@ -21,7 +21,7 @@ $Host.UI.RawUI.ForegroundColor = "Cyan"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH - Auto Nuke & Reinstall v3.5.2" -ForegroundColor Cyan
+Write-Host "  WSH - Auto Nuke & Reinstall v3.5.3" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

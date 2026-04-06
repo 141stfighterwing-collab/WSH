@@ -1,8 +1,11 @@
 #!/bin/sh
 # WSH Docker Entrypoint - Handles first-run database initialization and server startup
+# v3.5.3: Replaced netcat (nc -z) with Node.js-based PostgreSQL connectivity check.
+#   netcat silently fails when DNS resolution fails inside Docker (especially Docker Desktop
+#   on Windows/macOS). The new check uses Node.js dns+net modules for explicit DNS resolution
+#   and TCP connection testing, with full diagnostic output on every failure.
 # v3.5.2: Uses direct node path to prisma CLI (no npx, no symlinks, no PATH issues).
 # PostgreSQL mode: Uses marker file for first-run detection instead of SQLite file check.
-# Waits for PostgreSQL to be reachable before running Prisma commands.
 
 set -e
 
@@ -26,35 +29,110 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v3.5.2 - Starting up..."
+echo "  WSH (WeaveNote Self-Hosted) v3.5.3 - Starting up..."
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 
-# Wait for PostgreSQL to be reachable (max 60 seconds)
-echo "[*] Waiting for PostgreSQL to be ready..."
+# ── Extract host and port from DATABASE_URL ─────────────────────
+# Format: postgresql://user:pass@host:port/db
+DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*/@\([^:]*\):.*|\1|p')
+DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*/@[^:]*:\([0-9]*\)/.*|\1|p')
+
+if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
+  echo "[ERROR] Could not parse DATABASE_URL. Expected format: postgresql://user:pass@host:port/db"
+  echo "[ERROR] DATABASE_URL=$DATABASE_URL"
+  echo "[ERROR] Extracted: host='$DB_HOST', port='$DB_PORT'"
+  exit 1
+fi
+
+echo "[*] Waiting for PostgreSQL to be ready at $DB_HOST:$DB_PORT ..."
+
+# ── Wait for PostgreSQL using Node.js (not netcat) ──────────────
+# Rationale: netcat (nc -z) silently fails when Docker DNS resolution
+# fails (common on Docker Desktop for Windows/macOS). Node.js provides
+# explicit DNS and TCP diagnostics so we can identify the exact failure.
 RETRIES=0
 MAX_RETRIES=30
-while [ $RETRIES -lt $MAX_RETRIES ]; do
-  # Extract host and port from DATABASE_URL
-  # Format: postgresql://user:pass@host:port/db
-  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*/@\([^:]*\):.*|\1|p')
-  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*/@[^:]*:\([0-9]*\)/.*|\1|p')
+FIRST_DIAG=""
 
-  if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
-    if nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
-      echo "[+] PostgreSQL is reachable at $DB_HOST:$DB_PORT"
-      break
-    fi
+while [ $RETRIES -lt $MAX_RETRIES ]; do
+  # Use Node.js to test DNS resolution + TCP connection
+  # Returns: DNS_OK:<ips> | DNS_FAIL:<code> | TCP_OK | TCP_FAIL:<code>
+  RESULT=$(node -e "
+    const dns = require('dns');
+    const net = require('net');
+    const host = process.argv[1];
+    const port = parseInt(process.argv[2], 10);
+    const timeout = 5000;
+
+    dns.resolve4(host, (err, addresses) => {
+      if (err) {
+        console.log('DNS_FAIL:' + err.code + ':' + err.message);
+        process.exit(0);
+      }
+      console.log('DNS_OK:' + addresses.join(','));
+      const s = net.createConnection(port, host, () => {
+        console.log('TCP_OK');
+        s.destroy();
+        process.exit(0);
+      });
+      s.on('error', (e) => {
+        console.log('TCP_FAIL:' + e.code + ':' + e.message);
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.log('TCP_FAIL:TIMEOUT:connection timed out after ' + timeout + 'ms');
+        process.exit(0);
+      }, timeout);
+    });
+  " "$DB_HOST" "$DB_PORT" 2>&1)
+
+  if echo "$RESULT" | grep -q "TCP_OK"; then
+    DNS_IPS=$(echo "$RESULT" | grep "DNS_OK" | sed 's/DNS_OK://')
+    echo "[+] PostgreSQL is reachable at $DB_HOST:$DB_PORT (resolved to $DNS_IPS)"
+    break
   fi
 
   RETRIES=$((RETRIES + 1))
+
+  # Print full diagnostic on first failure (helps user identify the root cause)
+  if [ $RETRIES -eq 1 ]; then
+    FIRST_DIAG="$RESULT"
+    echo "[!] Diagnostic (first attempt):"
+    if echo "$RESULT" | grep -q "DNS_FAIL"; then
+      echo "    DNS FAILURE — hostname '$DB_HOST' could not be resolved."
+      echo "    This usually means:"
+      echo "      1. Docker networking is not configured correctly"
+      echo "      2. The postgres container is not on the same network"
+      echo "      3. Docker Desktop DNS is malfunctioning (restart Docker Desktop)"
+      echo "    Detail: $RESULT"
+    elif echo "$RESULT" | grep -q "TCP_FAIL"; then
+      echo "    TCP FAILURE — DNS resolved but connection to $DB_HOST:$DB_PORT failed."
+      echo "    This usually means:"
+      echo "      1. PostgreSQL is not yet accepting connections (normal during startup)"
+      echo "      2. A firewall is blocking the connection"
+      echo "    Detail: $RESULT"
+    else
+      echo "    Unknown error: $RESULT"
+    fi
+    echo ""
+  fi
+
   echo "  Attempt $RETRIES/$MAX_RETRIES — PostgreSQL not ready yet..."
   sleep 2
 done
 
 if [ $RETRIES -ge $MAX_RETRIES ]; then
   echo "[ERROR] PostgreSQL did not become reachable within 60 seconds."
-  echo "[ERROR] Check that the postgres container is running and healthy."
+  echo "[ERROR] Target: $DB_HOST:$DB_PORT"
+  echo "[ERROR] Last diagnostic: $RESULT"
+  echo ""
+  echo "[ERROR] Troubleshooting steps:"
+  echo "  1. Check postgres container:  docker compose logs postgres"
+  echo "  2. Check postgres is healthy: docker inspect --format='{{.State.Health.Status}}' wsh-postgres"
+  echo "  3. Test DNS from inside app:  docker exec weavenote-app node -e \"require('dns').resolve4('$DB_HOST', (e,a) => console.log(e||a))\""
+  echo "  4. Restart Docker Desktop (if on Windows/macOS)"
+  echo "  5. Clean rebuild:  docker compose down -v && docker compose build --no-cache && docker compose up -d"
   exit 1
 fi
 

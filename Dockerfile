@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 
 # CACHE-BUST: Build version arg forces rebuild when version changes
-ARG BUILD_VERSION=3.5.2
+ARG BUILD_VERSION=3.5.3
 
 # Stage 1: Install dependencies
 FROM base AS deps
@@ -28,7 +28,7 @@ RUN npm run build
 
 # Stage 3: Production runner
 FROM base AS runner
-RUN apk add --no-cache openssl wget netcat-openbsd
+RUN apk add --no-cache openssl wget bind-tools
 
 WORKDIR /app
 ENV NODE_ENV=production
