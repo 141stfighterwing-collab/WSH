@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "3.5.4",
+  "version": "3.5.5",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
@@ -54,6 +54,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "effect": "^3.10.0",
+    "empathic": "^2.3.1",
     "fast-check": "^3.23.2",
     "pure-rand": "^6.1.0",
     "embla-carousel-react": "^8.6.0",

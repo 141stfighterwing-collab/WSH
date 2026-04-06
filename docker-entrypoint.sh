@@ -35,7 +35,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v3.5.4 - Starting up..."
+echo "  WSH (WeaveNote Self-Hosted) v3.5.5 - Starting up..."
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 

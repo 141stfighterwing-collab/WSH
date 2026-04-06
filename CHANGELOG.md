@@ -5,6 +5,18 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.5] - 2026-04-06
+
+### Fixed
+- **CRITICAL**: Fixed `Cannot find module 'empathic/package'` crash during `prisma db push` at container startup. This is the continuation of the Prisma transitive dependency chain that has been the source of repeated crash-loops across v3.5.0 through v3.5.4. The full dependency chain is: `@prisma/config` → `effect` → `empathic`. Previous versions fixed `effect`, `fast-check`, and `pure-rand` by cherry-picking individual packages into the Docker runner stage, but this approach is fundamentally fragile because `@prisma/config` has a deep, unstable transitive dependency tree that changes between minor versions. Each Prisma update could introduce new missing dependencies, causing another crash-loop
+- **CRITICAL**: Eliminated the Prisma transitive dependency problem permanently by replacing the cherry-pick approach with a full `node_modules` copy. The Dockerfile now copies the ENTIRE production `node_modules` directory from the builder stage to the runner stage, instead of selectively copying individual packages (`prisma`, `@prisma`, `effect`, `fast-check`, `pure-rand`). This guarantees that ALL transitive dependencies of Prisma (including `empathic` and any future additions) are available at runtime. To mitigate the image size increase, `npm prune --production` is now run after the build stage to remove development dependencies (eslint, typescript, etc.) before copying to the runner. The trade-off is approximately 100-200MB larger image in exchange for zero `MODULE_NOT_FOUND` crashes from Prisma's dependency tree
+
+### Changed
+- Dockerfile builder stage now runs `npm prune --production` after `npm run build` to strip devDependencies before the runner stage copy. This removes eslint, typescript, bun-types, tailwindcss, tw-animate-css, and other build-only packages that were previously leaked into the production image through the selective COPY approach. The standalone Next.js output already excludes these, but the full node_modules copy would have included them without pruning
+- Dockerfile runner stage: replaced 7 individual `COPY --from=builder` directives (prisma, .prisma, @prisma, effect, fast-check, pure-rand, plus the prisma schema directory) with a single `COPY --from=builder /app/node_modules ./node_modules` and a separate `COPY --from=builder /app/prisma ./prisma` for the schema files. This dramatically simplifies the Dockerfile and makes it resilient to Prisma dependency changes
+- Added `empathic` (^2.3.1) as an explicit dependency in `package.json` — this is a transitive dependency of `@prisma/config` via `effect`. While the full node_modules copy makes this unnecessary for Docker, having it explicit ensures `npm install` from scratch works correctly for non-Docker environments
+- Version bumped to 3.5.5 across all files: `package.json`, `Dockerfile` (BUILD_VERSION), `docker-compose.yml` (image tag + build arg), `install.ps1`, `install.sh`, `docker-entrypoint.sh`, API routes (`health/route.ts`, `admin/system/route.ts`), `VersioningSection.tsx`, `README.md`
+
 ## [3.5.4] - 2026-04-06
 
 ### Fixed

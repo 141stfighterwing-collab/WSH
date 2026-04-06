@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 
 # CACHE-BUST: Build version arg forces rebuild when version changes
-ARG BUILD_VERSION=3.5.4
+ARG BUILD_VERSION=3.5.5
 
 # Stage 1: Install dependencies
 FROM base AS deps
@@ -26,6 +26,10 @@ RUN npx prisma db push --skip-generate 2>/dev/null || true
 # Build Next.js (standalone output)
 RUN npm run build
 
+# Prune devDependencies to reduce image size — keep only production deps
+# This removes eslint, typescript, playwright (~200MB+ of Chromium), etc.
+RUN npm prune --production
+
 # Stage 3: Production runner
 FROM base AS runner
 RUN apk add --no-cache openssl wget bind-tools
@@ -41,29 +45,25 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema, CLI, generated client, and runtime
-# CRITICAL: Must copy node_modules/prisma (the CLI package) to avoid npx
-# downloading Prisma 7.x from npm which has breaking changes (removed url from schema)
+# Copy ENTIRE node_modules from builder (production-only after npm prune)
+# This is the NUCLEAR fix for Prisma transitive dependency hell.
+# Previous approach: cherry-picked individual packages (prisma, @prisma, effect,
+# fast-check, pure-rand) but kept hitting new missing deps (empathic, etc.).
+# The @prisma/config package has a deep, unstable transitive dependency tree
+# that changes between minor versions. Copying ALL production node_modules
+# eliminates this class of bugs permanently.
+# Trade-off: ~100-200MB larger image vs. zero MODULE_NOT_FOUND crashes.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Copy Prisma schema for runtime use
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# FIX: Copy transitive dependencies required by Prisma's @prisma/config → effect chain
-# Without these, 'prisma db push' crashes with MODULE_NOT_FOUND at runtime:
-#   @prisma/config → effect → fast-check → pure-rand
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/effect ./node_modules/effect
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-check ./node_modules/fast-check
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pure-rand ./node_modules/pure-rand
-
-# Create node_modules/.bin/prisma symlink as fallback
-# Docker COPY does not preserve symlinks, so we recreate it manually
+# Create node_modules/.bin/prisma symlink (Docker COPY doesn't preserve symlinks)
 RUN mkdir -p /app/node_modules/.bin && \
     ln -sf ../prisma/build/index.js /app/node_modules/.bin/prisma && \
     chown -h nextjs:nodejs /app/node_modules/.bin/prisma
 
 # Create a 'prisma' wrapper script in /usr/local/bin as NUCLEAR fallback
-# This ensures 'prisma' command works even if all else fails
 RUN echo '#!/bin/sh' > /usr/local/bin/prisma && \
     echo 'exec node /app/node_modules/prisma/build/index.js "$@"' >> /usr/local/bin/prisma && \
     chmod +x /usr/local/bin/prisma
