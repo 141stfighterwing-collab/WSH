@@ -137,7 +137,7 @@ try {
     $health = Invoke-WebRequest -Uri "http://localhost:$Port/api/health" -TimeoutSec 15 -UseBasicParsing -ErrorAction Stop
     if ($health.StatusCode -eq 200) {
         $body = $health.Content | ConvertFrom-Json
-        Write-Host "  [OK] Health check PASSED — v$($body.version)" -ForegroundColor Green
+        Write-Host "  [OK] Health check PASSED -- v$($body.version)" -ForegroundColor Green
     }
 } catch {
     Write-Host "  [WARN] Still initializing. Watch logs:" -ForegroundColor Yellow

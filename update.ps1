@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# WSH — Non-destructive Update Script v3.9.2
+# WSH -- Non-destructive Update Script v3.9.2
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
@@ -15,17 +15,17 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH — Update v3.9.2" -ForegroundColor Cyan
+Write-Host "  WSH -- Update v3.9.2" -ForegroundColor Cyan
 Write-Host "  (data-preserving update)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── Step 1: Pull latest code ─────────────────────────────────
+# -- Step 1: Pull latest code ---------------------------------
 Write-Host "[1/4] Pulling latest code from GitHub..." -ForegroundColor Yellow
 git pull origin main 2>&1 | ForEach-Object { Write-Host "  $_" }
 Write-Host "  [OK] Code updated" -ForegroundColor Green
 
-# ── Step 2: Rebuild Docker image ─────────────────────────────
+# -- Step 2: Rebuild Docker image -----------------------------
 Write-Host ""
 Write-Host "[2/4] Rebuilding Docker image..." -ForegroundColor Yellow
 Write-Host "  (this may take 2-4 minutes on first run)" -ForegroundColor DarkGray
@@ -46,7 +46,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "  [OK] Image built" -ForegroundColor Green
 
-# ── Step 3: Restart containers ───────────────────────────────
+# -- Step 3: Restart containers -------------------------------
 Write-Host ""
 Write-Host "[3/4] Restarting containers (preserving data)..." -ForegroundColor Yellow
 docker compose up -d --force-recreate 2>&1 | ForEach-Object { Write-Host "  $_" }
@@ -58,7 +58,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "  [OK] Containers restarted" -ForegroundColor Green
 
-# ── Step 4: Validate ─────────────────────────────────────────
+# -- Step 4: Validate -----------------------------------------
 Write-Host ""
 Write-Host "[4/4] Validating services..." -ForegroundColor Yellow
 Write-Host "  Waiting 15s for services to start..." -ForegroundColor DarkGray
