@@ -139,6 +139,16 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
       token: '',
       role: 'user',
     });
+    // Clear persisted user from localStorage so logout survives refresh
+    try {
+      const STORAGE_KEY = 'wsh-store';
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        data.user = { isLoggedIn: false, username: '', email: '', token: '', role: 'user' };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+    } catch { /* ignore */ }
     onClose();
   };
 
