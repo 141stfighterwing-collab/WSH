@@ -28,6 +28,9 @@ import {
   ListTree,
 } from 'lucide-react';
 import { useWSHStore, type NoteType } from '@/store/wshStore';
+import CodeEditor from './editors/CodeEditor';
+import ProjectEditor from './editors/ProjectEditor';
+import DocumentEditor from './editors/DocumentEditor';
 
 const NOTE_TYPES: { type: NoteType; label: string }[] = [
   { type: 'quick', label: 'Quick' },
@@ -431,17 +434,40 @@ export default function NoteEditor() {
         </button>
       </div>
 
-      {/* Content Editor */}
-      <div className="px-3 py-2">
-        <div
-          ref={editorRef}
-          contentEditable
-          onInput={handleContentInput}
-          data-placeholder="Start writing your thoughts..."
-          className="min-h-[450px] h-[450px] max-h-[600px] overflow-y-auto bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 text-sm text-foreground leading-relaxed editor-inner focus:ring-2 focus:ring-pri-500/20 transition-all duration-200 resize-y"
-          style={{ minHeight: '300px' }}
+      {/* Content Editor — Specialized per note type */}
+      {activeNoteType === 'code' ? (
+        <CodeEditor
+          title={editorTitle}
+          setTitle={setEditorTitle}
+          content={editorContent}
+          setContent={(v) => { setEditorContent(v); setEditorRawContent(v); }}
         />
-      </div>
+      ) : activeNoteType === 'project' ? (
+        <ProjectEditor
+          title={editorTitle}
+          setTitle={setEditorTitle}
+          content={editorContent}
+          setContent={(v) => { setEditorContent(v); setEditorRawContent(v); }}
+        />
+      ) : activeNoteType === 'document' ? (
+        <DocumentEditor
+          title={editorTitle}
+          setTitle={setEditorTitle}
+          content={editorContent}
+          setContent={(v) => { setEditorContent(v); setEditorRawContent(v); }}
+        />
+      ) : (
+        <div className="px-3 py-2">
+          <div
+            ref={editorRef}
+            contentEditable
+            onInput={handleContentInput}
+            data-placeholder="Start writing your thoughts..."
+            className="min-h-[450px] h-[450px] max-h-[600px] overflow-y-auto bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 text-sm text-foreground leading-relaxed editor-inner focus:ring-2 focus:ring-pri-500/20 transition-all duration-200 resize-y"
+            style={{ minHeight: '300px' }}
+          />
+        </div>
+      )}
 
       {/* Hashtags */}
       <div className="px-3 pb-2">
