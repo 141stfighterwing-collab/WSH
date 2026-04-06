@@ -27,11 +27,15 @@ export async function POST(request: NextRequest) {
     ].includes(ext)) {
       text = buffer.toString('utf-8');
     }
-    // Handle PDF files using pdf-parse
+    // Handle PDF files using pdf-parse v2 (class-based API)
     else if (ext === 'pdf') {
       try {
-        const pdfData = await PDFParse(buffer);
-        text = pdfData.text || '';
+        const parser = new PDFParse(buffer);
+        const result = await parser.getText();
+        // getText() returns { pages: [{text, num}], total } — join all pages
+        if (result && result.pages && result.pages.length > 0) {
+          text = result.pages.map((p: { text: string; num: number }) => p.text).join('\n\n');
+        }
         // If pdf-parse returned nothing, fall back to regex extraction
         if (!text.trim()) {
           text = extractPdfTextFallback(buffer);

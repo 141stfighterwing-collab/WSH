@@ -5,6 +5,31 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-04-06
+
+### Fixed
+- **CRITICAL**: Fixed PDF text extraction failing on all PDF files. The `pdf-parse` v2 library uses a class-based API (`new PDFParse(buffer)` → `await parser.getText()`) returning `{ pages: [{text, num}], total }`, but the code was calling `await PDFParse(buffer)` as if it were a function (v1 API) and accessing `.text` on the result. This always threw `TypeError: PDFParse is not a constructor` or returned `undefined`. Updated to instantiate `PDFParse` as a class, call `getText()` correctly, and join all page texts with double-newline separators. The regex-based fallback (`extractPdfTextFallback`) remains for edge cases where `pdf-parse` fails, but it only works on uncompressed PDFs (no FlateDecode) — the primary path now uses the full `pdf-parse` engine which handles compressed streams, embedded fonts, and multi-byte encodings
+- **CRITICAL**: Fixed DB test endpoint (`/api/db-test`) creating a new `PrismaClient()` instance per request and calling `$disconnect()` in the `finally` block. In Next.js serverless/API route context, this caused connection pool exhaustion — each request opened a fresh connection, ran tests, then tore it down. With the health endpoint polling every 30 seconds plus manual test clicks, the connection pool would rapidly exhaust, causing "too many connections" errors or silent failures. Refactored to use the singleton `db` client from `@/lib/db.ts` (which caches the PrismaClient on `globalThis`) and removed the `$disconnect()` call, allowing the persistent connection pool to be reused across all requests
+- **CRITICAL**: Fixed `/api/health` endpoint with the same PrismaClient-per-request pattern. Switched to the `db` singleton and removed `$disconnect()`. This eliminates the root cause of the "DB shows online but test fails" bug — the health check would succeed because it created a fresh connection each time, but the subsequent db-test would fail because the previous connection was torn down and a new one couldn't be established fast enough before the pool limit was hit
+
+### Changed
+- DB Test button in Header is now visible to ALL logged-in users (not just admin/super-admin). Previously gated behind `{isAdmin && (` which prevented regular users from verifying their database connection. Any logged-in user can now click the DB Test button to run the write/read/count/notes suite and see pass/fail results. The Admin button remains admin-only as expected
+- Version bumped to 3.7.0 across all files: `package.json`, `Dockerfile` (BUILD_VERSION), `docker-compose.yml` (image tag + build arg), `install.ps1`, `install.sh`, `docker-entrypoint.sh`, API routes (`health/route.ts`, `admin/system/route.ts`), `VersioningSection.tsx`, `README.md`
+
+## [3.6.1] - 2026-04-06
+
+### Fixed
+- Preliminary fixes for PDF extraction, DB indicator visibility, and DB test (released but not fully functional — superseded by v3.7.0)
+
+## [3.6.0] - 2026-04-06
+
+### Added
+- Soft logout functionality — logged-out users see a clean login screen instead of the notes UI
+- Authentication gate — all note content is hidden when not logged in, requiring login to view any notes
+- Enhanced analytics panel with activity charts, streaks, and achievements tracking
+- Glowing green database connection indicator in the header (next to admin button) showing real-time DB status with latency
+- Database read/write test button for admin users to verify full CRUD operations against the live database
+
 ## [3.5.5] - 2026-04-06
 
 ### Fixed

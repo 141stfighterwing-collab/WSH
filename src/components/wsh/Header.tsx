@@ -227,8 +227,8 @@ export default function Header() {
               </div>
             </div>
 
-            {/* DB Test Button — admin only */}
-            {isAdmin && (
+            {/* DB Test Button — all logged-in users */}
+            {mounted && user.isLoggedIn && (
               <div className="relative" ref={dbTestTooltipRef}>
                 <button
                   onClick={handleDBTest}

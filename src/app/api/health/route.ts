@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
-
+// GET /api/health — Database connectivity health check
+// Uses the singleton db client from @/lib/db to avoid creating
+// new PrismaClient instances per poll (which exhausts connection pools).
 export async function GET() {
   let dbStatus = 'disconnected';
   let dbLatencyMs = -1;
@@ -11,7 +12,7 @@ export async function GET() {
   try {
     // Test actual table access, not just connection
     const start = Date.now();
-    const userCount = await prisma.user.count();
+    const userCount = await db.user.count();
     dbLatencyMs = Date.now() - start;
     dbStatus = 'connected';
     dbDetail = `${userCount} users`;
@@ -22,7 +23,7 @@ export async function GET() {
       try {
         // Fallback: just ping the connection
         const start = Date.now();
-        await prisma.$queryRaw`SELECT 1`;
+        await db.$queryRaw`SELECT 1`;
         dbLatencyMs = Date.now() - start;
         dbStatus = 'connected_no_tables';
         dbDetail = 'connected but tables missing';
@@ -34,13 +35,12 @@ export async function GET() {
       dbStatus = 'error';
       dbDetail = message.slice(0, 100);
     }
-  } finally {
-    await prisma.$disconnect();
   }
+  // NOTE: No db.$disconnect() — the singleton persists for the app lifetime
 
   return NextResponse.json({
     status: 'healthy',
-    version: '3.6.1',
+    version: '3.7.0',
     timestamp: new Date().toISOString(),
     database: {
       status: dbStatus,

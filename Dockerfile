@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 
 # CACHE-BUST: Build version arg forces rebuild when version changes
-ARG BUILD_VERSION=3.5.5
+ARG BUILD_VERSION=3.7.0
 
 # Stage 1: Install dependencies
 FROM base AS deps
