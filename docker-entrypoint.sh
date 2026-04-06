@@ -1,5 +1,11 @@
 #!/bin/sh
 # WSH Docker Entrypoint - Handles first-run database initialization and server startup
+# v3.5.4: Fixed DATABASE_URL parsing sed regex. The v3.5.3 patterns used '/@' to match the
+#   separator between credentials and hostname, but standard PostgreSQL URLs use '://' for the
+#   protocol and '@' (not '/@') before the hostname. The pattern '.*/@...' never matched any
+#   standard postgresql:// URL, causing DB_HOST and DB_PORT to always be empty and triggering
+#   immediate exit with "Could not parse DATABASE_URL". Fixed by removing the erroneous '/'
+#   from the sed patterns: '.*@\([^:]*\):.*' and '.*@[^:]*:\([0-9]*\)/.*'
 # v3.5.3: Replaced netcat (nc -z) with Node.js-based PostgreSQL connectivity check.
 #   netcat silently fails when DNS resolution fails inside Docker (especially Docker Desktop
 #   on Windows/macOS). The new check uses Node.js dns+net modules for explicit DNS resolution
@@ -29,14 +35,14 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v3.5.3 - Starting up..."
+echo "  WSH (WeaveNote Self-Hosted) v3.5.4 - Starting up..."
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 
 # ── Extract host and port from DATABASE_URL ─────────────────────
 # Format: postgresql://user:pass@host:port/db
-DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*/@\([^:]*\):.*|\1|p')
-DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*/@[^:]*:\([0-9]*\)/.*|\1|p')
+DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):.*|\1|p')
+DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*@[^:]*:\([0-9]*\)/.*|\1|p')
 
 if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
   echo "[ERROR] Could not parse DATABASE_URL. Expected format: postgresql://user:pass@host:port/db"

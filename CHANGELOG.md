@@ -5,6 +5,14 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.4] - 2026-04-06
+
+### Fixed
+- **CRITICAL**: Fixed `docker-entrypoint.sh` crash-loop caused by a broken `sed` regex that could never parse a valid PostgreSQL `DATABASE_URL`. The v3.5.3 sed patterns used `/@` as the separator between credentials and hostname (e.g., `s|.*/@\([^:]*\):.*|`), but standard PostgreSQL connection strings use the format `postgresql://user:pass@host:port/db` where the `@` symbol is preceded by the password (not `/`). The sequence `/@` does not exist anywhere in a standard PostgreSQL URL — the `//` appears in the protocol prefix `postgresql://` and the `@` appears after the password. This caused the sed substitution to never match, leaving both `DB_HOST` and `DB_PORT` as empty strings on every invocation. The entrypoint immediately exited with "Could not parse DATABASE_URL" and printed the perfectly valid URL alongside `Extracted: host='', port=''`. The fix removes the erroneous `/` prefix from both sed patterns, changing them to `s|.*@\([^:]*\):.*|` for host extraction and `s|.*@[^:]*:\([0-9]*\)/.*|` for port extraction. These patterns now correctly handle the standard PostgreSQL URL format by matching any characters up to `@`, then capturing the hostname before `:` and the port number before `/`
+
+### Changed
+- Version bumped to 3.5.4 across all files: `package.json`, `Dockerfile` (BUILD_VERSION), `docker-compose.yml` (image tag + build arg), `install.ps1`, `install.sh`, `docker-entrypoint.sh`, API routes (`health/route.ts`, `admin/system/route.ts`), `VersioningSection.tsx`, `README.md`
+
 ## [3.5.3] - 2026-04-06
 
 ### Fixed
