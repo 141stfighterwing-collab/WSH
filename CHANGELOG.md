@@ -5,6 +5,15 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.1] - 2026-04-07
+
+### Changed
+- **Version bump** — All version references updated from 3.9.0 to 3.9.1 across 14 files: `package.json`, `Dockerfile` (header comment + both `BUILD_VERSION` ARGs), `docker-compose.yml` (build arg + image tag), `docker-entrypoint.sh` (header comment + fallback version), `install.ps1` (header comment + banner text), `install.sh` (header comment + banner text), `update.ps1` (header comment + banner text), `update.sh` (header comment + banner text), `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `src/components/wsh/admin/VersioningSection.tsx` (fallback version), `README.md` (title, API example, image tag reference), and `docs/INDEX.md` (documentation header)
+
+### Fixed
+- **Documentation consistency** — Stale `docs/INDEX.md` version reference updated from v3.4.0 to v3.9.1, resolving a version drift that had been present since the v3.5.0 release series
+- **API response version alignment** — Health check example in README updated with correct version (3.9.1) and current date (2026-04-07)
+
 ## [3.9.0] - 2026-04-06
 
 ### Fixed

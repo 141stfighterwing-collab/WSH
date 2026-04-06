@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # WeaveNote Self-Hosted (WSH) - Auto Nuke & Reinstall
-# v3.9.0: Multi-stage Docker build. Installs a pre-built image.
+# v3.9.1: Multi-stage Docker build. Installs a pre-built image.
 # Updates are non-destructive: just `.\update.ps1` to pull + rebuild.
 #
 # Usage:  .\install.ps1
@@ -19,7 +19,7 @@ $Host.UI.RawUI.ForegroundColor = "Cyan"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH - Auto Nuke & Reinstall v3.9.0" -ForegroundColor Cyan
+Write-Host "  WSH - Auto Nuke & Reinstall v3.9.1" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

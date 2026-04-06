@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.9.0
+# WSH — WeaveNote Self-Hosted v3.9.1
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -490,7 +490,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:3.9.0` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:3.9.1` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ---
@@ -573,7 +573,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.9.0", "timestamp": "2026-04-06T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.9.1", "timestamp": "2026-04-07T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
