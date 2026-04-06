@@ -5,6 +5,42 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.2] - 2026-04-07
+
+### Security (Critical Fixes)
+
+This release addresses 14 security and stability bugs identified in the v3.9.1 comprehensive test report. The authentication subsystem has been fundamentally reworked from a client-side-only system to a proper server-side JWT-based authentication architecture.
+
+- **CRITICAL: Password hashing (BUG-001)**: All passwords are now hashed with bcryptjs (12 rounds) before storage in PostgreSQL. Registration hashes passwords before insert; login compares using `bcrypt.compare()`. The admin user creation and password change endpoints also hash passwords. This eliminates the OWASP A02:2021 Cryptographic Failures vulnerability where all passwords were stored as plaintext.
+- **CRITICAL: JWT session management (BUG-002)**: Implemented full JWT-based authentication using the `jose` library (Edge-compatible). Login endpoint now signs a JWT containing `userId`, `username`, and `role` with the configured `JWT_SECRET`. Tokens expire after 7 days. The previously-configured `JWT_SECRET` environment variable is now actually used for the first time.
+- **CRITICAL: Server-side auth middleware (BUG-004)**: Created `src/middleware.ts` that validates JWT tokens on all `/api/*` routes except public endpoints (`/api/health`, `/api/db-test`, `/api/admin/users/login`, `/api/admin/users/register`, `/api/graph`). The middleware also attaches `x-user-id`, `x-user-username`, and `x-user-role` headers to authenticated requests for downstream handlers.
+- **CRITICAL: Client-side role escalation eliminated (BUG-003)**: The `LoginWidget` component no longer assigns roles based on the username string. Instead, it calls the login API and uses the role returned by the server (which comes from the database). The login form now has a proper password field and shows loading/error states. No user can grant themselves admin access by typing a specific username.
+- **CRITICAL: Registration rate limiting (BUG-005)**: Added in-memory rate limiting to the registration endpoint: 3 registrations per minute per IP address. Returns 429 Too Many Requests with `Retry-After` header when exceeded.
+- **HIGH: Login rate limiting (BUG-006)**: Added rate limiting to the login endpoint: 10 login attempts per minute per IP address. Returns 429 Too Many Requests with `Retry-After` header when exceeded.
+
+### Fixed
+
+- **Password policy strengthened (BUG-007)**: Minimum password length increased from 4 to 8 characters. Added complexity validation requiring at least 2 of: uppercase letter, lowercase letter, number, special character. Password change endpoint in admin users route also updated.
+- **Username unique constraint (BUG-008)**: Added `@unique` directive to `username` field in Prisma schema, preventing duplicate username race conditions at the database level. Also added email uniqueness check during registration.
+- **Email validation**: Added basic email format validation on the registration endpoint using regex pattern matching.
+- **Mock data fallbacks removed (BUG-009)**: All `.catch(() => mockData)` patterns have been removed from the users CRUD route (`GET`, `POST`, `PATCH`, `DELETE`). Failed database operations now return proper 500 error responses instead of fake success messages. Added authentication checks to all handlers (admin/super-admin required). Added self-deletion prevention.
+
+### Changed
+
+- **LoginWidget rewritten**: Now makes a real `POST /api/admin/users/login` API call with username and password fields. Shows loading spinner during authentication, displays server error messages, and stores the JWT token from the server response. The old "token (optional)" field has been replaced with a proper password field.
+- **Auth state no longer persisted to localStorage (BUG-014)**: The Zustand store's `saveToLocalStorage()` no longer includes `user` state, and `loadFromLocalStorage()` no longer restores it. Users must log in via the API to establish an authenticated session. This prevents auth spoofing via browser DevTools.
+- **package.json scripts cross-platform (BUG-010)**: Removed Unix-only commands from npm scripts. `dev` script no longer pipes to `tee`. `build` script uses a new `scripts/copy-build-assets.mjs` helper instead of `cp -r`. `start` script uses plain `node` without inline `NODE_ENV=` or `tee`. All scripts now work on Windows, Linux, and macOS.
+- **Removed unused `sharp` dependency (BUG-012)**: The `sharp` native addon package was listed in dependencies but never imported anywhere in the codebase. Removed to eliminate unnecessary native compilation complexity, especially on Windows.
+- **Added `.gitattributes` (BUG-011)**: Created `.gitattributes` enforcing LF line endings for `.sh`, `.mjs`, `.ts`, `.tsx`, `.json`, `.prisma`, `.yml`, and `.md` files. PowerShell files (`.ps1`, `.bat`, `.cmd`) use CRLF. This prevents CRLF contamination of bash scripts inside Docker containers.
+- **`.env.example` security warnings strengthened (BUG-013)**: Added explicit SECURITY WARNING comments to sensitive configuration sections. Added instructions for generating a secure JWT_SECRET using `crypto.randomBytes()`. Added warning about changing POSTGRES_PASSWORD and PGADMIN_PASSWORD before network deployment.
+
+### Added
+
+- **`src/lib/auth.ts`**: Central authentication utility module providing password hashing (`hashPassword`, `comparePassword`), JWT management (`signToken`, `verifyToken`), and in-memory rate limiting (`checkRateLimit`, `getRateLimitInfo`). Rate limiter auto-cleans expired entries every 5 minutes.
+- **`src/middleware.ts`**: Next.js Edge middleware for JWT validation on API routes. Public routes are explicitly whitelisted. Authenticated requests get user identity headers attached.
+- **`scripts/copy-build-assets.mjs`**: Cross-platform Node.js script for copying build assets after `next build`, replacing the Unix-only `cp -r` command. Uses `fs.cpSync` with recursive flag.
+- **`bcryptjs` and `jose` dependencies**: Added for password hashing and JWT signing/verification respectively.
+
 ## [3.9.1] - 2026-04-07
 
 ### Changed

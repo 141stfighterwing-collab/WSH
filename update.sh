@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# WSH — Non-destructive Update Script v3.9.1
+# WSH — Non-destructive Update Script v3.9.2
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
@@ -18,7 +18,7 @@ done
 
 echo ""
 echo "========================================"
-echo "  WSH — Update v3.9.1"
+echo "  WSH — Update v3.9.2"
 echo "  (data-preserving update)"
 echo "========================================"
 echo ""

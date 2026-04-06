@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # WeaveNote Self-Hosted (WSH) - Auto Nuke & Reinstall
-# v3.9.1: Multi-stage Docker build. Installs a pre-built image.
+# v3.9.2: Multi-stage Docker build. Installs a pre-built image.
 # Updates are non-destructive: just `./update.sh` to pull + rebuild.
 #
 # Usage:  chmod +x install.sh && ./install.sh
@@ -24,7 +24,7 @@ done
 
 echo ""
 echo "========================================"
-echo "  WSH - Auto Nuke & Reinstall v3.9.1"
+echo "  WSH - Auto Nuke & Reinstall v3.9.2"
 echo "========================================"
 echo ""
 

@@ -284,7 +284,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  // Persistence
+  // Persistence (BUG-014 fix: do NOT persist user auth state to localStorage)
   saveToLocalStorage: () => {
     const state = get();
     const toSave = {
@@ -293,7 +293,8 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       theme: state.theme,
       darkMode: state.darkMode,
       viewMode: state.viewMode,
-      user: state.user,
+      // user state intentionally excluded from localStorage
+      // auth is managed via JWT token from server
       aiUsageCount: state.aiUsageCount,
     };
     if (typeof window !== 'undefined') {
@@ -317,7 +318,8 @@ export const useWSHStore = create<WSHState>((set, get) => ({
           document.documentElement.classList.toggle('dark', data.darkMode);
         }
         if (data.viewMode) set({ viewMode: data.viewMode });
-        if (data.user) set({ user: { ...defaultUser, ...data.user } });
+        // BUG-014 fix: do NOT restore user auth state from localStorage
+        // User must log in via the login API to get a valid JWT token
         if (typeof data.aiUsageCount === 'number') set({ aiUsageCount: data.aiUsageCount });
       } catch {
         console.error('Failed to load WSH state from localStorage');

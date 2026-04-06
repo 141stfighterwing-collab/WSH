@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Shield, ShieldCheck } from 'lucide-react';
+import { X, Shield, ShieldCheck, Loader2 } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 interface LoginWidgetProps {
@@ -9,30 +9,65 @@ interface LoginWidgetProps {
   onClose: () => void;
 }
 
+interface LoginResponse {
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+    status: string;
+  };
+  token: string;
+  message: string;
+}
+
 export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
   const { user, setUser, logoutUser, saveToLocalStorage } = useWSHStore();
   const [username, setUsername] = useState('');
-  const [token, setToken] = useState('');
-  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
-    let role = 'user';
-    if (username.toLowerCase() === 'superadmin') {
-      role = 'super-admin';
-    } else if (username.toLowerCase() === 'admin') {
-      role = 'admin';
+    if (!username.trim() || !password.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/admin/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
+        setLoading(false);
+        return;
+      }
+
+      const loginData = data as LoginResponse;
+
+      // BUG-003 fix: role comes from server response, NOT client-side assignment
+      setUser({
+        isLoggedIn: true,
+        username: loginData.user.username,
+        email: loginData.user.email,
+        token: loginData.token,
+        role: loginData.user.role,
+      });
+      saveToLocalStorage();
+      setError('');
+      onClose();
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setUser({
-      isLoggedIn: true,
-      username: username.trim(),
-      email: email || `${username.trim()}@wsh.local`,
-      token: token || 'local-token',
-      role,
-    });
-    saveToLocalStorage();
-    onClose();
   };
 
   const handleLogout = () => {
@@ -111,6 +146,11 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
+            {error && (
+              <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-[10px] font-semibold text-red-400">{error}</p>
+              </div>
+            )}
             <div>
               <label className="micro-label text-muted-foreground mb-1 block">
                 Username
@@ -121,37 +161,37 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
                 className="w-full px-3 py-2 rounded-full text-sm bg-secondary border border-transparent focus:border-pri-500 focus:outline-none transition-colors placeholder:text-muted-foreground"
+                required
+                disabled={loading}
               />
             </div>
             <div>
               <label className="micro-label text-muted-foreground mb-1 block">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email"
-                className="w-full px-3 py-2 rounded-full text-sm bg-secondary border border-transparent focus:border-pri-500 focus:outline-none transition-colors placeholder:text-muted-foreground"
-              />
-            </div>
-            <div>
-              <label className="micro-label text-muted-foreground mb-1 block">
-                Token (optional)
+                Password
               </label>
               <input
                 type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Access token"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
                 className="w-full px-3 py-2 rounded-full text-sm bg-secondary border border-transparent focus:border-pri-500 focus:outline-none transition-colors placeholder:text-muted-foreground"
+                required
+                disabled={loading}
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg"
+              disabled={loading}
+              className="w-full py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Login
+              {loading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                'Login'
+              )}
             </button>
           </form>
         )}

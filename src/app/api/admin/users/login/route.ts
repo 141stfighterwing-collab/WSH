@@ -1,16 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import {
+  comparePassword,
+  signToken,
+  checkRateLimit,
+  getRateLimitInfo,
+} from '@/lib/auth';
 
 // POST /api/admin/users/login — Authenticate user by username + password
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (BUG-006 fix): 10 login attempts per minute per IP
+    const clientIP =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rateLimitKey = `login:${clientIP}`;
+
+    if (!checkRateLimit(rateLimitKey, 10, 60 * 1000)) {
+      const info = getRateLimitInfo(rateLimitKey, 10, 60 * 1000);
+      return NextResponse.json(
+        {
+          error: 'Too many login attempts. Please try again later.',
+          retryAfter: Math.ceil((info.resetAt - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(info.resetAt).toISOString(),
+          },
+        },
+      );
+    }
+
     const body = await request.json();
     const { username, password } = body as { username: string; password: string };
 
     if (!username || !password) {
       return NextResponse.json(
         { error: 'Username and password are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -30,7 +60,7 @@ export async function POST(request: NextRequest) {
       if (!user) {
         return NextResponse.json(
           { error: 'Invalid username or password' },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -38,7 +68,7 @@ export async function POST(request: NextRequest) {
       if (user.status === 'banned') {
         return NextResponse.json(
           { error: 'Account has been banned. Contact an administrator.' },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
@@ -51,7 +81,7 @@ export async function POST(request: NextRequest) {
           const remainingHours = Math.ceil(24 - hoursDiff);
           return NextResponse.json(
             { error: `Account is suspended. ${remainingHours} hour(s) remaining.` },
-            { status: 403 }
+            { status: 403 },
           );
         }
         // Suspension expired — auto-unsuspend
@@ -61,25 +91,40 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Simple password comparison (plain text for now — production should use bcrypt)
-      if (user.password !== password) {
+      // BUG-001 fix: use bcrypt comparison instead of plaintext
+      const isValid = await comparePassword(password, user.password);
+      if (!isValid) {
         return NextResponse.json(
           { error: 'Invalid username or password' },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
-      // Return user data (without password)
+      // BUG-002 fix: issue JWT token with user identity and role
       const { password: _pw, ...safeUser } = user;
-      return NextResponse.json({
-        user: safeUser,
-        message: 'Login successful',
+      const token = await signToken({
+        userId: user.id,
+        username: user.username,
+        role: user.role,
       });
+
+      const info = getRateLimitInfo(rateLimitKey, 10, 60 * 1000);
+      return NextResponse.json(
+        {
+          user: safeUser,
+          token,
+          message: 'Login successful',
+        },
+        {
+          headers: {
+            'X-RateLimit-Remaining': String(info.remaining),
+          },
+        },
+      );
     } catch {
-      // DB not available — allow fallback local auth
       return NextResponse.json(
         { error: 'Database not available' },
-        { status: 503 }
+        { status: 503 },
       );
     }
   } catch (error: unknown) {
