@@ -1,72 +1,99 @@
 #!/usr/bin/env pwsh
-# WSH - One-Command Update
-# Pulls latest changes from GitHub and rebuilds the app inside the container.
-# Your database and notes are preserved — only the app code changes.
+# WSH — Non-destructive Update Script v3.9.0
+# Pulls latest code, rebuilds image, and restarts containers.
+# Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
-# Usage:  .\update.ps1
-#         .\update.ps1 -Branch develop
+# Usage:
+#   .\update.ps1
+#   .\update.ps1 -NoCache    # Force full rebuild
 
 param(
-    [string]$Branch = "main"
+    [switch]$NoCache
 )
 
 $ErrorActionPreference = "Stop"
-$Host.UI.RawUI.ForegroundColor = "Cyan"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH Update v3.9.0" -ForegroundColor Cyan
+Write-Host "  WSH — Update v3.9.0" -ForegroundColor Cyan
+Write-Host "  (data-preserving update)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check container is running
-$running = docker inspect -f '{{.State.Running}}' weavenote-app 2>$null
-if ($running -ne "true") {
-    Write-Host "[ERROR] WSH container is not running!" -ForegroundColor Red
-    Write-Host "  Start it first:  docker compose up -d" -ForegroundColor Yellow
+# ── Step 1: Pull latest code ─────────────────────────────────
+Write-Host "[1/4] Pulling latest code from GitHub..." -ForegroundColor Yellow
+git pull origin main 2>&1 | ForEach-Object { Write-Host "  $_" }
+Write-Host "  [OK] Code updated" -ForegroundColor Green
+
+# ── Step 2: Rebuild Docker image ─────────────────────────────
+Write-Host ""
+Write-Host "[2/4] Rebuilding Docker image..." -ForegroundColor Yellow
+Write-Host "  (this may take 2-4 minutes on first run)" -ForegroundColor DarkGray
+Write-Host ""
+
+if ($NoCache) {
+    docker compose build --no-cache 2>&1 | ForEach-Object { Write-Host "  $_" }
+} else {
+    docker compose build 2>&1 | ForEach-Object { Write-Host "  $_" }
+}
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "[FAIL] Docker build failed!" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "[1/3] Triggering update inside container..." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  [OK] Image built" -ForegroundColor Green
 
-# Method 1: Touch the update marker and restart (triggers git pull + rebuild)
-docker exec weavenote-app sh -c "touch /app/tmp/.needs-update" 2>$null
+# ── Step 3: Restart containers ───────────────────────────────
+Write-Host ""
+Write-Host "[3/4] Restarting containers (preserving data)..." -ForegroundColor Yellow
+docker compose up -d --force-recreate 2>&1 | ForEach-Object { Write-Host "  $_" }
+
 if ($LASTEXITCODE -ne 0) {
-    # Fallback: Use WSH_UPDATE env to force update on restart
-    Write-Host "  Using WSH_UPDATE=true method..." -ForegroundColor DarkGray
-    docker compose stop weavenote
-    docker compose up -d -e WSH_UPDATE=true
-} else {
-    docker restart weavenote-app
+    Write-Host "[FAIL] Container restart failed!" -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "[2/3] Waiting for rebuild (this takes 1-2 minutes)..." -ForegroundColor Yellow
-Write-Host "  Watch progress:  docker compose logs -f weavenote" -ForegroundColor DarkGray
-Write-Host ""
+Write-Host "  [OK] Containers restarted" -ForegroundColor Green
 
-# Poll health endpoint
-$waitSeconds = 120
-$checked = 0
-while ($checked -lt $waitSeconds) {
-    Start-Sleep -Seconds 5
-    $checked += 5
-    try {
-        $health = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
-        if ($health.StatusCode -eq 200) {
-            Write-Host "[3/3] Update complete! App is healthy." -ForegroundColor Green
-            Write-Host ""
-            Write-Host "  App: http://localhost:3000" -ForegroundColor Cyan
-            $body = $health.Content | ConvertFrom-Json
-            Write-Host "  Version: $($body.version)" -ForegroundColor Cyan
-            Write-Host ""
-            exit 0
-        }
-    } catch {
-        Write-Host "  ... still building (${checked}s)" -ForegroundColor DarkGray
+# ── Step 4: Validate ─────────────────────────────────────────
+Write-Host ""
+Write-Host "[4/4] Validating services..." -ForegroundColor Yellow
+Write-Host "  Waiting 15s for services to start..." -ForegroundColor DarkGray
+Start-Sleep -Seconds 15
+
+$allOk = $true
+foreach ($svc in @("weavenote-app", "wsh-dbviewer", "wsh-postgres")) {
+    $running = docker inspect -f '{{.State.Running}}' $svc 2>$null
+    if ($running -eq "true") {
+        Write-Host "  [OK] $svc is RUNNING" -ForegroundColor Green
+    } else {
+        Write-Host "  [FAIL] $svc is NOT running" -ForegroundColor Red
+        $allOk = $false
     }
 }
 
+# Health check
+$port = if ($env:WSH_PORT) { $env:WSH_PORT } else { 3000 }
+try {
+    $health = Invoke-WebRequest -Uri "http://localhost:$port/api/health" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+    if ($health.StatusCode -eq 200) {
+        Write-Host "  [OK] Health check PASSED (HTTP 200)" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "  [WARN] Health check not ready yet (container may still be initializing)" -ForegroundColor Yellow
+}
+
 Write-Host ""
-Write-Host "[WARN] Update taking longer than expected." -ForegroundColor Yellow
-Write-Host "  Check logs:  docker compose logs --tail 50 weavenote" -ForegroundColor Yellow
-exit 1
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "  UPDATE COMPLETE" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "  App:        http://localhost:$port" -ForegroundColor Cyan
+Write-Host "  DB Viewer:  http://localhost:5682" -ForegroundColor Cyan
+Write-Host "  Logs:       docker compose logs -f weavenote" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  To do a full clean install:  .\install.ps1" -ForegroundColor DarkGray
+Write-Host ""

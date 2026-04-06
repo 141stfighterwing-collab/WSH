@@ -309,7 +309,7 @@ WSH includes a production-ready **Docker configuration** for easy deployment on 
 
 **Capabilities:**
 
-- **Multi-stage Dockerfile** — Three-stage build (deps → builder → runner) for minimal image size
+- **Multi-stage Dockerfile** — Three-stage build (deps → builder → runner) with visible progress output at each step
 - **PostgreSQL backend** — Production-grade database with health checks, persistent volume storage, and automatic readiness detection
 - **Health checks** — Built-in health check hitting `/api/health` every 30 seconds
 - **Volume persistence** — PostgreSQL data stored in a named Docker volume (`postgres-data`) for data persistence across container restarts
@@ -385,9 +385,9 @@ bun run start
 
 ## Docker Deployment
 
-### One-Command Install (Recommended)
+### Quick Install (Recommended)
 
-The install scripts automatically detect and **nuke ALL old containers, images, volumes, and networks** before rebuilding from scratch. No manual cleanup needed.
+The install script automatically detects and removes ALL old containers, images, volumes, and networks before rebuilding from scratch. No manual cleanup needed.
 
 **Windows (PowerShell):**
 ```powershell
@@ -412,28 +412,36 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Auto-detect and remove ALL existing WSH/WeaveNote/PostgreSQL/pgAdmin containers, images, volumes, and networks
 2. Prune all dangling Docker resources (including build cache)
-3. Build the Docker image from scratch (no cache)
+3. Build the Docker image with visible progress at each step
 4. Start all services (App + PostgreSQL + DB Viewer)
 5. Validate that all 3 required containers are running
 6. Stream live logs
 
-**Custom port:**
+### Updating WSH (Non-Destructive)
+
+When a new version is released, update WSH **without losing any data** using the update script:
+
+**Windows:**
 ```powershell
-.\install.ps1 -Port 8080        # Windows
-./install.sh 8080               # Linux/macOS
+cd WSH
+.\update.ps1                    # Pull latest code + rebuild + restart
+.\update.ps1 -NoCache           # Force full rebuild (no layer caching)
 ```
 
-**Include pgAdmin:**
-```powershell
-.\install.ps1 -WithPgAdmin      # Windows
-./install.sh --with-pgadmin     # Linux/macOS
+**Linux / macOS:**
+```bash
+cd WSH
+./update.sh                    # Pull latest code + rebuild + restart
+./update.sh --no-cache          # Force full rebuild (no layer caching)
 ```
 
-**Clean only (remove without rebuilding):**
-```powershell
-.\install.ps1 -CleanOnly        # Windows
-./install.sh --clean-only       # Linux/macOS
-```
+The update script will:
+1. `git pull` the latest code from GitHub
+2. Rebuild the Docker image (uses layer caching — only changed layers rebuild)
+3. Restart containers with `--force-recreate` (your PostgreSQL data is preserved)
+4. Validate all services are running and health check passes
+
+> **Note:** The install script (`install.sh` / `install.ps1`) is for first-time installs or complete resets. It destroys all data. For ongoing updates, always use the update script.
 
 ### Available URLs
 
@@ -444,6 +452,20 @@ The install script will:
 | **pgAdmin** | http://localhost:5050 | Full PostgreSQL admin UI (requires `-WithPgAdmin` / `--with-pgadmin`) |
 
 **pgAdmin login:** `admin@wsh.local` / `admin123` (configurable via `PGADMIN_EMAIL` / `PGADMIN_PASSWORD`)
+
+### Custom Port
+
+```powershell
+.\install.ps1 -Port 8080        # Windows install
+./install.sh 8080               # Linux/macOS install
+```
+
+### Include pgAdmin
+
+```powershell
+.\install.ps1 -WithPgAdmin      # Windows
+./install.sh --with-pgadmin     # Linux/macOS
+```
 
 ### Manual Docker Commands
 
@@ -469,6 +491,7 @@ The `docker-compose.yml` includes:
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
 - **Version-tagged image** — Image tagged as `weavenote:3.9.0` for cache busting
+- **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ---
 
@@ -527,11 +550,13 @@ wsh/
 │       └── wshStore.ts       # Zustand global state store
 ├── prisma/
 │   └── schema.prisma         # Database schema (PostgreSQL)
-├── docker-compose.yml        # Docker Compose configuration (PostgreSQL + App + DB Viewer + pgAdmin)
-├── Dockerfile                # Multi-stage Docker build
+├── docker-compose.yml        # Docker Compose (PostgreSQL + App + DB Viewer + pgAdmin)
+├── Dockerfile                # Multi-stage Docker build (deps → build → runner)
 ├── docker-entrypoint.sh      # Container startup script (DB init + server)
 ├── install.ps1               # Windows PowerShell auto-nuke & install
 ├── install.sh                # Linux/macOS auto-nuke & install
+├── update.ps1                # Windows PowerShell non-destructive update
+├── update.sh                 # Linux/macOS non-destructive update
 ├── Caddyfile                 # Caddy reverse proxy config
 ├── next.config.ts            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration

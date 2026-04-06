@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # WeaveNote Self-Hosted (WSH) - Auto Nuke & Reinstall
-# v3.9.0: Pull-based architecture. Installs a lightweight image that
-# clones the repo and builds inside the container. Updates are instant
-# (just `./update.sh` — no full rebuild from scratch).
+# v3.9.0: Multi-stage Docker build. Installs a pre-built image.
+# Updates are non-destructive: just `./update.sh` to pull + rebuild.
 #
 # Usage:  chmod +x install.sh && ./install.sh
 #         ./install.sh 8080            (custom port)
@@ -26,7 +25,6 @@ done
 echo ""
 echo "========================================"
 echo "  WSH - Auto Nuke & Reinstall v3.9.0"
-echo "  Pull-based update architecture"
 echo "========================================"
 echo ""
 
@@ -80,8 +78,8 @@ if [ "$CLEAN_ONLY" = true ]; then
 fi
 
 # ---- PHASE 5: Build and start ----
-echo -e "\033[33m[5/6] Building WSH (pull-based image)...\033[0m"
-echo "  First run clones the repo and builds inside the container."
+echo -e "\033[33m[5/6] Building WSH Docker image...\033[0m"
+echo "  (this may take 3-5 minutes)"
 echo ""
 
 WSH_PORT="$PORT" docker compose build
@@ -97,8 +95,8 @@ fi
 # ---- PHASE 6: Validate ----
 echo ""
 echo -e "\033[33m[6/6] Validating services...\033[0m"
-echo "  Waiting 45s for first-run build (git clone + npm install + next build)..."
-sleep 45
+echo "  Waiting 30s for services to start..."
+sleep 30
 
 ALL_OK=true
 for svc in weavenote-app wsh-dbviewer wsh-postgres; do
@@ -115,7 +113,7 @@ if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
     VERSION=$(curl -sf "http://localhost:$PORT/api/health" 2>/dev/null | grep -o '"version":"[^"]*"' | head -1)
     echo "  \033[32m[OK] Health check PASSED $VERSION\033[0m"
 else
-    echo "  \033[33m[WARN] Still building (first run takes 1-2 min). Watch:\033[0m"
+    echo "  \033[33m[WARN] Still initializing. Watch logs:\033[0m"
     echo "         docker compose logs -f weavenote"
 fi
 
@@ -131,6 +129,6 @@ echo "  PostgreSQL: localhost:5432 (internal)"
 echo ""
 echo "  Logs:     docker compose logs -f weavenote"
 echo "  Stop:     docker compose down"
-echo "  UPDATE:   ./update.sh  (instant update!)"
+echo "  Update:   ./update.sh    (preserves data!)"
 echo "  Full nuke:./install.sh"
 echo ""

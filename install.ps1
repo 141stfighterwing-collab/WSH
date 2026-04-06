@@ -1,8 +1,7 @@
 #!/usr/bin/env pwsh
 # WeaveNote Self-Hosted (WSH) - Auto Nuke & Reinstall
-# v3.9.0: Pull-based architecture. Installs a lightweight image that
-# clones the repo and builds inside the container. Updates are instant
-# (just `.\update.ps1` — no full rebuild from scratch).
+# v3.9.0: Multi-stage Docker build. Installs a pre-built image.
+# Updates are non-destructive: just `.\update.ps1` to pull + rebuild.
 #
 # Usage:  .\install.ps1
 #         .\install.ps1 -Port 8080
@@ -21,7 +20,6 @@ $Host.UI.RawUI.ForegroundColor = "Cyan"
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  WSH - Auto Nuke & Reinstall v3.9.0" -ForegroundColor Cyan
-Write-Host "  Pull-based update architecture" -ForegroundColor DarkGray
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -88,8 +86,8 @@ if ($CleanOnly) {
 }
 
 # ---- PHASE 5: Build and start ----
-Write-Host "[5/6] Building WSH (pull-based image)..." -ForegroundColor Yellow
-Write-Host "  First run will clone the repo and build inside the container." -ForegroundColor DarkGray
+Write-Host "[5/6] Building WSH Docker image..." -ForegroundColor Yellow
+Write-Host "  (this may take 3-5 minutes)" -ForegroundColor DarkGray
 Write-Host ""
 
 $env:WSH_PORT = $Port
@@ -116,8 +114,8 @@ if ($LASTEXITCODE -ne 0) {
 # ---- PHASE 6: Validate ----
 Write-Host ""
 Write-Host "[6/6] Validating services..." -ForegroundColor Yellow
-Write-Host "  Waiting 45s for first-run build (git clone + npm install + next build)..." -ForegroundColor DarkGray
-Start-Sleep -Seconds 45
+Write-Host "  Waiting 30s for services to start..." -ForegroundColor DarkGray
+Start-Sleep -Seconds 30
 
 $allOk = $true
 foreach ($svc in @(
@@ -142,7 +140,7 @@ try {
         Write-Host "  [OK] Health check PASSED — v$($body.version)" -ForegroundColor Green
     }
 } catch {
-    Write-Host "  [WARN] Still building (first run takes 1-2 min). Watch logs:" -ForegroundColor Yellow
+    Write-Host "  [WARN] Still initializing. Watch logs:" -ForegroundColor Yellow
     Write-Host "         docker compose logs -f weavenote" -ForegroundColor DarkGray
 }
 
@@ -160,6 +158,6 @@ if ($WithPgAdmin) {
 Write-Host ""
 Write-Host "  Logs:        docker compose logs -f weavenote" -ForegroundColor DarkGray
 Write-Host "  Stop:        docker compose down" -ForegroundColor DarkGray
-Write-Host "  UPDATE:      .\update.ps1  (instant update!)" -ForegroundColor Green
+Write-Host "  Update:      .\update.ps1  (preserves data!)" -ForegroundColor Green
 Write-Host "  Full nuke:   .\install.ps1" -ForegroundColor DarkGray
 Write-Host ""

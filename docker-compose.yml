@@ -19,12 +19,7 @@ services:
     networks:
       - wsh-net
 
-  # ── WSH Application (Pull-based) ──────────────────────────────
-  # Lightweight image that clones the repo and builds at runtime.
-  # To update:  ./update.sh  (or  .\update.ps1 on Windows)
-  #   → git pull → npm install → next build → restart (1-2 min)
-  # To update with custom branch/PAT, set env vars before restart:
-  #   WSH_GIT_BRANCH=develop WSH_GIT_PAT=ghp_xxx docker compose up -d
+  # ── WSH Application ────────────────────────────────────────────
   weavenote:
     build:
       context: .
@@ -37,9 +32,6 @@ services:
       - "${WSH_PORT:-3000}:3000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-wsh}:${POSTGRES_PASSWORD:-wsh-secret-pw}@postgres:5432/${POSTGRES_DB:-weavenote}
-      - WSH_GIT_REPO=${WSH_GIT_REPO:-https://github.com/141stfighterwing-collab/WSH.git}
-      - WSH_GIT_BRANCH=${WSH_GIT_BRANCH:-main}
-      - WSH_GIT_PAT=${WSH_GIT_PAT:-}
       - AI_SYNTHESIS_MODEL=${AI_SYNTHESIS_MODEL:-glm-4-flash}
       - AI_SYNTHESIS_TEMPERATURE=${AI_SYNTHESIS_TEMPERATURE:-0.7}
       - AI_SYNTHESIS_MAX_TOKENS=${AI_SYNTHESIS_MAX_TOKENS:-4096}
@@ -60,7 +52,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 180s
+      start_period: 120s
     networks:
       - wsh-net
 

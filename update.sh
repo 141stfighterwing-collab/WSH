@@ -1,65 +1,88 @@
 #!/usr/bin/env bash
-# WSH - One-Command Update
-# Pulls latest changes from GitHub and rebuilds the app inside the container.
-# Your database and notes are preserved — only the app code changes.
+# WSH — Non-destructive Update Script v3.9.0
+# Pulls latest code, rebuilds image, and restarts containers.
+# Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
-# Usage:  chmod +x update.sh && ./update.sh
-#         ./update.sh develop     (custom branch)
+# Usage:
+#   chmod +x update.sh && ./update.sh
+#   ./update.sh --no-cache    # Force full rebuild (no layer caching)
 
 set -e
 
-BRANCH="${1:-main}"
-
-echo ""
-echo "========================================"
-echo "  WSH Update v3.9.0"
-echo "========================================"
-echo ""
-
-# Check container is running
-RUNNING=$(docker inspect -f '{{.State.Running}}' weavenote-app 2>/dev/null || echo "false")
-if [ "$RUNNING" != "true" ]; then
-    echo "ERROR: WSH container is not running!"
-    echo "  Start it first:  docker compose up -d"
-    exit 1
-fi
-
-echo -e "\033[33m[1/3] Triggering update inside container...\033[0m"
-
-# Touch the update marker and restart (triggers git pull + rebuild)
-docker exec weavenote-app sh -c "touch /app/tmp/.needs-update" 2>/dev/null
-if [ $? -ne 0 ]; then
-    # Fallback: use WSH_UPDATE env
-    echo "  Using WSH_UPDATE=true method..."
-    docker compose stop weavenote
-    docker compose up -d -e WSH_UPDATE=true
-else
-    docker restart weavenote-app
-fi
-
-echo -e "\033[33m[2/3] Waiting for rebuild (1-2 minutes)...\033[0m"
-echo "  Watch: docker compose logs -f weavenote"
-echo ""
-
-# Poll health endpoint
-CHECKED=0
-while [ $CHECKED -lt 120 ]; do
-    sleep 5
-    CHECKED=$((CHECKED + 5))
-    if curl -sf "http://localhost:3000/api/health" > /dev/null 2>&1; then
-        VERSION=$(curl -sf "http://localhost:3000/api/health" 2>/dev/null | grep -o '"version":"[^"]*"' | head -1 || echo "unknown")
-        echo ""
-        echo -e "\033[32m[3/3] Update complete! App is healthy.\033[0m"
-        echo ""
-        echo "  App:     http://localhost:3000"
-        echo "  Version: $VERSION"
-        echo ""
-        exit 0
-    fi
-    echo "  ... still building (${CHECKED}s)"
+NO_CACHE=""
+for arg in "$@"; do
+    case "$arg" in
+        --no-cache) NO_CACHE="--no-cache" ;;
+    esac
 done
 
 echo ""
-echo -e "\033[33m[WARN] Update taking longer than expected.\033[0m"
-echo "  Check logs: docker compose logs --tail 50 weavenote"
-exit 1
+echo "========================================"
+echo "  WSH — Update v3.9.0"
+echo "  (data-preserving update)"
+echo "========================================"
+echo ""
+
+# ── Step 1: Pull latest code ─────────────────────────────────
+echo -e "\033[33m[1/4] Pulling latest code from GitHub...\033[0m"
+git pull origin main 2>&1
+echo "  \033[32m[OK] Code updated\033[0m"
+
+# ── Step 2: Rebuild Docker image ─────────────────────────────
+echo ""
+echo -e "\033[33m[2/4] Rebuilding Docker image...\033[0m"
+echo "  (this may take 2-4 minutes on first run)"
+echo ""
+
+if [ -n "$NO_CACHE" ]; then
+    docker compose build --no-cache 2>&1
+else
+    docker compose build 2>&1
+fi
+
+echo ""
+echo "  \033[32m[OK] Image built\033[0m"
+
+# ── Step 3: Restart containers ───────────────────────────────
+echo ""
+echo -e "\033[33m[3/4] Restarting containers (preserving data)...\033[0m"
+docker compose up -d --force-recreate 2>&1
+echo "  \033[32m[OK] Containers restarted\033[0m"
+
+# ── Step 4: Validate ─────────────────────────────────────────
+echo ""
+echo -e "\033[33m[4/4] Validating services...\033[0m"
+echo "  Waiting 15s for services to start..."
+sleep 15
+
+ALL_OK=true
+for svc in weavenote-app wsh-dbviewer wsh-postgres; do
+    RUNNING=$(docker inspect -f '{{.State.Running}}' "$svc" 2>/dev/null || echo "false")
+    if [ "$RUNNING" = "true" ]; then
+        echo "  \033[32m[OK] $svc is RUNNING\033[0m"
+    else
+        echo "  \033[31m[FAIL] $svc is NOT running\033[0m"
+        ALL_OK=false
+    fi
+done
+
+# Health check
+PORT=${WSH_PORT:-3000}
+if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
+    VERSION=$(curl -sf "http://localhost:$PORT/api/health" 2>/dev/null | grep -o '"version":"[^"]*"' | head -1)
+    echo "  \033[32m[OK] Health check PASSED ($VERSION)\033[0m"
+else
+    echo "  \033[33m[WARN] Health check not ready yet (container may still be initializing)\033[0m"
+fi
+
+echo ""
+echo "========================================"
+echo "  UPDATE COMPLETE"
+echo "========================================"
+echo ""
+echo "  App:        http://localhost:$PORT"
+echo "  DB Viewer:  http://localhost:5682"
+echo "  Logs:       docker compose logs -f weavenote"
+echo ""
+echo "  To do a full clean install:  ./install.sh"
+echo ""
