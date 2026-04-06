@@ -78,7 +78,7 @@ export default function Header() {
         const res = await fetch('/api/health');
         const data = await res.json();
         setDbStatus({
-          connected: data.database?.status === 'connected',
+          connected: data.database?.status === 'connected' || data.database?.status === 'connected_no_tables',
           latencyMs: data.database?.latencyMs ?? -1,
           lastChecked: new Date().toISOString(),
         });
@@ -189,10 +189,9 @@ export default function Header() {
           <span>Analytics</span>
         </button>
 
-        {/* Admin + DB Indicator */}
-        {isAdmin && (
-          <div className="hidden lg:flex items-center gap-2">
-            {/* Glowing Green DB Connection Indicator */}
+        {/* DB Connection Indicator — visible for ALL logged-in users */}
+        {mounted && user.isLoggedIn && (
+          <div className="flex items-center gap-2">
             <div className="relative group">
               <div
                 className={`w-3 h-3 rounded-full transition-all duration-500 ${
@@ -222,68 +221,55 @@ export default function Header() {
                     <span className="text-[9px] text-muted-foreground">{dbStatus.latencyMs}ms</span>
                   )}
                 </div>
+                <div className="text-[8px] text-muted-foreground/60 mt-0.5">
+                  {dbStatus.lastChecked ? `Checked ${new Date(dbStatus.lastChecked).toLocaleTimeString()}` : ''}
+                </div>
               </div>
             </div>
 
-            {/* DB Test Button */}
-            <div className="relative" ref={dbTestTooltipRef}>
-              <button
-                onClick={handleDBTest}
-                disabled={dbTestResult.status === 'testing'}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
-                title="Test Database Read/Write"
-              >
-                {dbTestResult.status === 'testing' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <FlaskConical className="w-3.5 h-3.5" />
-                )}
-                <span>DB Test</span>
-              </button>
+            {/* DB Test Button — admin only */}
+            {isAdmin && (
+              <div className="relative" ref={dbTestTooltipRef}>
+                <button
+                  onClick={handleDBTest}
+                  disabled={dbTestResult.status === 'testing'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
+                  title="Test Database Read/Write"
+                >
+                  {dbTestResult.status === 'testing' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FlaskConical className="w-3.5 h-3.5" />
+                  )}
+                  <span>DB Test</span>
+                </button>
 
-              {/* Test Result Tooltip */}
-              {dbTestResult.status !== 'idle' && (
-                <div className="absolute top-full right-0 mt-2 w-72 px-3 py-2 rounded-xl bg-card border border-border shadow-xl z-[200] animate-fadeIn">
-                  <div className="flex items-start gap-2">
-                    {dbTestResult.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin mt-0.5 shrink-0" />}
-                    {dbTestResult.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />}
-                    {dbTestResult.status === 'fail' && <XCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />}
-                    <span className={`text-xs font-semibold break-all ${dbTestResult.status === 'pass' ? 'text-green-400' : dbTestResult.status === 'fail' ? 'text-red-400' : 'text-cyan-400'}`}>
-                      {dbTestResult.message}
-                    </span>
+                {/* Test Result Tooltip */}
+                {dbTestResult.status !== 'idle' && (
+                  <div className="absolute top-full right-0 mt-2 w-72 px-3 py-2 rounded-xl bg-card border border-border shadow-xl z-[200] animate-fadeIn">
+                    <div className="flex items-start gap-2">
+                      {dbTestResult.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin mt-0.5 shrink-0" />}
+                      {dbTestResult.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />}
+                      {dbTestResult.status === 'fail' && <XCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />}
+                      <span className={`text-xs font-semibold break-all ${dbTestResult.status === 'pass' ? 'text-green-400' : dbTestResult.status === 'fail' ? 'text-red-400' : 'text-cyan-400'}`}>
+                        {dbTestResult.message}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Admin Button */}
-            <button
-              onClick={() => setAdminPanelOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 transition-all duration-200 active:scale-95"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
-          </div>
-        )}
-
-        {/* Non-admin DB indicator (always visible when logged in) */}
-        {!isAdmin && mounted && user.isLoggedIn && (
-          <div className="hidden lg:flex items-center gap-2">
-            <div className="relative group">
-              <div
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
-                  dbStatus.connected
-                    ? 'bg-green-400 shadow-[0_0_5px_2px_rgba(74,222,128,0.4)]'
-                    : 'bg-red-500/60'
-                }`}
-              />
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-lg bg-card border border-border shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[200]">
-                <span className="text-[9px] font-bold">
-                  {dbStatus.connected ? '🟢 DB Connected' : '🔴 DB Offline'}
-                </span>
-              </div>
-            </div>
+            {isAdmin && (
+              <button
+                onClick={() => setAdminPanelOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 transition-all duration-200 active:scale-95"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </button>
+            )}
           </div>
         )}
 

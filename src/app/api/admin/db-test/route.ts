@@ -1,84 +1,83 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { randomUUID } from 'crypto';
 
-// GET /api/admin/db-test — Test database write + read
-export async function GET() {
+// POST /api/admin/db-test — Test database write + read using safe operations
+export async function POST() {
   const results: Record<string, string> = {};
   let success = true;
 
-  // Test 1: Write a test record
+  // Test 1: Write — use email (unique field) for upsert
   try {
-    const testId = `db-test-${randomUUID().slice(0, 8)}`;
-    const testNote = await db.note.create({
-      data: {
-        id: testId,
-        title: `DB Test - ${new Date().toISOString()}`,
-        content: 'WSH Database connectivity test record. Safe to delete.',
-        rawContent: 'WSH Database connectivity test record.',
-        type: 'quick',
-        tags: '["db-test"]',
-        color: 'yellow',
-        folderId: null,
-        userId: 'system-test',
-        isDeleted: true, // Mark as deleted so it doesn't appear in UI
+    const testEmail = '_db_health_check_admin@wsh.local';
+    const testUser = await db.user.upsert({
+      where: { email: testEmail },
+      update: { username: '_db_health_check' },
+      create: {
+        email: testEmail,
+        username: '_db_health_check',
+        password: 'health-check-only-do-not-use',
+        role: 'user',
       },
     });
-    results.write = `OK — created note id=${testNote.id}`;
+    results.write = `OK — upserted user id=${testUser.id}`;
   } catch (e: unknown) {
     success = false;
-    results.write = `FAIL — ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
+    const msg = e instanceof Error ? e.message : String(e);
+    results.write = `FAIL — ${msg.slice(0, 200)}`;
   }
 
-  // Test 2: Read the test record
+  // Test 2: Read — find the test user
   try {
-    const testNotes = await db.note.findMany({
-      where: { title: { startsWith: 'DB Test -' } },
-      select: { id: true, title: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
+    const readUser = await db.user.findUnique({
+      where: { email: '_db_health_check_admin@wsh.local' },
     });
-    results.read = `OK — found ${testNotes.length} test records`;
-    results.latestId = testNotes[0]?.id || 'none';
+    if (readUser) {
+      results.read = `OK — found user id=${readUser.id}`;
+    } else {
+      results.read = 'FAIL — user not found';
+      success = false;
+    }
   } catch (e: unknown) {
     success = false;
     results.read = `FAIL — ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
   }
 
-  // Test 3: Cleanup — delete test records older than 1 minute
-  try {
-    const oneMinuteAgo = new Date(Date.now() - 60000);
-    const deleted = await db.note.deleteMany({
-      where: {
-        title: { startsWith: 'DB Test -' },
-        createdAt: { lt: oneMinuteAgo },
-        isDeleted: true,
-      },
-    });
-    results.cleanup = `OK — removed ${deleted.count} old test records`;
-  } catch (e: unknown) {
-    results.cleanup = `WARN — cleanup failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 100)}`;
-  }
-
-  // Test 4: Count active users
+  // Test 3: Count users
   try {
     const userCount = await db.user.count();
-    results.userCount = String(userCount);
+    results.userCount = `OK — ${userCount} user(s) in database`;
   } catch (e: unknown) {
-    results.userCount = `FAIL — ${(e instanceof Error ? e.message : String(e)).slice(0, 100)}`;
+    success = false;
+    results.userCount = `FAIL — ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
   }
 
-  // Test 5: Count active notes
+  // Test 4: Count notes
   try {
     const noteCount = await db.note.count({ where: { isDeleted: false } });
-    results.noteCount = String(noteCount);
+    results.noteCount = `OK — ${noteCount} active note(s)`;
   } catch (e: unknown) {
-    results.noteCount = `FAIL — ${(e instanceof Error ? e.message : String(e)).slice(0, 100)}`;
+    success = false;
+    results.noteCount = `FAIL — ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
   }
 
+  const errorDetail = results.write?.includes('FAIL') ? results.write : '';
+  const tableHint = errorDetail.includes('relation') || errorDetail.includes('table')
+    ? ' Tables may not exist — run: npx prisma db push'
+    : '';
+
   return NextResponse.json({
-    status: success ? 'connected' : 'error',
-    results,
+    status: success ? 'ok' : 'error',
+    results: {
+      ...results,
+      overall: success
+        ? 'PASS — Database read/write is working correctly'
+        : `FAIL — Database issue.${tableHint}`,
+    },
     timestamp: new Date().toISOString(),
   });
+}
+
+// Keep GET for backward compatibility
+export async function GET() {
+  return POST();
 }
