@@ -71,6 +71,8 @@ export default function NoteEditor() {
   const editorRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const synthesisMenuRef = useRef<HTMLDivElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [engineStatus, setEngineStatus] = useState('Intelligence Idle');
   const [saveStatus, setSaveStatus] = useState('');
@@ -126,37 +128,47 @@ export default function NoteEditor() {
   };
 
   const handleSave = () => {
+    // Clear any pending timers to prevent stale status
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+
     setSaveStatus('Saving...');
-    setTimeout(() => {
-      if (activeNoteId) {
-        updateNote(activeNoteId, {
-          title: editorTitle,
-          content: editorContent,
-          rawContent: editorRef.current?.innerText || '',
-          type: activeNoteType,
-          tags: editorTags,
-        });
-      } else {
-        const newNote = {
-          id: `note-${Date.now()}`,
-          title: editorTitle || 'Untitled Note',
-          content: editorContent,
-          rawContent: editorRef.current?.innerText || '',
-          type: activeNoteType,
-          tags: editorTags,
-          color: 'yellow',
-          folderId: null,
-          userId: 'local',
-          isDeleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        addNote(newNote);
-        setActiveNoteId(newNote.id);
+
+    // Use a ref-guarded timer so rapid clicks don't leave it stuck
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        if (activeNoteId) {
+          updateNote(activeNoteId, {
+            title: editorTitle,
+            content: editorContent,
+            rawContent: editorRef.current?.innerText || '',
+            type: activeNoteType,
+            tags: editorTags,
+          });
+        } else {
+          const newNote = {
+            id: `note-${Date.now()}`,
+            title: editorTitle || 'Untitled Note',
+            content: editorContent,
+            rawContent: editorRef.current?.innerText || '',
+            type: activeNoteType,
+            tags: editorTags,
+            color: 'yellow',
+            folderId: null,
+            userId: 'local',
+            isDeleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          addNote(newNote);
+          setActiveNoteId(newNote.id);
+        }
+        saveToLocalStorage();
+      } catch {
+        // Even if save throws, clear the status
       }
-      saveToLocalStorage();
       setSaveStatus('Saved');
-      setTimeout(() => setSaveStatus(''), 2000);
+      clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1500);
     }, 300);
   };
 
@@ -481,8 +493,10 @@ export default function NoteEditor() {
             onClick={handleSave}
             className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-secondary transition-all active:scale-95"
           >
-            <Save className="w-3 h-3" />
-            {saveStatus || 'Save Raw'}
+            <Save className={`w-3 h-3 ${saveStatus === 'Saved' ? 'text-green-400' : ''}`} />
+            {saveStatus === 'Saving...' && <span className="text-pri-400">Saving...</span>}
+            {saveStatus === 'Saved' && <span className="text-green-400">Saved ✓</span>}
+            {!saveStatus && 'Save'}
           </button>
 
           {/* Synthesis Button with Dropdown */}
