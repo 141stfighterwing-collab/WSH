@@ -114,6 +114,7 @@ interface WSHState {
   // User
   user: UserState;
   setUser: (user: Partial<UserState>) => void;
+  logoutUser: () => void;
   aiUsageCount: number;
   setAiUsageCount: (count: number) => void;
 
@@ -272,6 +273,10 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   setUser: (user) => set((state) => ({
     user: { ...state.user, ...user },
   })),
+  logoutUser: () => {
+    set({ user: { ...defaultUser } });
+    get().saveToLocalStorage();
+  },
   aiUsageCount: 0,
   setAiUsageCount: (count) => set({ aiUsageCount: count }),
 

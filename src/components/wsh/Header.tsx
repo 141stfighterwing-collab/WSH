@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useState, useCallback, useSyncExternalStore, useEffect, useRef } from 'react';
 import {
   Search,
   BarChart3,
@@ -15,15 +15,18 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  X,
+  FlaskConical,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import Logo from './Logo';
 import LoginWidget from './LoginWidget';
 import { useWSHStore } from '@/store/wshStore';
 
-interface DbStatus {
-  status: 'checking' | 'connected' | 'error' | 'idle';
-  message?: string;
+interface DBStatus {
+  connected: boolean;
+  latencyMs: number;
+  lastChecked: string;
 }
 
 export default function Header() {
@@ -38,14 +41,19 @@ export default function Header() {
     searchQuery,
     setSearchQuery,
     user,
-    loginOpen,
-    setLoginOpen,
   } = useWSHStore();
 
   const [loginAnchorEl, setLoginAnchorEl] = useState<HTMLElement | null>(null);
-  const [dbStatus, setDbStatus] = useState<DbStatus>({ status: 'idle' });
-  const [showDbTest, setShowDbTest] = useState(false);
-  const [dbTestResult, setDbTestResult] = useState<Record<string, string> | null>(null);
+  const [dbStatus, setDbStatus] = useState<DBStatus>({
+    connected: false,
+    latencyMs: -1,
+    lastChecked: '',
+  });
+  const [dbTestResult, setDbTestResult] = useState<{
+    status: 'idle' | 'testing' | 'pass' | 'fail';
+    message: string;
+  }>({ status: 'idle', message: '' });
+  const dbTestTooltipRef = useRef<HTMLDivElement>(null);
 
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -61,56 +69,66 @@ export default function Header() {
     setLoginAnchorEl(null);
   }, []);
 
-  // Sync loginAnchorEl with store loginOpen
-  useEffect(() => {
-    if (loginOpen && !loginAnchorEl) {
-      // Store triggered login, show widget at the login button
-      const btn = document.getElementById('login-btn');
-      if (btn) setLoginAnchorEl(btn);
-    }
-    if (!loginOpen && loginAnchorEl) {
-      setLoginAnchorEl(null);
-    }
-  }, [loginOpen, loginAnchorEl]);
-
   const isAdmin = mounted && user.isLoggedIn && (user.role === 'admin' || user.role === 'super-admin');
 
-  // Check DB status on mount
+  // Poll DB health every 30 seconds
   useEffect(() => {
-    if (!isAdmin) return;
-    const check = async () => {
-      setDbStatus({ status: 'checking' });
+    const checkDB = async () => {
       try {
-        const res = await fetch('/api/admin/db-test');
+        const res = await fetch('/api/health');
         const data = await res.json();
         setDbStatus({
-          status: data.status === 'connected' ? 'connected' : 'error',
-          message: data.results?.read || 'Unknown',
+          connected: data.database?.status === 'connected',
+          latencyMs: data.database?.latencyMs ?? -1,
+          lastChecked: new Date().toISOString(),
         });
       } catch {
-        setDbStatus({ status: 'error', message: 'Network error' });
+        setDbStatus((prev) => ({
+          ...prev,
+          connected: false,
+          lastChecked: new Date().toISOString(),
+        }));
       }
     };
-    check();
-    const interval = setInterval(check, 30000); // Re-check every 30s
-    return () => clearInterval(interval);
-  }, [isAdmin]);
 
-  const handleDbTest = async () => {
-    setDbStatus({ status: 'checking' });
-    setDbTestResult(null);
-    setShowDbTest(true);
+    checkDB();
+    const interval = setInterval(checkDB, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close db test tooltip on outside click
+  useEffect(() => {
+    if (dbTestResult.status === 'idle') return;
+    const handleClick = (e: MouseEvent) => {
+      if (dbTestTooltipRef.current && !dbTestTooltipRef.current.contains(e.target as Node)) {
+        setDbTestResult({ status: 'idle', message: '' });
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [dbTestResult.status]);
+
+  const handleDBTest = async () => {
+    setDbTestResult({ status: 'testing', message: 'Running read/write test...' });
     try {
-      const res = await fetch('/api/admin/db-test');
+      const res = await fetch('/api/db-test', { method: 'POST' });
       const data = await res.json();
-      setDbStatus({
-        status: data.status === 'connected' ? 'connected' : 'error',
-        message: data.results?.read || 'Unknown',
-      });
-      setDbTestResult(data.results);
+      if (data.status === 'ok') {
+        setDbTestResult({
+          status: 'pass',
+          message: `✓ ${data.results.overall} (${data.results.count})`,
+        });
+      } else {
+        setDbTestResult({
+          status: 'fail',
+          message: `✗ ${data.results.overall}`,
+        });
+      }
     } catch {
-      setDbStatus({ status: 'error', message: 'Network error' });
-      setDbTestResult({ error: 'Could not reach server' });
+      setDbTestResult({
+        status: 'fail',
+        message: '✗ Could not reach server',
+      });
     }
   };
 
@@ -171,34 +189,74 @@ export default function Header() {
           <span>Analytics</span>
         </button>
 
-        {/* Admin + DB Status */}
+        {/* Admin + DB Indicator */}
         {isAdmin && (
-          <div className="hidden lg:flex items-center gap-1.5">
-            {/* Green DB status glow */}
-            <div className="relative">
+          <div className="hidden lg:flex items-center gap-2">
+            {/* Glowing Green DB Connection Indicator */}
+            <div className="relative group">
               <div
-                className={`w-2 h-2 rounded-full absolute -left-1 -top-1 z-10 ${
-                  dbStatus.status === 'connected'
-                    ? 'bg-green-400 animate-pulse shadow-[0_0_6px_2px_rgba(74,222,128,0.6)]'
-                    : dbStatus.status === 'checking'
-                    ? 'bg-yellow-400 animate-pulse shadow-[0_0_6px_2px_rgba(250,204,21,0.4)]'
-                    : dbStatus.status === 'error'
-                    ? 'bg-red-400 shadow-[0_0_6px_2px_rgba(248,113,113,0.4)]'
-                    : 'bg-gray-500'
+                className={`w-3 h-3 rounded-full transition-all duration-500 ${
+                  dbStatus.connected
+                    ? 'bg-green-400 shadow-[0_0_6px_2px_rgba(74,222,128,0.5),0_0_12px_4px_rgba(74,222,128,0.2)]'
+                    : 'bg-red-500 shadow-[0_0_6px_2px_rgba(239,68,68,0.5)]'
                 }`}
-                title={
-                  dbStatus.status === 'connected'
-                    ? 'Database Connected'
-                    : dbStatus.status === 'checking'
-                    ? 'Checking Database...'
-                    : dbStatus.status === 'error'
-                    ? 'Database Error'
-                    : 'Database: Unknown'
-                }
               />
+              {dbStatus.connected && (
+                <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-400 animate-ping opacity-30" />
+              )}
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-xl bg-card border border-border shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[200]">
+                <div className="flex items-center gap-2">
+                  {dbStatus.connected ? (
+                    <>
+                      <Wifi className="w-3 h-3 text-green-400" />
+                      <span className="text-[10px] font-bold text-green-400">DB Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-3 h-3 text-red-400" />
+                      <span className="text-[10px] font-bold text-red-400">DB Disconnected</span>
+                    </>
+                  )}
+                  {dbStatus.latencyMs >= 0 && (
+                    <span className="text-[9px] text-muted-foreground">{dbStatus.latencyMs}ms</span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Admin button */}
+            {/* DB Test Button */}
+            <div className="relative" ref={dbTestTooltipRef}>
+              <button
+                onClick={handleDBTest}
+                disabled={dbTestResult.status === 'testing'}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
+                title="Test Database Read/Write"
+              >
+                {dbTestResult.status === 'testing' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FlaskConical className="w-3.5 h-3.5" />
+                )}
+                <span>DB Test</span>
+              </button>
+
+              {/* Test Result Tooltip */}
+              {dbTestResult.status !== 'idle' && (
+                <div className="absolute top-full right-0 mt-2 w-72 px-3 py-2 rounded-xl bg-card border border-border shadow-xl z-[200] animate-fadeIn">
+                  <div className="flex items-start gap-2">
+                    {dbTestResult.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin mt-0.5 shrink-0" />}
+                    {dbTestResult.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />}
+                    {dbTestResult.status === 'fail' && <XCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />}
+                    <span className={`text-xs font-semibold break-all ${dbTestResult.status === 'pass' ? 'text-green-400' : dbTestResult.status === 'fail' ? 'text-red-400' : 'text-cyan-400'}`}>
+                      {dbTestResult.message}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Admin Button */}
             <button
               onClick={() => setAdminPanelOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 transition-all duration-200 active:scale-95"
@@ -206,16 +264,26 @@ export default function Header() {
               <Shield className="w-3.5 h-3.5" />
               <span>Admin</span>
             </button>
+          </div>
+        )}
 
-            {/* DB Test button */}
-            <button
-              onClick={handleDbTest}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95 border border-border/30"
-              title="Test Database Connection (Write + Read)"
-            >
-              <Database className="w-3 h-3" />
-              <span className="hidden xl:inline">Test DB</span>
-            </button>
+        {/* Non-admin DB indicator (always visible when logged in) */}
+        {!isAdmin && mounted && user.isLoggedIn && (
+          <div className="hidden lg:flex items-center gap-2">
+            <div className="relative group">
+              <div
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
+                  dbStatus.connected
+                    ? 'bg-green-400 shadow-[0_0_5px_2px_rgba(74,222,128,0.4)]'
+                    : 'bg-red-500/60'
+                }`}
+              />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-lg bg-card border border-border shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[200]">
+                <span className="text-[9px] font-bold">
+                  {dbStatus.connected ? '🟢 DB Connected' : '🔴 DB Offline'}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -235,7 +303,6 @@ export default function Header() {
 
         {/* Login */}
         <button
-          id="login-btn"
           onClick={handleLoginClick}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
         >
@@ -270,43 +337,6 @@ export default function Header() {
           <Settings className="w-4 h-4" />
         </button>
       </div>
-
-      {/* DB Test Results Dropdown */}
-      {showDbTest && dbTestResult && (
-        <div className="fixed z-[100] bg-card border border-border rounded-xl shadow-2xl p-4 w-80 animate-fadeIn"
-          style={{
-            top: 60,
-            right: window.innerWidth > 1024 ? 320 : 16,
-          }}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="micro-label text-muted-foreground">Database Test Results</span>
-            <button onClick={() => setShowDbTest(false)} className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {Object.entries(dbTestResult).map(([key, value]) => {
-              const isOk = value.startsWith('OK');
-              return (
-                <div key={key} className="flex items-start gap-2">
-                  {isOk ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{key}</span>
-                    <p className={`text-xs ${isOk ? 'text-green-400' : 'text-red-400'}`}>{value}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 pt-2 border-t border-border/30 text-[9px] text-muted-foreground text-center">
-            Auto-refreshing every 30 seconds
-          </div>
-        </div>
-      )}
     </header>
   );
 }

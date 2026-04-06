@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { LogIn, Lock, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
 import Header from '@/components/wsh/Header';
 import LeftSidebar from '@/components/wsh/LeftSidebar';
 import NoteEditor from '@/components/wsh/NoteEditor';
@@ -15,61 +16,74 @@ import TrashModal from '@/components/wsh/TrashModal';
 import NotebookView from '@/components/wsh/NotebookView';
 import NoteDetailModal from '@/components/wsh/NoteDetailModal';
 import DBViewer from '@/components/wsh/DBViewer';
+import LoginWidget from '@/components/wsh/LoginWidget';
 import { useWSHStore } from '@/store/wshStore';
-import { Shield, LogIn, FileText } from 'lucide-react';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, setLoginOpen } = useWSHStore();
+  const { user } = useWSHStore();
 
   if (!user.isLoggedIn) {
-    return (
-      <div className="flex-1 flex items-center justify-center px-4">
-        <div className="text-center space-y-6 animate-fadeIn max-w-sm">
-          <div className="w-20 h-20 rounded-2xl bg-pri-600/10 border border-pri-500/20 flex items-center justify-center mx-auto">
-            <Shield className="w-10 h-10 text-pri-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Login Required</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              You must be logged in to view and manage your notes. Your data is private and protected.
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-3">
-            <button
-              onClick={() => setLoginOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg"
-            >
-              <LogIn className="w-4 h-4" />
-              Login to Continue
-            </button>
-            <p className="text-xs text-muted-foreground">
-              Don&apos;t have an account? Click Login, then Register.
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/30">
-            <div className="text-center">
-              <FileText className="w-5 h-5 text-pri-400 mx-auto mb-1" />
-              <p className="text-[10px] font-bold text-muted-foreground">Notes</p>
-            </div>
-            <div className="text-center">
-              <Shield className="w-5 h-5 text-amber-400 mx-auto mb-1" />
-              <p className="text-[10px] font-bold text-muted-foreground">Secure</p>
-            </div>
-            <div className="text-center">
-              <LogIn className="w-5 h-5 text-green-400 mx-auto mb-1" />
-              <p className="text-[10px] font-bold text-muted-foreground">Private</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return <>{children}</>;
 }
 
+function LockedOverlay() {
+  const { user, setLoginOpen } = useWSHStore();
+
+  const [loginAnchorEl, setLoginAnchorEl] = 
+    (globalThis as Record<string, unknown>).__wshLoginAnchor as [React.ReactNode, (v: unknown) => void] || 
+    [null, () => {}];
+
+  if (user.isLoggedIn) {
+    return null;
+  }
+
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="text-center max-w-md animate-fadeIn">
+        <div className="w-20 h-20 rounded-2xl bg-pri-600/10 border border-pri-500/20 flex items-center justify-center mx-auto mb-6">
+          <Lock className="w-10 h-10 text-pri-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-3">Notes Locked</h2>
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+          You need to be logged in to view and manage your notes. 
+          Click the <strong>Login</strong> button in the header to get started.
+        </p>
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
+            <BookOpen className="w-4 h-4 text-blue-400" />
+            <span className="text-[10px] font-bold text-muted-foreground">Quick</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
+            <Code className="w-4 h-4 text-orange-400" />
+            <span className="text-[10px] font-bold text-muted-foreground">Code</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
+            <Briefcase className="w-4 h-4 text-pink-400" />
+            <span className="text-[10px] font-bold text-muted-foreground">Project</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
+            <FileText className="w-4 h-4 text-cyan-400" />
+            <span className="text-[10px] font-bold text-muted-foreground">Document</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
+            <Brain className="w-4 h-4 text-purple-400" />
+            <span className="text-[10px] font-bold text-muted-foreground">Deep</span>
+          </div>
+        </div>
+        <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-pri-600/10 border border-pri-500/20 text-pri-400">
+          <LogIn className="w-4 h-4" />
+          <span className="text-xs font-bold">Login to unlock your workspace</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
-  const { loadFromLocalStorage, viewMode } = useWSHStore();
+  const { loadFromLocalStorage, viewMode, user } = useWSHStore();
 
   useEffect(() => {
     loadFromLocalStorage();
@@ -81,38 +95,58 @@ export default function Home() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left Sidebar — Calendar, Quick References, Folders, Tags */}
-        {useWSHStore.getState().user.isLoggedIn && <LeftSidebar />}
+        <AuthGate>
+          <LeftSidebar />
+        </AuthGate>
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto min-w-0">
-          <div className="px-2 py-2 md:px-4 md:py-3">
-            <AuthGate>
+          {user.isLoggedIn ? (
+            <div className="px-2 py-2 md:px-4 md:py-3">
               {/* Editor */}
               <NoteEditor />
 
               {/* Notes Grid (hidden in focus mode) */}
               {viewMode === 'grid' && <NotesGrid />}
-            </AuthGate>
-          </div>
+            </div>
+          ) : (
+            <LockedOverlay />
+          )}
         </main>
 
         {/* Right Sidebar — Clock, Today's Things, Projects */}
-        {useWSHStore.getState().user.isLoggedIn && <RightSidebar />}
+        <AuthGate>
+          <RightSidebar />
+        </AuthGate>
       </div>
 
       <Footer />
 
       {/* Slide-over Panels */}
       <SettingsPanel />
-      <AnalyticsPanel />
-      <AdminPanel />
+      <AuthGate>
+        <AnalyticsPanel />
+      </AuthGate>
+      <AuthGate>
+        <AdminPanel />
+      </AuthGate>
 
       {/* Full-Screen Modals & Overlays */}
-      <MindMap />
-      <TrashModal />
-      <NotebookView />
-      <NoteDetailModal />
-      <DBViewer />
+      <AuthGate>
+        <MindMap />
+      </AuthGate>
+      <AuthGate>
+        <TrashModal />
+      </AuthGate>
+      <AuthGate>
+        <NotebookView />
+      </AuthGate>
+      <AuthGate>
+        <NoteDetailModal />
+      </AuthGate>
+      <AuthGate>
+        <DBViewer />
+      </AuthGate>
     </div>
   );
 }
