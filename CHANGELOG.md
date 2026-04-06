@@ -5,6 +5,25 @@ All notable changes to WSH (WeaveNote Self-Hosted) will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-04-06
+
+### Added
+- **Notebook View completely redesigned** — transformed from a simple linear document reader into a rich, design-document-style notebook with a two-column layout inspired by professional design tools. The sidebar now displays rich cards with image thumbnails, description snippets, relative date badges, type icons, and tag pills. The main content area renders structured content with dedicated sections for images, quotes, links, and design notes
+- **Rich sidebar cards** — each card shows: relative date/time badge ("Today, 14:30", "Yesterday", "3d ago"), note type with colored icon badge, bold title, truncated 3-line description, optional image thumbnail (auto-extracted from note content), and up to 3 tag pills with overflow count. Active card has a colored left border accent
+- **Type filter pills** — new horizontal filter bar in the sidebar with pill buttons for each note type (quick, notebook, deep, code, project, document). Click to filter, click again to clear. "All" pill resets the filter. Active filter highlighted with the type's signature color
+- **Image gallery** — images are auto-extracted from note content (markdown `![](url)`, HTML `<img src>`, and bare image URLs) and rendered as a responsive grid gallery with hover zoom effect and external link overlay. Supports up to 6 images with "+N more" overflow indicator
+- **Quote blocks** — markdown blockquotes (`> text`) and HTML `<blockquote>` elements are extracted and rendered as styled callout boxes with a primary-colored left border, italic text, and a "Quote" label badge. Multi-line blockquotes are properly joined
+- **Link cards** — all URLs in note content are extracted (markdown `[text](url)`, HTML `<a href>`, and bare URLs) and rendered as interactive link cards with Google favicon, domain name, link text, and external link icon. Links open in new tabs
+- **Design note boxes** — content patterns matching "DESIGN NOTE:", "INSIGHT:", "NOTE:", or "THOUGHT:" are detected and rendered in a special styled callout box with a label badge and italic content, similar to the design-note aesthetic shown in the reference UI
+- **Image thumbnails in sidebar** — the first image found in a note's content is automatically extracted and displayed as a 48x48px thumbnail in the sidebar card, providing visual context at a glance. Graceful fallback if image fails to load
+- **Line-clamp and prose CSS utilities** — added custom `.line-clamp-3`, `.line-clamp-2` classes and `.prose` override styles for blockquotes, links, headings, images, and code blocks to match the notebook's design language
+
+### Changed
+- Notebook sidebar widened from `w-56` (224px) to `w-72` (288px) to accommodate richer card layouts
+- Notebook main content max-width increased from `max-w-2xl` to `max-w-3xl` for better readability
+- Notebook header now shows note type badge alongside the title
+- Version bumped to 3.8.0 across all files
+
 ## [3.7.0] - 2026-04-06
 
 ### Fixed

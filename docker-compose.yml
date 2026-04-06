@@ -25,9 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_VERSION: "3.7.0"
+        BUILD_VERSION: "3.8.0"
     container_name: weavenote-app
-    image: weavenote:3.7.0
+    image: weavenote:3.8.0
     ports:
       - "${WSH_PORT:-3000}:3000"
     environment:

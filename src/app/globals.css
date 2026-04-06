@@ -501,3 +501,55 @@ body.theme-hyperblue {
     padding-block: 0.75rem;
   }
 }
+
+/* ========== LINE CLAMP UTILITY ========== */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ========== NOTEBOOK PROSE OVERRIDES ========== */
+.prose blockquote {
+  border-left: none;
+  padding: 0;
+  font-style: normal;
+}
+
+.prose a {
+  color: var(--pri-400);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  color: var(--pri-300);
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  color: var(--foreground);
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose img {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.prose code {
+  color: var(--pri-300);
+  background: var(--secondary);
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}

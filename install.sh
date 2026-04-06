@@ -26,7 +26,7 @@ done
 
 echo ""
 echo "========================================"
-echo "  WSH - Auto Nuke & Reinstall v3.7.0"
+echo "  WSH - Auto Nuke & Reinstall v3.8.0"
 echo "========================================"
 echo ""
 
