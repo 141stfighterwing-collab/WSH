@@ -95,5 +95,5 @@ Write-Host "  App:        http://localhost:$port" -ForegroundColor Cyan
 Write-Host "  DB Viewer:  http://localhost:5682" -ForegroundColor Cyan
 Write-Host "  Logs:       docker compose logs -f weavenote" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  To do a full clean install:  .\install.ps1" -ForegroundColor DarkGray
+Write-Host '  To do a full clean install:  .\install.ps1' -ForegroundColor DarkGray
 Write-Host ""

@@ -158,6 +158,6 @@ if ($WithPgAdmin) {
 Write-Host ""
 Write-Host "  Logs:        docker compose logs -f weavenote" -ForegroundColor DarkGray
 Write-Host "  Stop:        docker compose down" -ForegroundColor DarkGray
-Write-Host "  Update:      .\update.ps1  (preserves data!)" -ForegroundColor Green
-Write-Host "  Full nuke:   .\install.ps1" -ForegroundColor DarkGray
+Write-Host '  Update:      .\update.ps1  (preserves data!)' -ForegroundColor Green
+Write-Host '  Full nuke:   .\install.ps1' -ForegroundColor DarkGray
 Write-Host ""
