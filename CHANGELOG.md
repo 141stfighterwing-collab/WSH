@@ -361,3 +361,24 @@ This release addresses 14 security and stability bugs identified in the v3.9.1 c
 - Note editor with contenteditable
 - Notes grid with type badges
 - Zustand state management with localStorage persistence
+
+## [3.9.2] - 2026-04-07
+
+### Security
+- All 14 bugs from v3.9.1 test report fixed and verified
+- Password hashing with bcryptjs (12 rounds)
+- JWT session management with jose (7-day expiry, HS256)
+- Server-side auth middleware on all /api/* routes
+- Registration rate limiting (3/min) and login rate limiting (10/min)
+- Password minimum increased to 8 chars with complexity validation
+- Username @unique constraint added to Prisma schema
+- Mock data fallbacks removed, proper error responses
+
+### Changed
+- Cross-platform package.json scripts (Windows compatible)
+- .gitattributes enforcing LF/CRLF line endings
+- Security warnings strengthened in .env.example
+- Auth state no longer persisted to localStorage
+
+### Removed
+- Unused sharp dependency
