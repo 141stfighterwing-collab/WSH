@@ -1,0 +1,31 @@
+{
+  "version": "3.9.2",
+  "app_name": "WeaveNote Self-Hosted (WSH)",
+  "install_dir": "",
+  "install_date": "",
+  "installer": "",
+  "options": {
+    "port": 3000,
+    "with_pgadmin": false
+  },
+  "resources": {
+    "containers": ["wsh-postgres", "weavenote-app", "wsh-dbviewer", "wsh-pgadmin"],
+    "images": ["weavenote:3.9.2", "weavenote:latest"],
+    "volumes": ["postgres-data", "weavenote-data", "pgadmin-data"],
+    "networks": ["wsh-net"]
+  },
+  "directories": {
+    "app_source": "",
+    "docker_compose": "",
+    "data_volumes": [],
+    "logs": "",
+    "config_files": []
+  },
+  "ports": {
+    "app": 3000,
+    "db_viewer": 5682,
+    "postgres_internal": 5432,
+    "pgadmin": 5050
+  },
+  "history": []
+}

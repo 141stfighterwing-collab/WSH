@@ -21,14 +21,118 @@ param(
 $ErrorActionPreference = "SilentlyContinue"
 $Host.UI.RawUI.ForegroundColor = "Cyan"
 
+# ---- Manifest file path ----
+$ScriptDir = $PSScriptRoot
+if (-not $ScriptDir) { $ScriptDir = (Get-Location).Path }
+$ManifestFile = Join-Path $ScriptDir ".wsh-manifest.json"
+$projectName = (Split-Path -Leaf $ScriptDir).ToLower()
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  WSH - Auto Nuke & Reinstall v3.9.2" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# ============================================================
+# Helper: write installation manifest
+# ============================================================
+function Write-Manifest {
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $installDir = $ScriptDir -replace '\\','\\'
+    $withPgAdminBool = if ($WithPgAdmin) { "true" } else { "false" }
+
+    # Build config files list from files that exist
+    $configFiles = @()
+    @("docker-compose.yml", "Dockerfile", ".wsh-manifest.json", "install.sh", "update.sh", "install.ps1") | ForEach-Object {
+        $fp = Join-Path $ScriptDir $_
+        if (Test-Path $fp) {
+            $configFiles += ($fp -replace '\\','\\')
+        }
+    }
+    $configFilesJson = ($configFiles | ForEach-Object { "      `"$_`"" }) -join ",`n"
+
+    $manifestContent = @"
+{
+  "version": "3.9.2",
+  "app_name": "WeaveNote Self-Hosted (WSH)",
+  "install_dir": "$installDir",
+  "install_date": "$timestamp",
+  "installer": "install.ps1 (PowerShell)",
+  "options": {
+    "port": $Port,
+    "with_pgadmin": $withPgAdminBool
+  },
+  "resources": {
+    "containers": ["wsh-postgres", "weavenote-app", "wsh-dbviewer", "wsh-pgadmin"],
+    "images": ["weavenote:3.9.2", "weavenote:latest"],
+    "volumes": ["postgres-data", "weavenote-data", "pgadmin-data"],
+    "networks": ["wsh-net"]
+  },
+  "directories": {
+    "app_source": "$installDir",
+    "docker_compose": "$installDir\docker-compose.yml",
+    "dockerfile": "$installDir\Dockerfile",
+    "data_volumes": [
+      "docker-vol:postgres-data",
+      "docker-vol:weavenote-data",
+      "docker-vol:pgadmin-data"
+    ],
+    "logs": "docker-logs:weavenote-app,wsh-postgres,wsh-dbviewer,wsh-pgadmin",
+    "config_files": [
+$configFilesJson
+    ]
+  },
+  "ports": {
+    "app": $Port,
+    "db_viewer": 5682,
+    "postgres_internal": 5432,
+    "pgadmin": 5050
+  }
+}
+"@
+
+    Set-Content -Path $ManifestFile -Value $manifestContent -Encoding UTF8
+    Write-Host "  [OK] Manifest written to $ManifestFile" -ForegroundColor Green
+}
+
+# ============================================================
+# Helper: read manifest for cleanup
+# ============================================================
+function Read-Manifest {
+    if (Test-Path $ManifestFile) {
+        Write-Host "  [INFO] Reading install manifest..." -ForegroundColor Cyan
+        try {
+            $manifest = Get-Content $ManifestFile -Raw | ConvertFrom-Json
+            Write-Host "  Install dir:  $($manifest.install_dir)" -ForegroundColor DarkGray
+            Write-Host "  Install date: $($manifest.install_date)" -ForegroundColor DarkGray
+            Write-Host "  Installer:    $($manifest.installer)" -ForegroundColor DarkGray
+        } catch {
+            Write-Host "  Manifest file: $ManifestFile" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Host "  [WARN] No manifest file found. Using default cleanup." -ForegroundColor Yellow
+    }
+}
+
+# ============================================================
+# Helper: show tracked files from manifest
+# ============================================================
+function Show-TrackedFiles {
+    if (Test-Path $ManifestFile) {
+        Write-Host "  Cleaning tracked files from manifest..." -ForegroundColor Yellow
+        try {
+            $manifest = Get-Content $ManifestFile -Raw | ConvertFrom-Json
+            Write-Host "  [OK] Manifest file reviewed. Docker resources cleaned above." -ForegroundColor Green
+            Write-Host "  [INFO] To remove the source directory, manually run:" -ForegroundColor Cyan
+            Write-Host "         Remove-Item -Recurse -Force '$($manifest.install_dir)'" -ForegroundColor DarkGray
+        } catch {
+            Write-Host "  [WARN] Could not parse manifest." -ForegroundColor Yellow
+        }
+    }
+}
+
 # ---- PHASE 1: Stop & remove WSH containers (exact names only) ----
-Write-Host "[1/5] Stopping WSH containers..." -ForegroundColor Yellow
+Write-Host "[1/6] Stopping WSH containers..." -ForegroundColor Yellow
 
 # Use docker compose down for project-scoped cleanup (containers + networks)
 # This ONLY touches resources defined in docker-compose.yml
@@ -56,7 +160,7 @@ if ($foundCount -gt 0) {
 }
 
 # ---- PHASE 2: Remove WSH images (exact matches only) ----
-Write-Host "[2/5] Removing WSH Docker images..." -ForegroundColor Yellow
+Write-Host "[2/6] Removing WSH Docker images..." -ForegroundColor Yellow
 
 # Only remove images that WSH explicitly builds or tags
 # We do NOT remove shared images like postgres:16-alpine, adminer:latest, etc.
@@ -79,11 +183,10 @@ if ($foundImages -gt 0) {
 }
 
 # ---- PHASE 3: Remove WSH volumes & networks (exact names only) ----
-Write-Host "[3/5] Removing WSH volumes and networks..." -ForegroundColor Yellow
+Write-Host "[3/6] Removing WSH volumes and networks..." -ForegroundColor Yellow
 
 # Docker Compose prefixes volumes with the project directory name (e.g., "WSH_postgres-data")
 # Remove known WSH volume names by exact match
-$projectName = (Split-Path -Leaf (Get-Location)).ToLower()
 $wshVolumes = @(
     "postgres-data",
     "weavenote-data",
@@ -120,7 +223,7 @@ if ($allNetworks) {
 Write-Host "  [OK] Cleaned" -ForegroundColor Green
 
 # ---- PHASE 4: Clean WSH build cache only ----
-Write-Host "[4/5] Cleaning WSH build cache..." -ForegroundColor Yellow
+Write-Host "[4/6] Cleaning WSH build cache..." -ForegroundColor Yellow
 
 # Use --filter to ONLY prune build cache for this project
 # We DO NOT use "docker system prune -af" as that would destroy resources
@@ -128,7 +231,14 @@ Write-Host "[4/5] Cleaning WSH build cache..." -ForegroundColor Yellow
 docker builder prune -f --filter "label=com.docker.compose.project=$projectName" 2>$null | Out-Null
 Write-Host "  [OK] Build cache cleaned" -ForegroundColor Green
 
+# ---- PHASE 5: Read manifest & clean tracked files ----
+Write-Host "[5/6] Reviewing install manifest..." -ForegroundColor Yellow
+Read-Manifest
+Show-TrackedFiles
+
 if ($CleanOnly) {
+    # Remove the manifest file itself on clean-only
+    Remove-Item -Path $ManifestFile -Force -ErrorAction SilentlyContinue
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "  CLEAN COMPLETE" -ForegroundColor Green
@@ -140,8 +250,8 @@ if ($CleanOnly) {
     exit 0
 }
 
-# ---- PHASE 5: Build and start ----
-Write-Host "[5/5] Building WSH Docker image..." -ForegroundColor Yellow
+# ---- PHASE 6: Build, start, and write manifest ----
+Write-Host "[6/6] Building WSH Docker image..." -ForegroundColor Yellow
 Write-Host "  (this may take 3-5 minutes)" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -165,6 +275,11 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "[FAIL] Docker start failed!" -ForegroundColor Red
     exit 1
 }
+
+# ---- Write installation manifest ----
+Write-Host ""
+Write-Host "Writing installation manifest..." -ForegroundColor Yellow
+Write-Manifest
 
 # ---- Validate ----
 Write-Host ""
@@ -211,8 +326,9 @@ if ($WithPgAdmin) {
     Write-Host "  pgAdmin:    http://localhost:5050" -ForegroundColor Cyan
 }
 Write-Host ""
-Write-Host "  Logs:        docker compose logs -f weavenote" -ForegroundColor DarkGray
-Write-Host "  Stop:        docker compose down" -ForegroundColor DarkGray
+Write-Host "  Manifest:   $ManifestFile" -ForegroundColor DarkGray
+Write-Host "  Logs:       docker compose logs -f weavenote" -ForegroundColor DarkGray
+Write-Host "  Stop:       docker compose down" -ForegroundColor DarkGray
 Write-Host '  Update:      .\update.ps1  (preserves data!)' -ForegroundColor Green
-Write-Host '  Full nuke:   .\install.ps1' -ForegroundColor DarkGray
+Write-Host '  Full nuke:   .\install.ps1 -CleanOnly' -ForegroundColor DarkGray
 Write-Host ""

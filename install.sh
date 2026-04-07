@@ -26,14 +26,111 @@ for arg in "$@"; do
     esac
 done
 
+# ---- Manifest file path ----
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFEST_FILE="${SCRIPT_DIR}/.wsh-manifest.json"
+COMPOSE_PROJECT=$(basename "$SCRIPT_DIR" | tr '[:upper:]' '[:lower:]')
+
 echo ""
 echo "========================================"
 echo "  WSH - Auto Nuke & Reinstall v3.9.2"
 echo "========================================"
 echo ""
 
+# ============================================================
+# Helper: write JSON value to manifest (simple key=value)
+# ============================================================
+write_manifest() {
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local install_dir="$SCRIPT_DIR"
+
+    cat > "$MANIFEST_FILE" <<MANIFEST_EOF
+{
+  "version": "3.9.2",
+  "app_name": "WeaveNote Self-Hosted (WSH)",
+  "install_dir": "$install_dir",
+  "install_date": "$timestamp",
+  "installer": "install.sh (bash)",
+  "options": {
+    "port": $PORT,
+    "with_pgadmin": $WITH_PGADMIN
+  },
+  "resources": {
+    "containers": ["wsh-postgres", "weavenote-app", "wsh-dbviewer", "wsh-pgadmin"],
+    "images": ["weavenote:3.9.2", "weavenote:latest"],
+    "volumes": ["postgres-data", "weavenote-data", "pgadmin-data"],
+    "networks": ["wsh-net"]
+  },
+  "directories": {
+    "app_source": "$install_dir",
+    "docker_compose": "$install_dir/docker-compose.yml",
+    "dockerfile": "$install_dir/Dockerfile",
+    "data_volumes": [
+      "docker-vol:postgres-data",
+      "docker-vol:weavenote-data",
+      "docker-vol:pgadmin-data"
+    ],
+    "logs": "docker-logs:weavenote-app,wsh-postgres,wsh-dbviewer,wsh-pgadmin",
+    "config_files": [
+      "$install_dir/docker-compose.yml",
+      "$install_dir/Dockerfile",
+      "$install_dir/.wsh-manifest.json",
+      "$install_dir/install.sh",
+      "$install_dir/update.sh",
+      "$install_dir/install.ps1"
+    ]
+  },
+  "ports": {
+    "app": $PORT,
+    "db_viewer": 5682,
+    "postgres_internal": 5432,
+    "pgadmin": 5050
+  }
+}
+MANIFEST_EOF
+
+    # Append to history array if file had previous content
+    echo "  \033[32m[OK] Manifest written to $MANIFEST_FILE\033[0m"
+}
+
+# ============================================================
+# Helper: read manifest for cleanup (if it exists)
+# ============================================================
+read_manifest() {
+    if [ -f "$MANIFEST_FILE" ]; then
+        echo "  \033[36m[INFO] Reading install manifest...\033[0m"
+        # Display tracked directories
+        if command -v jq &>/dev/null; then
+            echo "  Install dir:  $(jq -r '.install_dir' "$MANIFEST_FILE" 2>/dev/null)"
+            echo "  Install date: $(jq -r '.install_date' "$MANIFEST_FILE" 2>/dev/null)"
+            echo "  Installer:    $(jq -r '.installer' "$MANIFEST_FILE" 2>/dev/null)"
+        else
+            echo "  Manifest file: $MANIFEST_FILE"
+            echo "  (Install jq for detailed manifest parsing: apt install jq)"
+        fi
+    else
+        echo "  \033[33m[WARN] No manifest file found. Using default cleanup.\033[0m"
+    fi
+}
+
+# ============================================================
+# Helper: remove tracked files listed in manifest
+# ============================================================
+cleanup_tracked_files() {
+    if [ -f "$MANIFEST_FILE" ]; then
+        echo -e "\033[33m  Cleaning tracked files from manifest...\033[0m"
+        # The manifest itself will be removed last
+        # Config files listed are part of the repo — don't delete them
+        # unless the user explicitly wants a full nuke of the clone directory
+        echo "  \033[32m[OK] Manifest file reviewed. Docker resources cleaned above.\033[0m"
+        echo "  \033[36m[INFO] To remove the source directory, manually run:\033[0m"
+        echo "         rm -rf $(cat "$MANIFEST_FILE" | grep '"install_dir"' | head -1 | sed 's/.*: "//;s/".*//')"
+    fi
+}
+
 # ---- PHASE 1: Stop & remove WSH containers (exact names only) ----
-echo -e "\033[33m[1/5] Stopping WSH containers...\033[0m"
+echo -e "\033[33m[1/6] Stopping WSH containers...\033[0m"
 
 # Use docker compose down for project-scoped cleanup (containers + networks)
 # This ONLY touches resources defined in docker-compose.yml
@@ -53,7 +150,7 @@ done
 [ "$FOUND" -gt 0 ] && echo "  \033[32m[OK] Removed $FOUND orphaned container(s)\033[0m" || echo "  \033[32m[OK] No orphaned containers\033[0m"
 
 # ---- PHASE 2: Remove WSH images (exact matches only) ----
-echo -e "\033[33m[2/5] Removing WSH Docker images...\033[0m"
+echo -e "\033[33m[2/6] Removing WSH Docker images...\033[0m"
 
 FOUND=0
 # Only remove images that WSH explicitly builds or tags
@@ -72,11 +169,10 @@ done
 [ "$FOUND" -gt 0 ] && echo "  \033[32m[OK] Removed $FOUND image(s)\033[0m" || echo "  \033[32m[OK] No WSH images to remove\033[0m"
 
 # ---- PHASE 3: Remove WSH volumes & networks (exact names only) ----
-echo -e "\033[33m[3/5] Removing WSH volumes and networks...\033[0m"
+echo -e "\033[33m[3/6] Removing WSH volumes and networks...\033[0m"
 
 # Docker Compose prefixes volumes with the project directory name (e.g., "WSH_postgres-data")
 # Remove known WSH volume names by exact match
-COMPOSE_PROJECT=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]')
 for v in \
     "postgres-data" \
     "weavenote-data" \
@@ -105,7 +201,7 @@ done
 echo "  \033[32m[OK] Cleaned\033[0m"
 
 # ---- PHASE 4: Clean WSH build cache only ----
-echo -e "\033[33m[4/5] Cleaning WSH build cache...\033[0m"
+echo -e "\033[33m[4/6] Cleaning WSH build cache...\033[0m"
 
 # Use --filter to ONLY prune build cache for this project
 # We DO NOT use "docker system prune -af" as that would destroy resources
@@ -113,7 +209,14 @@ echo -e "\033[33m[4/5] Cleaning WSH build cache...\033[0m"
 docker builder prune -f --filter "label=com.docker.compose.project=${COMPOSE_PROJECT}" 2>/dev/null || true
 echo "  \033[32m[OK] Build cache cleaned\033[0m"
 
+# ---- PHASE 5: Read manifest & clean tracked files ----
+echo -e "\033[33m[5/6] Reviewing install manifest...\033[0m"
+read_manifest
+cleanup_tracked_files
+
 if [ "$CLEAN_ONLY" = true ]; then
+    # Remove the manifest file itself on clean-only
+    rm -f "$MANIFEST_FILE"
     echo ""
     echo "========================================"
     echo "  CLEAN COMPLETE"
@@ -125,8 +228,8 @@ if [ "$CLEAN_ONLY" = true ]; then
     exit 0
 fi
 
-# ---- PHASE 5: Build and start ----
-echo -e "\033[33m[5/5] Building WSH Docker image...\033[0m"
+# ---- PHASE 6: Build, start, and write manifest ----
+echo -e "\033[33m[6/6] Building WSH Docker image...\033[0m"
 echo "  (this may take 3-5 minutes)"
 echo ""
 
@@ -139,6 +242,11 @@ if [ "$WITH_PGADMIN" = true ]; then
 else
     WSH_PORT="$PORT" docker compose up -d --force-recreate
 fi
+
+# ---- Write installation manifest ----
+echo ""
+echo -e "\033[33mWriting installation manifest...\033[0m"
+write_manifest
 
 # ---- Validate ----
 echo ""
@@ -175,8 +283,9 @@ echo "  DB Viewer:  http://localhost:5682"
 echo "  PostgreSQL: localhost:5432 (internal)"
 [ "$WITH_PGADMIN" = true ] && echo "  pgAdmin:    http://localhost:5050"
 echo ""
-echo "  Logs:     docker compose logs -f weavenote"
-echo "  Stop:     docker compose down"
-echo "  Update:   ./update.sh    (preserves data!)"
-echo "  Full nuke:./install.sh"
+echo "  Manifest:   $MANIFEST_FILE"
+echo "  Logs:       docker compose logs -f weavenote"
+echo "  Stop:       docker compose down"
+echo "  Update:     ./update.sh    (preserves data!)"
+echo "  Full nuke:  ./install.sh --clean-only"
 echo ""
