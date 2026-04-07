@@ -7,6 +7,10 @@
 #         .\install.ps1 -Port 8080
 #         .\install.ps1 -CleanOnly
 #         .\install.ps1 -WithPgAdmin
+#
+# SAFETY: This script ONLY removes containers, images, volumes, and
+#         networks that belong to WSH. It will NEVER touch resources
+#         from other Docker Compose projects or standalone containers.
 
 param(
     [int]$Port = 3000,
@@ -23,58 +27,106 @@ Write-Host "  WSH - Auto Nuke & Reinstall v3.9.2" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ---- PHASE 1: Kill ALL containers ----
-Write-Host "[1/6] Stopping ALL WSH/WeaveNote containers..." -ForegroundColor Yellow
+# ---- PHASE 1: Stop & remove WSH containers (exact names only) ----
+Write-Host "[1/5] Stopping WSH containers..." -ForegroundColor Yellow
 
-$containers = docker ps -a --format "{{.Names}}" | Where-Object {
-    $_ -match "wsh|weavenote|pgadmin"
-}
+# Use docker compose down for project-scoped cleanup (containers + networks)
+# This ONLY touches resources defined in docker-compose.yml
+docker compose down -v --remove-orphans 2>$null | Out-Null
+docker compose --profile admin down -v --remove-orphans 2>$null | Out-Null
 
-if ($containers) {
-    foreach ($c in $containers) {
-        Write-Host "  - Removing container: $c" -ForegroundColor DarkGray
-        docker rm -f $c 2>$null
+# Also remove any orphaned WSH containers by their EXACT container_name values
+# These are the only container_name values defined in docker-compose.yml
+$wshContainers = @("wsh-postgres", "weavenote-app", "wsh-dbviewer", "wsh-pgadmin")
+$foundCount = 0
+$allContainers = docker ps -a --format "{{.Names}}" 2>$null
+if ($allContainers) {
+    foreach ($c in $wshContainers) {
+        if ($allContainers -contains $c) {
+            Write-Host "  - Removing container: $c" -ForegroundColor DarkGray
+            docker rm -f $c 2>$null | Out-Null
+            $foundCount++
+        }
     }
-    Write-Host "  [OK] Removed $($containers.Count) container(s)" -ForegroundColor Green
+}
+if ($foundCount -gt 0) {
+    Write-Host "  [OK] Removed $foundCount orphaned container(s)" -ForegroundColor Green
 } else {
-    Write-Host "  [OK] No existing containers found" -ForegroundColor Green
+    Write-Host "  [OK] No orphaned containers" -ForegroundColor Green
 }
 
-# ---- PHASE 2: Remove ALL matching images ----
-Write-Host "[2/6] Removing ALL WSH/WeaveNote Docker images..." -ForegroundColor Yellow
+# ---- PHASE 2: Remove WSH images (exact matches only) ----
+Write-Host "[2/5] Removing WSH Docker images..." -ForegroundColor Yellow
 
-$images = docker images --format "{{.Repository}}:{{.Tag}}" | Where-Object {
-    $_ -match "wsh|weavenote|adminer|pgadmin|postgres"
-}
-
-if ($images) {
-    foreach ($img in $images) {
-        Write-Host "  - Removing image: $img" -ForegroundColor DarkGray
-        docker rmi -f $img 2>$null
+# Only remove images that WSH explicitly builds or tags
+# We do NOT remove shared images like postgres:16-alpine, adminer:latest, etc.
+$wshImages = @("weavenote:3.9.2", "weavenote:latest", "weavenote-app")
+$foundImages = 0
+$allImages = docker images --format "{{.Repository}}:{{.Tag}}" 2>$null
+if ($allImages) {
+    foreach ($img in $wshImages) {
+        if ($allImages -contains $img) {
+            Write-Host "  - Removing image: $img" -ForegroundColor DarkGray
+            docker rmi -f $img 2>$null | Out-Null
+            $foundImages++
+        }
     }
-    Write-Host "  [OK] Removed $($images.Count) image(s)" -ForegroundColor Green
+}
+if ($foundImages -gt 0) {
+    Write-Host "  [OK] Removed $foundImages image(s)" -ForegroundColor Green
 } else {
-    Write-Host "  [OK] No existing images found" -ForegroundColor Green
+    Write-Host "  [OK] No WSH images to remove" -ForegroundColor Green
 }
 
-# ---- PHASE 3: Remove volumes & networks ----
-Write-Host "[3/6] Removing volumes and networks..." -ForegroundColor Yellow
+# ---- PHASE 3: Remove WSH volumes & networks (exact names only) ----
+Write-Host "[3/5] Removing WSH volumes and networks..." -ForegroundColor Yellow
 
-foreach ($v in $(docker volume ls --format "{{.Name}}" | Where-Object { $_ -match "wsh|weavenote|postgres|pgadmin" })) {
-    docker volume rm $v 2>$null
+# Docker Compose prefixes volumes with the project directory name (e.g., "WSH_postgres-data")
+# Remove known WSH volume names by exact match
+$projectName = (Split-Path -Leaf (Get-Location)).ToLower()
+$wshVolumes = @(
+    "postgres-data",
+    "weavenote-data",
+    "pgadmin-data",
+    "${projectName}_postgres-data",
+    "${projectName}_weavenote-data",
+    "${projectName}_pgadmin-data",
+    "WSH_postgres-data",
+    "WSH_weavenote-data",
+    "WSH_pgadmin-data"
+)
+$allVolumes = docker volume ls --format "{{.Name}}" 2>$null
+if ($allVolumes) {
+    foreach ($v in $wshVolumes) {
+        if ($allVolumes -contains $v) {
+            Write-Host "  - Removing volume: $v" -ForegroundColor DarkGray
+            docker volume rm $v 2>$null | Out-Null
+        }
+    }
 }
 
-foreach ($n in $(docker network ls --format "{{.Name}}" | Where-Object { $_ -match "wsh|weavenote" -and $_ -ne "bridge" -and $_ -ne "host" -and $_ -ne "none" })) {
-    docker network rm $n 2>$null
+# Remove WSH networks by exact name
+$wshNetworks = @("wsh-net", "${projectName}_wsh-net", "WSH_wsh-net", "WSH_default")
+$allNetworks = docker network ls --format "{{.Name}}" 2>$null
+if ($allNetworks) {
+    foreach ($n in $wshNetworks) {
+        if ($allNetworks -contains $n) {
+            Write-Host "  - Removing network: $n" -ForegroundColor DarkGray
+            docker network rm $n 2>$null | Out-Null
+        }
+    }
 }
 
 Write-Host "  [OK] Cleaned" -ForegroundColor Green
 
-# ---- PHASE 4: Prune ----
-Write-Host "[4/6] Pruning Docker resources..." -ForegroundColor Yellow
-docker system prune -af 2>$null | Out-Null
-docker builder prune -af 2>$null | Out-Null
-Write-Host "  [OK] Pruned" -ForegroundColor Green
+# ---- PHASE 4: Clean WSH build cache only ----
+Write-Host "[4/5] Cleaning WSH build cache..." -ForegroundColor Yellow
+
+# Use --filter to ONLY prune build cache for this project
+# We DO NOT use "docker system prune -af" as that would destroy resources
+# from other Docker Compose projects and standalone containers.
+docker builder prune -f --filter "label=com.docker.compose.project=$projectName" 2>$null | Out-Null
+Write-Host "  [OK] Build cache cleaned" -ForegroundColor Green
 
 if ($CleanOnly) {
     Write-Host ""
@@ -82,11 +134,14 @@ if ($CleanOnly) {
     Write-Host "  CLEAN COMPLETE" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
     Write-Host ""
+    Write-Host "  Only WSH resources were removed." -ForegroundColor Cyan
+    Write-Host "  Other Docker containers/images/volumes are untouched." -ForegroundColor Cyan
+    Write-Host ""
     exit 0
 }
 
 # ---- PHASE 5: Build and start ----
-Write-Host "[5/6] Building WSH Docker image..." -ForegroundColor Yellow
+Write-Host "[5/5] Building WSH Docker image..." -ForegroundColor Yellow
 Write-Host "  (this may take 3-5 minutes)" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -111,9 +166,9 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# ---- PHASE 6: Validate ----
+# ---- Validate ----
 Write-Host ""
-Write-Host "[6/6] Validating services..." -ForegroundColor Yellow
+Write-Host "Validating services..." -ForegroundColor Yellow
 Write-Host "  Waiting 30s for services to start..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 30
 

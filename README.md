@@ -23,26 +23,16 @@ Inspired by [WeaveNote](https://weavenote.com), WSH gives you full control over 
 
 - [Overview](#overview)
 - [Features](#features)
-  - [Mind Map](#-mind-map)
-  - [Trash Modal](#-trash-modal)
-  - [Notebook View](#-notebook-view)
-  - [Note Detail Modal](#-note-detail-modal)
-  - [Web DB Viewer](#-web-db-viewer)
-  - [Mind Map API](#-mind-map-api)
-  - [AlertTriangle ENV Warning](#-alerttriangle-env-warning)
-  - [ENV Import/Export](#-env-importexport)
-  - [Quick Add Common Keys](#-quick-add-common-keys)
-  - [AI Synthesis Engine](#-ai-synthesis-engine)
-  - [Admin Panel](#-admin-panel)
-  - [Color Themes](#-15-color-themes)
-  - [Note Types](#-6-note-types)
-  - [Folders & Tags](#-folders--tags)
-  - [Authentication](#-user-authentication)
-  - [Docker Support](#-docker-support)
-  - [Analytics Panel](#-analytics-panel)
-  - [Settings Panel](#-settings-panel)
 - [Quick Start](#quick-start)
 - [Docker Deployment](#docker-deployment)
+  - [Quick Install (Recommended)](#quick-install-recommended)
+  - [Updating WSH (Non-Destructive)](#updating-wsh-non-destructive)
+  - [Available URLs](#available-urls)
+  - [Custom Port](#custom-port)
+  - [Include pgAdmin](#include-pgadmin)
+  - [Manual Docker Commands](#manual-docker-commands)
+  - [Docker Configuration](#docker-configuration)
+  - [Docker Safety](#docker-safety)
 - [PowerShell Installer](#powershell-installer)
 - [Project Structure](#project-structure)
 - [API Routes](#api-routes)
@@ -64,6 +54,7 @@ Key design principles:
 - **localStorage persistence** — all application state survives page reloads
 - **Role-based access control** — user, admin, and super-admin roles
 - **Extensible architecture** — Prisma ORM with PostgreSQL for production-grade data management
+- **Docker-safe cleanup** — install/uninstall scripts only touch WSH resources, never other containers
 
 ---
 
@@ -72,8 +63,6 @@ Key design principles:
 ### 🧠 Mind Map
 
 A fully interactive **SVG force-directed graph** that visualizes the relationships between your notes in real time. The mind map uses a custom physics simulation engine — no external D3.js dependency required.
-
-**Capabilities:**
 
 - **Physics simulation** — Nodes repel each other while shared-tag edges attract connected notes, creating organic, balanced layouts automatically
 - **Node dragging** — Click and drag any node to reposition it; the simulation continues around the pinned node
@@ -90,8 +79,6 @@ A fully interactive **SVG force-directed graph** that visualizes the relationshi
 
 A comprehensive **soft-delete system** that protects you from accidental data loss while keeping your workspace clean.
 
-**Capabilities:**
-
 - **Restore individual notes** — Hover over any trashed note and click "Restore" to move it back to your active notes with a single click
 - **Permanent delete** — Remove notes forever with a dedicated delete action (cannot be undone)
 - **Empty trash** — One-click button to permanently delete all trashed notes at once
@@ -102,8 +89,6 @@ A comprehensive **soft-delete system** that protects you from accidental data lo
 ### 📖 Notebook View
 
 A distraction-free **linear document reader** that presents all your notes as a continuous, scrollable document — like reading a book.
-
-**Capabilities:**
 
 - **Full-screen reading mode** — Takes over the entire viewport for immersive reading, hiding all sidebar distractions
 - **Sidebar navigation** — A compact sidebar lists all notes with their titles, allowing quick jumps between sections
@@ -116,8 +101,6 @@ A distraction-free **linear document reader** that presents all your notes as a 
 
 A **full-featured note viewer** that displays all metadata and content for any individual note without entering edit mode.
 
-**Capabilities:**
-
 - **Type badge** — Displays the note's type with its corresponding color
 - **Creation & updated dates** — Shows when the note was first created and last modified in a clean, formatted layout
 - **Content rendering** — Full HTML rendering of the note's processed content with all formatting preserved
@@ -129,8 +112,6 @@ A **full-featured note viewer** that displays all metadata and content for any i
 ### 🌐 Web DB Viewer
 
 A powerful **full-screen database browser** for inspecting and managing your WSH data directly from the web interface.
-
-**Capabilities:**
 
 - **Full-screen database browser** — Dedicated full-viewport overlay for maximum screen real estate
 - **Multiple tables** — Browse data across three core tables: Notes, Folders, and Users
@@ -147,8 +128,6 @@ A RESTful API endpoint that provides the graph data structure consumed by the Mi
 
 **Endpoint:** `GET /api/graph?notes=[...]`
 
-**Capabilities:**
-
 - **Returns nodes and edges** — The response contains a `nodes` array (each with `id`, `title`, `type`, `tags`) and an `edges` array (each with `source`, `target`, `weight`)
 - **Tag-based connection calculation** — Automatically computes edges between notes that share one or more tags
 - **Edge weighting** — The `weight` field indicates how many tags two notes share (higher = stronger connection)
@@ -159,8 +138,6 @@ A RESTful API endpoint that provides the graph data structure consumed by the Mi
 
 A prominent **security warning banner** displayed in the Admin Panel's ENV Settings section to remind administrators about the dangers of exposing environment variables.
 
-**Capabilities:**
-
 - **Visual warning** — Uses the Lucide `AlertTriangle` icon with amber/yellow styling for high visibility
 - **Security message** — Warns administrators to never commit `.env` files to version control or expose them publicly
 - **Persistent display** — The warning remains visible whenever the ENV Settings section is active, ensuring it's always noticed
@@ -168,8 +145,6 @@ A prominent **security warning banner** displayed in the Admin Panel's ENV Setti
 ### 💾 ENV Import/Export Buttons
 
 Convenient **file-based management** of your application's environment configuration directly from the Admin Panel.
-
-**Capabilities:**
 
 - **Import .env files** — Upload a `.env` file from your local machine to load environment variables into the admin interface
 - **Export current config** — Download all currently configured environment variables as a `.env` file
@@ -180,8 +155,6 @@ Convenient **file-based management** of your application's environment configura
 
 One-click **preset buttons** that instantly add the most commonly used environment variables to the Admin Panel's ENV configuration.
 
-**Capabilities:**
-
 - **Pre-configured keys** — Buttons for `PORT`, `APP_NAME`, `STORAGE_TYPE`, `BACKUP_INTERVAL`, `LOG_LEVEL`, and `MAX_UPLOAD_SIZE`
 - **Default values** — Each preset comes with a sensible default value that you can modify after adding
 - **Duplicate prevention** — Existing keys are not added again
@@ -191,8 +164,6 @@ One-click **preset buttons** that instantly add the most commonly used environme
 
 An intelligent **text processing engine** powered by the `z-ai-web-dev-sdk` that transforms your notes using five distinct AI modes.
 
-**Modes:**
-
 | Mode | Description |
 |------|-------------|
 | **Summarize** | Condenses note content into a concise summary while preserving key information |
@@ -200,8 +171,6 @@ An intelligent **text processing engine** powered by the `z-ai-web-dev-sdk` that
 | **Improve** | Enhances writing quality by fixing grammar, improving clarity, and refining style |
 | **Generate Tags** | Analyzes content and suggests relevant tags as a JSON array |
 | **Create Outline** | Generates a structured hierarchical outline from the note's content |
-
-**Capabilities:**
 
 - **z-ai-web-dev-sdk integration** — Uses the GLM-4-Flash model (configurable) via the z-ai-web-dev-sdk package
 - **Daily usage limit** — Enforces a configurable daily limit (default: 800 requests/day) with automatic counter reset at midnight
@@ -221,8 +190,6 @@ A comprehensive **system administration dashboard** with six distinct sections f
 4. **Cloud Setup** — Configure cloud backup, remote storage, and deployment settings
 5. **DB Viewer** — Launch the full-screen Web DB Viewer for direct database inspection
 6. **System Logs** — View real-time and historical application logs for debugging and monitoring
-
-**Capabilities:**
 
 - **Role-based access** — Only users with `admin` or `super-admin` roles can access the panel
 - **Tabbed navigation** — Clean tab-based UI for switching between sections
@@ -250,8 +217,6 @@ WSH ships with **15 hand-crafted color themes** that transform the entire applic
 | **Yellow** | Warm golden tones |
 | **Hyperblue** | Intense electric blue |
 
-**Capabilities:**
-
 - **Instant switching** — Theme changes apply immediately without page reload
 - **Persistent selection** — Your chosen theme is saved to `localStorage` and restored on next visit
 - **Full coverage** — Themes affect all components, cards, badges, backgrounds, and borders
@@ -269,8 +234,6 @@ WSH supports **six distinct note types**, each with its own colored badge, descr
 | **Project** | Pink | Project planning notes with tasks, milestones, timelines, and deliverables |
 | **Document** | Cyan | Formal documents, reports, and structured writing with distinct left-border styling |
 
-**Capabilities:**
-
 - **Colored badges** — Each type displays a uniquely colored badge on every note card
 - **Type filtering** — Filter your notes grid by type to focus on specific categories
 - **Distinct descriptions** — The Note Editor displays a unique description for each type when selected
@@ -278,8 +241,6 @@ WSH supports **six distinct note types**, each with its own colored badge, descr
 ### 📂 Folders & Tags
 
 A flexible **organizational system** combining hierarchical folders with flat tag-based categorization.
-
-**Capabilities:**
 
 - **Folder creation and management** — Create, rename, reorder, and delete folders to organize notes hierarchically
 - **Drag-and-drop** — Reorder folders with drag-and-drop using `@dnd-kit`
@@ -293,8 +254,6 @@ A flexible **organizational system** combining hierarchical folders with flat ta
 
 A secure **authentication system** with role-based access control for multi-user deployments.
 
-**Capabilities:**
-
 - **Login/registration** — Built-in login widget with username, email, and password fields
 - **Role-based access** — Three roles with escalating permissions:
   - `user` — Standard access to personal notes and basic features
@@ -307,20 +266,17 @@ A secure **authentication system** with role-based access control for multi-user
 
 WSH includes a production-ready **Docker configuration** for easy deployment on any server or cloud platform.
 
-**Capabilities:**
-
 - **Multi-stage Dockerfile** — Three-stage build (deps → builder → runner) with visible progress output at each step
 - **PostgreSQL backend** — Production-grade database with health checks, persistent volume storage, and automatic readiness detection
 - **Health checks** — Built-in health check hitting `/api/health` every 30 seconds
 - **Volume persistence** — PostgreSQL data stored in a named Docker volume (`postgres-data`) for data persistence across container restarts
 - **Auto-restart** — Configured with `restart: unless-stopped` for high availability
 - **Configurable environment** — All settings configurable via `docker-compose.yml` environment variables
+- **Safe cleanup** — Install/uninstall scripts only target WSH resources, never touching other containers, images, or volumes on your system
 
 ### 📊 Analytics Panel
 
 A visual **statistics dashboard** showing insights into your note-taking habits and data.
-
-**Capabilities:**
 
 - **Note statistics** — Total notes, notes by type, notes by folder
 - **Activity tracking** — Creation trends, update frequency
@@ -330,8 +286,6 @@ A visual **statistics dashboard** showing insights into your note-taking habits 
 ### ⚙️ Settings Panel
 
 A central **configuration panel** for personalizing your WSH experience.
-
-**Capabilities:**
 
 - **Dark/light mode toggle** — Switch between dark and light themes with a single click
 - **Theme selection** — Choose from all 15 color themes
@@ -387,7 +341,7 @@ bun run start
 
 ### Quick Install (Recommended)
 
-The install script automatically detects and removes ALL old containers, images, volumes, and networks before rebuilding from scratch. No manual cleanup needed.
+The install script automatically removes only WSH containers, images, volumes, and networks before rebuilding from scratch. **Other Docker projects on your system are never affected.** See [Docker Safety](#docker-safety) for details.
 
 **Windows (PowerShell):**
 ```powershell
@@ -396,7 +350,7 @@ cd WSH
 .\install.ps1                    # Standard install (App + DB Viewer + PostgreSQL)
 .\install.ps1 -WithPgAdmin        # Include pgAdmin on port 5050
 .\install.ps1 -Port 8080          # Custom app port
-.\install.ps1 -CleanOnly          # Remove everything without reinstalling
+.\install.ps1 -CleanOnly          # Remove only WSH resources without reinstalling
 ```
 
 **Linux / macOS:**
@@ -406,16 +360,17 @@ cd WSH
 chmod +x install.sh && ./install.sh                # Standard install
 ./install.sh --with-pgadmin                        # Include pgAdmin
 ./install.sh 8080                                  # Custom app port
-./install.sh --clean-only                          # Remove without reinstalling
+./install.sh --clean-only                          # Remove only WSH resources without reinstalling
 ```
 
 The install script will:
-1. Auto-detect and remove ALL existing WSH/WeaveNote/PostgreSQL/pgAdmin containers, images, volumes, and networks
-2. Prune all dangling Docker resources (including build cache)
-3. Build the Docker image with visible progress at each step
-4. Start all services (App + PostgreSQL + DB Viewer)
-5. Validate that all 3 required containers are running
-6. Stream live logs
+1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
+2. Use `docker compose down -v` for project-scoped volume/network removal
+3. Remove only the locally-built WSH image (`weavenote:3.9.2`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
+5. Build the Docker image with visible progress at each step
+6. Start all services (App + PostgreSQL + DB Viewer)
+7. Validate that all 3 required containers are running
 
 ### Updating WSH (Non-Destructive)
 
@@ -441,7 +396,7 @@ The update script will:
 3. Restart containers with `--force-recreate` (your PostgreSQL data is preserved)
 4. Validate all services are running and health check passes
 
-> **Note:** The install script (`install.sh` / `install.ps1`) is for first-time installs or complete resets. It destroys all data. For ongoing updates, always use the update script.
+> **Note:** The install script (`install.sh` / `install.ps1`) is for first-time installs or complete resets. It destroys WSH data only. For ongoing updates, always use the update script.
 
 ### Available URLs
 
@@ -490,8 +445,59 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:3.9.1` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:3.9.2` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
+
+### Docker Safety
+
+> **Your other Docker projects are safe.** The install and update scripts use scoped cleanup that only targets WSH resources.
+
+**What the scripts DO remove:**
+
+| Resource | Target | Method |
+|----------|--------|--------|
+| Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
+| Images | `weavenote:3.9.2`, `weavenote:latest` | Exact tag match |
+| Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
+| Networks | `wsh-net` (with project prefix) | Exact name match |
+| Build cache | Only cache with WSH project label | `--filter` by project |
+
+**What the scripts do NOT touch:**
+
+- Any container not named `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, or `wsh-pgadmin`
+- Any image not tagged `weavenote:*` (including shared images like `postgres:16-alpine`, `adminer:latest`, `dpage/pgadmin4:latest`)
+- Any volume not named with WSH's project prefix
+- Any network not created by WSH's docker-compose
+- System-wide Docker prune (the old `docker system prune -af` has been removed)
+- Containers, images, volumes, or networks from other Docker Compose projects
+
+**Why this matters:** If you have other applications running in Docker (e.g., a WordPress site, a home automation stack, or another development project), running `./install.sh` or `./install.ps1` will NOT affect them. The old scripts used broad `grep` pattern matching and `docker system prune -af`, which could destroy unrelated containers and data.
+
+---
+
+## PowerShell Installer
+
+The Windows PowerShell installer (`install.ps1`) provides the same functionality as the Bash version with identical safety guarantees:
+
+```powershell
+# First-time install
+.\install.ps1
+
+# Install with pgAdmin
+.\install.ps1 -WithPgAdmin
+
+# Install on custom port
+.\install.ps1 -Port 8080
+
+# Clean only (remove WSH resources without reinstalling)
+.\install.ps1 -CleanOnly
+
+# Update (non-destructive, preserves data)
+.\update.ps1
+
+# Force full rebuild
+.\update.ps1 -NoCache
+```
 
 ---
 
@@ -553,8 +559,8 @@ wsh/
 ├── docker-compose.yml        # Docker Compose (PostgreSQL + App + DB Viewer + pgAdmin)
 ├── Dockerfile                # Multi-stage Docker build (deps → build → runner)
 ├── docker-entrypoint.sh      # Container startup script (DB init + server)
-├── install.ps1               # Windows PowerShell auto-nuke & install
-├── install.sh                # Linux/macOS auto-nuke & install
+├── install.ps1               # Windows PowerShell auto-nuke & install (WSH-scoped)
+├── install.sh                # Linux/macOS auto-nuke & install (WSH-scoped)
 ├── update.ps1                # Windows PowerShell non-destructive update
 ├── update.sh                 # Linux/macOS non-destructive update
 ├── Caddyfile                 # Caddy reverse proxy config
@@ -573,7 +579,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.9.1", "timestamp": "2026-04-07T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.9.2", "timestamp": "2026-04-07T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
@@ -671,21 +677,6 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | Runtime | Bun / Node.js |
 | Containerization | Docker + Docker Compose |
 | Reverse Proxy | Caddy (optional) |
-
----
-
-## Screenshots
-
-| View | Description |
-|------|-------------|
-| ![Full Layout](download/screenshot-02-full-layout-with-data.png) | **3-Column Layout** — Left sidebar (Calendar, Folders, Tags) + Main Content + Right sidebar (Clock, Today's Things, Projects) |
-| ![Left Sidebar](download/screenshot-03-left-sidebar.png) | **Left Sidebar** — Calendar, Quick References, Folders |
-| ![Right Sidebar](download/screenshot-04-right-sidebar.png) | **Right Sidebar** — Live Clock, Today's Things |
-| ![Projects](download/screenshot-05-right-sidebar-projects.png) | **Projects** — All project-type notes listed in right sidebar |
-| ![Tags](download/screenshot-06-left-sidebar-tags.png) | **Neon Tags** — Clickable tags with search filtering |
-| ![Project Tab](download/screenshot-07-project-tab-selected.png) | **Project Tab** — Selected in the note editor |
-| ![Tag Search](download/screenshot-09-tag-search-deployment.png) | **Tag Search** — Clicking #deployment filters notes |
-| ![Notes Grid](download/screenshot-10-notes-grid-projects.png) | **Notes Grid** — Project cards with pink border |
 
 ---
 
