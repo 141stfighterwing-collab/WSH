@@ -29,7 +29,7 @@ services:
     container_name: weavenote-app
     image: weavenote:3.9.3
     ports:
-      - "${WSH_PORT:-3000}:3000"
+      - "${WSH_PORT:-8883}:3000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-wsh}:${POSTGRES_PASSWORD:-wsh-secret-pw}@postgres:5432/${POSTGRES_DB:-weavenote}
       - AI_SYNTHESIS_MODEL=${AI_SYNTHESIS_MODEL:-glm-4-flash}

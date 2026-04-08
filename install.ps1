@@ -13,7 +13,7 @@
 #         from other Docker Compose projects or standalone containers.
 
 param(
-    [int]$Port = 3000,
+    [int]$Port = 8883,
     [switch]$CleanOnly,
     [switch]$WithPgAdmin
 )

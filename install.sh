@@ -5,6 +5,7 @@
 #
 # Usage:  chmod +x install.sh && ./install.sh
 #         ./install.sh 8080            (custom port)
+#         Default port: 8883
 #         ./install.sh --clean-only    (nuke without rebuilding)
 #         ./install.sh --with-pgadmin  (include pgAdmin on port 5050)
 #
@@ -14,7 +15,7 @@
 
 set -e
 
-PORT="${1:-3000}"
+PORT="${1:-8883}"
 CLEAN_ONLY=false
 WITH_PGADMIN=false
 
