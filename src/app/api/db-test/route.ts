@@ -9,7 +9,7 @@ export async function POST() {
 
   try {
     // Test 1: Write — use email (which IS @unique) for upsert
-    const testEmail = '_db_health_check@wsh.local';
+    const testEmail = '_db_health_check@example.com';
     const testUser = await db.user.upsert({
       where: { email: testEmail },
       update: { username: '_db_health_check' },

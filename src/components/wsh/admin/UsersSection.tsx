@@ -53,7 +53,7 @@ export default function UsersSection() {
         body: JSON.stringify({
           username: newUser.username,
           password: newUser.password,
-          email: newUser.email || `${newUser.username}@wsh.local`,
+          email: newUser.email || `${newUser.username}@example.com`,
           role: newUser.role,
         }),
       });
@@ -65,18 +65,7 @@ export default function UsersSection() {
         addLog(`Create failed: ${data.error || 'Unknown error'}`);
       }
     } catch {
-      setUsers((prev) => [
-        {
-          id: `usr-${Date.now()}`,
-          username: newUser.username,
-          email: newUser.email || `${newUser.username}@wsh.local`,
-          role: newUser.role,
-          status: 'active',
-          createdAt: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-      addLog(`Created user "${newUser.username}" (local fallback)`);
+      addLog(`Create failed: Network error — check server connection`);
     }
     setNewUser({ username: '', email: '', password: '', role: 'user' });
     setShowNewUser(false);

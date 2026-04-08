@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userEmail = email || `${username}@wsh.local`;
+    const userEmail = email || `${username}@example.com`;
 
     try {
       // Check if username already exists

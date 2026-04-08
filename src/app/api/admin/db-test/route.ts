@@ -8,7 +8,7 @@ export async function POST() {
 
   // Test 1: Write — use email (unique field) for upsert
   try {
-    const testEmail = '_db_health_check_admin@wsh.local';
+    const testEmail = '_db_health_check_admin@example.com';
     const testUser = await db.user.upsert({
       where: { email: testEmail },
       update: { username: '_db_health_check' },
@@ -29,7 +29,7 @@ export async function POST() {
   // Test 2: Read — find the test user
   try {
     const readUser = await db.user.findUnique({
-      where: { email: '_db_health_check_admin@wsh.local' },
+      where: { email: '_db_health_check_admin@example.com' },
     });
     if (readUser) {
       results.read = `OK — found user id=${readUser.id}`;
