@@ -76,7 +76,7 @@ foreach ($svc in @("weavenote-app", "wsh-dbviewer", "wsh-postgres")) {
 }
 
 # Health check
-$port = if ($env:WSH_PORT) { $env:WSH_PORT } else { 3000 }
+$port = if ($env:WSH_PORT) { $env:WSH_PORT } else { 8883 }
 try {
     $health = Invoke-WebRequest -Uri "http://localhost:$port/api/health" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
     if ($health.StatusCode -eq 200) {

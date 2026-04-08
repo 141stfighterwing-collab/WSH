@@ -41,7 +41,7 @@ Before deploying WSH, ensure your system meets the following requirements:
 | Git | 2.30+ | Latest stable |
 | RAM | 2 GB minimum | 4 GB+ recommended |
 | Disk Space | 5 GB free | 10 GB+ for production use |
-| Ports | 3000, 5432, 5682 available | Also 5050 if using pgAdmin |
+| Ports | 8883, 5432, 5682 available | Also 5050 if using pgAdmin |
 
 ### For Development (Non-Docker)
 
@@ -71,7 +71,7 @@ cd WSH
 
 After the script completes, open these URLs:
 
-- **Main App:** http://localhost:3000
+- **Main App:** http://localhost:8883
 - **DB Viewer:** http://localhost:5682
 - **Default Admin Login:** `admin` / `admin123`
 
@@ -326,6 +326,7 @@ rm -rf WSH
 
 ```bash
 # Check container logs
+
 docker compose logs weavenote
 docker compose logs postgres
 
@@ -333,7 +334,7 @@ docker compose logs postgres
 docker compose ps
 
 # Check if ports are in use
-sudo lsof -i :3000
+sudo lsof -i :8883
 sudo lsof -i :5682
 sudo lsof -i :5432
 ```
@@ -343,7 +344,7 @@ sudo lsof -i :5432
 The health check endpoint (`/api/health`) may not be ready immediately after container startup. The app has a `start_period` of 120 seconds. Wait up to 2 minutes and try again:
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:8883/api/health
 ```
 
 If health check consistently fails:
@@ -367,7 +368,7 @@ If PostgreSQL failed to start:
 
 #### Port already in use
 
-If port 3000 is occupied by another application:
+If port 8883 is occupied by another application:
 
 ```bash
 # Install WSH on a different port
@@ -444,7 +445,7 @@ docker compose up -d
                     ┌─────────────────────┐
                     │   Docker Host       │
                     │                     │
-  Port 3000  ──────►│  ┌───────────────┐  │
+  Port 8883 ──────►│  ┌───────────────┐  │
                     │  │ weavenote-app │  │
                     │  │  (Next.js 16) │  │
                     │  └───────┬───────┘  │
@@ -473,7 +474,7 @@ docker compose up -d
 
 | Container | Image | Purpose | Ports |
 |-----------|-------|---------|-------|
-| `weavenote-app` | `weavenote:3.9.3` (built locally) | Main Next.js application | 3000 |
+| `weavenote-app` | `weavenote:3.9.3` (built locally) | Main Next.js application | 8883 |
 | `wsh-postgres` | `postgres:16-alpine` | PostgreSQL 16 database | 5432 (internal) |
 | `wsh-dbviewer` | `adminer:latest` | Web database browser | 5682 |
 | `wsh-pgadmin` | `dpage/pgadmin4:latest` | Full PostgreSQL admin UI | 5050 (optional) |
@@ -581,7 +582,7 @@ All admin endpoints require authentication with `admin` or `super-admin` role.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `3000` | HTTP listening port |
+| `PORT` | `8883` | HTTP listening port |
 | `HOSTNAME` | `0.0.0.0` | Bind address |
 | `APP_NAME` | `WSH` | Display name |
 | `LOG_LEVEL` | `info` | Log verbosity: `debug`, `info`, `warn`, `error` |
@@ -618,7 +619,7 @@ All admin endpoints require authentication with `admin` or `super-admin` role.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WSH_PORT` | `3000` | Main app port mapping |
+| `WSH_PORT` | `8883` | Main app port mapping |
 | `DB_VIEWER_PORT` | `5682` | Adminer DB viewer port |
 | `PGADMIN_PORT` | `5050` | pgAdmin port |
 | `PGADMIN_EMAIL` | `admin@example.com` | pgAdmin login email |
@@ -649,5 +650,5 @@ Before deploying WSH to a production environment, review and update these securi
 - WSH containers run as non-root users inside the container
 - PostgreSQL data is stored in a named Docker volume, not a bind mount
 - All inter-container communication occurs over the isolated `wsh-net` bridge network
-- Only necessary ports are exposed to the host (3000, 5682, optionally 5050)
+- Only necessary ports are exposed to the host (8883, 5682, optionally 5050)
 - PostgreSQL port 5432 is only accessible within the Docker network, not from the host

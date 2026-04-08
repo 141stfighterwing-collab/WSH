@@ -15,7 +15,7 @@ import {
 import type { EnvVar } from './types';
 
 const QUICK_ADD_KEYS = [
-  { key: 'PORT', value: '3000', category: 'System' },
+  { key: 'PORT', value: '8883', category: 'System' },
   { key: 'NEXT_PUBLIC_APP_NAME', value: 'WeaveNote', category: 'System' },
   { key: 'STORAGE_TYPE', value: 'local', category: 'Infra' },
   { key: 'BACKUP_INTERVAL', value: '3600', category: 'Infra' },

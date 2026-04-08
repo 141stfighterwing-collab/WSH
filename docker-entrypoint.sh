@@ -106,6 +106,6 @@ echo "[*] Verifying Prisma client..."
 $PRISMA_CLI generate $SCHEMA_FLAG 2>&1 | tail -1
 
 # ── Start server ───────────────────────────────────────────────
-echo "[*] Starting WSH server on port ${PORT:-3000}..."
+echo "[*] Starting WSH server on port ${PORT:-8883}..."
 echo "======================================================="
 exec "$@"

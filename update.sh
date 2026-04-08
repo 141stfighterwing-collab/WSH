@@ -67,7 +67,7 @@ for svc in weavenote-app wsh-dbviewer wsh-postgres; do
 done
 
 # Health check
-PORT=${WSH_PORT:-3000}
+PORT=${WSH_PORT:-8883}
 if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
     VERSION=$(curl -sf "http://localhost:$PORT/api/health" 2>/dev/null | grep -o '"version":"[^"]*"' | head -1)
     echo "  \033[32m[OK] Health check PASSED ($VERSION)\033[0m"

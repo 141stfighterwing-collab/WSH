@@ -323,7 +323,7 @@ bun run db:push
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:8883](http://localhost:8883) in your browser.
 
 ### Production Build
 
@@ -402,7 +402,7 @@ The update script will:
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **WSH App** | http://localhost:3000 | Main application |
+| **WSH App** | http://localhost:8883 | Main application |
 | **DB Viewer** | http://localhost:5682 | Adminer — browse database tables, run SQL queries |
 | **pgAdmin** | http://localhost:5050 | Full PostgreSQL admin UI (requires `-WithPgAdmin` / `--with-pgadmin`) |
 
@@ -640,7 +640,7 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `3000` | Application listening port |
+| `PORT` | `8883` | Application listening port |
 | `HOSTNAME` | `0.0.0.0` | Application bind address |
 | `DATABASE_URL` | `postgresql://wsh:wsh-secret-pw@postgres:5432/weavenote` | PostgreSQL connection string (set by docker-compose) |
 | `JWT_SECRET` | `change-me-in-production` | Secret key for JWT token signing (**change in production!**) |
