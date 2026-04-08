@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # WeaveNote Self-Hosted (WSH) - Auto Nuke & Reinstall
-# v3.9.2: Multi-stage Docker build. Installs a pre-built image.
+# v3.9.3: Multi-stage Docker build. Installs a pre-built image.
 # Updates are non-destructive: just `./update.sh` to pull + rebuild.
 #
 # Usage:  chmod +x install.sh && ./install.sh
@@ -33,7 +33,7 @@ COMPOSE_PROJECT=$(basename "$SCRIPT_DIR" | tr '[:upper:]' '[:lower:]')
 
 echo ""
 echo "========================================"
-echo "  WSH - Auto Nuke & Reinstall v3.9.2"
+echo "  WSH - Auto Nuke & Reinstall v3.9.3"
 echo "========================================"
 echo ""
 
@@ -47,7 +47,7 @@ write_manifest() {
 
     cat > "$MANIFEST_FILE" <<MANIFEST_EOF
 {
-  "version": "3.9.2",
+  "version": "3.9.3",
   "app_name": "WeaveNote Self-Hosted (WSH)",
   "install_dir": "$install_dir",
   "install_date": "$timestamp",
@@ -58,7 +58,7 @@ write_manifest() {
   },
   "resources": {
     "containers": ["wsh-postgres", "weavenote-app", "wsh-dbviewer", "wsh-pgadmin"],
-    "images": ["weavenote:3.9.2", "weavenote:latest"],
+    "images": ["weavenote:3.9.3", "weavenote:latest"],
     "volumes": ["postgres-data", "weavenote-data", "pgadmin-data"],
     "networks": ["wsh-net"]
   },
@@ -156,7 +156,7 @@ FOUND=0
 # Only remove images that WSH explicitly builds or tags
 # We do NOT remove shared images like postgres:16-alpine, adminer:latest, etc.
 for img in \
-    "weavenote:3.9.2" \
+    "weavenote:3.9.3" \
     "weavenote:latest" \
     "weavenote-app" \
 ; do

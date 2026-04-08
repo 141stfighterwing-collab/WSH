@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.9.3] - 2026-04-09
+
+### 🐛 Fixed
+
+- **pgAdmin email validation failure** — Changed the default `PGADMIN_DEFAULT_EMAIL` and `ADMIN_DEFAULT_EMAIL` from `admin@wsh.local` to `admin@example.com`. The `.local` TLD is a reserved special-use domain (RFC 2606) that is rejected by newer versions of pgAdmin4's email validator, causing a startup crash loop with the error: "The part after the @-sign is a special-use or reserved name that cannot be used with email." This affected both the `docker-compose.yml` defaults and the `.env.example` template.
+
+### 📝 Documentation
+
+- Updated all references to pgAdmin login credentials across README, DOCS, and CHANGELOG to reflect the new `admin@example.com` default
+- Updated environment variable tables to show the new default email addresses
+- Updated Docker Safety tables and version references to 3.9.3
+
+### 🔧 Changed
+
+- Bumped version from 3.9.2 to 3.9.3 across all files: `package.json`, `docker-compose.yml`, `Dockerfile`, `docker-entrypoint.sh`, `install.ps1`, `install.sh`, `update.ps1`, `update.sh`, health check endpoint, system info endpoint, VersioningSection component, and all documentation files
+
+---
+
 ## [3.9.2] - 2026-04-08
 
 ### 🔒 Security

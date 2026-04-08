@@ -1,6 +1,6 @@
 # WSH Documentation
 
-> WeaveNote Self-Hosted v3.9.2 — Complete reference documentation
+> WeaveNote Self-Hosted v3.9.3 — Complete reference documentation
 
 ---
 
@@ -127,7 +127,7 @@ pgAdmin provides a full-featured PostgreSQL administration UI. It is disabled by
 .\install.ps1 -WithPgAdmin
 ```
 
-pgAdmin will be available at http://localhost:5050 with the credentials configured by `PGADMIN_EMAIL` and `PGADMIN_PASSWORD` environment variables (defaults: `admin@wsh.local` / `admin123`).
+pgAdmin will be available at http://localhost:5050 with the credentials configured by `PGADMIN_EMAIL` and `PGADMIN_PASSWORD` environment variables (defaults: `admin@example.com` / `admin123`).
 
 ### Manual Docker Commands
 
@@ -183,7 +183,7 @@ The install and cleanup scripts (`install.sh`, `install.ps1`) only remove the fo
 | Resource Type | Exact Names/Tags Removed | Method |
 |---------------|--------------------------|--------|
 | **Containers** | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match via `docker compose down` + explicit `docker rm -f` for orphans |
-| **Images** | `weavenote:3.9.2`, `weavenote:latest`, `weavenote-app` | Exact tag match |
+| **Images** | `weavenote:3.9.3`, `weavenote:latest`, `weavenote-app` | Exact tag match |
 | **Volumes** | `postgres-data`, `weavenote-data`, `pgadmin-data` (with Docker Compose project prefix like `WSH_`) | Exact name match |
 | **Networks** | `wsh-net` (with Docker Compose project prefix) | Exact name match |
 | **Build Cache** | Only cache entries labeled with WSH's project name | `--filter "label=com.docker.compose.project=<name>"` |
@@ -421,7 +421,7 @@ If the install scripts are not working and you need to manually clean up:
 docker rm -f wsh-postgres weavenote-app wsh-dbviewer wsh-pgadmin 2>/dev/null
 
 # Remove WSH image
-docker rmi -f weavenote:3.9.2 2>/dev/null
+docker rmi -f weavenote:3.9.3 2>/dev/null
 
 # Remove WSH volumes
 docker volume rm WSH_postgres-data WSH_weavenote-data WSH_pgadmin-data 2>/dev/null
@@ -473,7 +473,7 @@ docker compose up -d
 
 | Container | Image | Purpose | Ports |
 |-----------|-------|---------|-------|
-| `weavenote-app` | `weavenote:3.9.2` (built locally) | Main Next.js application | 3000 |
+| `weavenote-app` | `weavenote:3.9.3` (built locally) | Main Next.js application | 3000 |
 | `wsh-postgres` | `postgres:16-alpine` | PostgreSQL 16 database | 5432 (internal) |
 | `wsh-dbviewer` | `adminer:latest` | Web database browser | 5682 |
 | `wsh-pgadmin` | `dpage/pgadmin4:latest` | Full PostgreSQL admin UI | 5050 (optional) |
@@ -508,7 +508,7 @@ Returns application health status.
 ```json
 {
   "status": "healthy",
-  "version": "3.9.2",
+  "version": "3.9.3",
   "timestamp": "2026-04-08T12:00:00.000Z"
 }
 ```
@@ -602,7 +602,7 @@ All admin endpoints require authentication with `admin` or `super-admin` role.
 |----------|---------|-------------|
 | `JWT_SECRET` | `change-me-in-production` | JWT signing key (**must change!**) |
 | `ADMIN_DEFAULT_USERNAME` | `admin` | Initial admin username |
-| `ADMIN_DEFAULT_EMAIL` | `admin@wsh.local` | Initial admin email |
+| `ADMIN_DEFAULT_EMAIL` | `admin@example.com` | Initial admin email |
 | `ADMIN_DEFAULT_PASSWORD` | `admin123` | Initial admin password (**change immediately!**) |
 
 ### AI Synthesis
@@ -621,7 +621,7 @@ All admin endpoints require authentication with `admin` or `super-admin` role.
 | `WSH_PORT` | `3000` | Main app port mapping |
 | `DB_VIEWER_PORT` | `5682` | Adminer DB viewer port |
 | `PGADMIN_PORT` | `5050` | pgAdmin port |
-| `PGADMIN_EMAIL` | `admin@wsh.local` | pgAdmin login email |
+| `PGADMIN_EMAIL` | `admin@example.com` | pgAdmin login email |
 | `PGADMIN_PASSWORD` | `admin123` | pgAdmin login password |
 
 ---

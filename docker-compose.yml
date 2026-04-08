@@ -25,9 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_VERSION: "3.9.2"
+        BUILD_VERSION: "3.9.3"
     container_name: weavenote-app
-    image: weavenote:3.9.2
+    image: weavenote:3.9.3
     ports:
       - "${WSH_PORT:-3000}:3000"
     environment:
@@ -38,7 +38,7 @@ services:
       - AI_DAILY_LIMIT=${AI_DAILY_LIMIT:-800}
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - ADMIN_DEFAULT_USERNAME=${ADMIN_DEFAULT_USERNAME:-admin}
-      - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-admin@wsh.local}
+      - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-admin@example.com}
       - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-admin123}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
@@ -82,7 +82,7 @@ services:
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@wsh.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
     volumes:
       - pgadmin-data:/var/lib/pgadmin

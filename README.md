@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.9.2
+# WSH — WeaveNote Self-Hosted v3.9.3
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -366,7 +366,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:3.9.2`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:3.9.3`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -406,7 +406,7 @@ The update script will:
 | **DB Viewer** | http://localhost:5682 | Adminer — browse database tables, run SQL queries |
 | **pgAdmin** | http://localhost:5050 | Full PostgreSQL admin UI (requires `-WithPgAdmin` / `--with-pgadmin`) |
 
-**pgAdmin login:** `admin@wsh.local` / `admin123` (configurable via `PGADMIN_EMAIL` / `PGADMIN_PASSWORD`)
+**pgAdmin login:** `admin@example.com` / `admin123` (configurable via `PGADMIN_EMAIL` / `PGADMIN_PASSWORD`)
 
 ### Custom Port
 
@@ -445,7 +445,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:3.9.2` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:3.9.3` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -457,7 +457,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:3.9.2`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:3.9.3`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -579,7 +579,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.9.2", "timestamp": "2026-04-07T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.9.3", "timestamp": "2026-04-09T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
@@ -645,7 +645,7 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | `DATABASE_URL` | `postgresql://wsh:wsh-secret-pw@postgres:5432/weavenote` | PostgreSQL connection string (set by docker-compose) |
 | `JWT_SECRET` | `change-me-in-production` | Secret key for JWT token signing (**change in production!**) |
 | `ADMIN_DEFAULT_USERNAME` | `admin` | Default admin username on first run |
-| `ADMIN_DEFAULT_EMAIL` | `admin@wsh.local` | Default admin email on first run |
+| `ADMIN_DEFAULT_EMAIL` | `admin@example.com` | Default admin email on first run |
 | `ADMIN_DEFAULT_PASSWORD` | `admin123` | Default admin password on first run (**change immediately!**) |
 | `AI_SYNTHESIS_MODEL` | `glm-4-flash` | AI model used for synthesis operations |
 | `AI_SYNTHESIS_TEMPERATURE` | `0.7` | AI response creativity (0.0–1.0) |
