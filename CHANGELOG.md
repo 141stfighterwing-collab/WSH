@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - **pgAdmin email validation failure** — Changed the default `PGADMIN_DEFAULT_EMAIL` and `ADMIN_DEFAULT_EMAIL` from `admin@wsh.local` to `admin@example.com`. The `.local` TLD is a reserved special-use domain (RFC 2606) that is rejected by newer versions of pgAdmin4's email validator, causing a startup crash loop with the error: "The part after the @-sign is a special-use or reserved name that cannot be used with email." This affected both the `docker-compose.yml` defaults and the `.env.example` template.
+- **Prisma CLI crash — `Cannot find module 'empathic/package'`** — The Dockerfile previously used manual `COPY` instructions for individual Prisma transitive dependencies (`effect`, `fast-check`, `pure-rand`). Prisma 6.11.1+ introduced new transitive deps (`empathic`, `c12`, `deepmerge-ts`, plus 12+ sub-dependencies of `c12`) that were not included, causing `prisma db push` and `prisma generate` to fail at container startup with `MODULE_NOT_FOUND`. The Dockerfile now uses `npm install --omit=dev` in the runner stage, which automatically resolves the full dependency tree — this is future-proof against further Prisma dependency changes.
+
+### 🐳 Docker
+
+- **Rewrote Dockerfile Prisma dependency installation** — Replaced the fragile per-package `COPY` block (which required manually adding every new transitive dependency) with `npm install --omit=dev` in the runner stage. This installs all production dependencies including `prisma` and its complete transitive dependency tree in one step, with proper file ownership for the non-root `nextjs` user.
+- Reordered runner stage: npm install now runs before the standalone Next.js copy, so the Prisma client can be properly regenerated after install
+- Removed the manual `prisma` CLI wrapper symlinks (no longer needed — npm install creates them automatically)
 
 ### 📝 Documentation
 

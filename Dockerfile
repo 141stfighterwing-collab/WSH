@@ -64,29 +64,28 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone Next.js output
+# Install production deps (includes prisma + ALL transitive deps).
+# This replaces the old manual per-package COPY block that broke every
+# time Prisma added new transitive dependencies (empathic, c12, etc.).
+# npm resolves the full dependency tree automatically — future-proof.
+COPY --from=deps --chown=nextjs:nodejs /app/package.json /app/package-lock.json* ./
+RUN npm install --omit=dev --no-audit --no-fund 2>&1 | tail -3 && \
+    chown -R nextjs:nodejs node_modules && \
+    echo "[prisma] ✓ Production deps + Prisma CLI + all transitive deps installed"
+
+# Copy Prisma schema
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Regenerate Prisma client into production node_modules (ensures .prisma/client
+# matches the schema version, not a stale copy from the build stage)
+RUN npx prisma generate 2>&1 | tail -1 && \
+    chown -R nextjs:nodejs node_modules/.prisma && \
+    echo "[prisma] ✓ Client regenerated for production"
+
+# Copy standalone Next.js output (must come AFTER npm install so the
+# standalone server can find @prisma/client in node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy Prisma — schema, CLI, generated client, and ALL runtime dependencies
-# Uses nuclear copy of full node_modules (post npm prune --production) to
-# permanently eliminate all MODULE_NOT_FOUND crashes from transitive deps
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-# Transitive deps: @prisma/config → effect → fast-check → pure-rand
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/effect ./node_modules/effect
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-check ./node_modules/fast-check
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pure-rand ./node_modules/pure-rand
-
-# Create prisma CLI wrapper (guaranteed to use pinned v6.x, never downloads from npm)
-RUN mkdir -p /app/node_modules/.bin && \
-    ln -sf ../prisma/build/index.js /app/node_modules/.bin/prisma && \
-    chown -h nextjs:nodejs /app/node_modules/.bin/prisma && \
-    echo '#!/bin/sh' > /usr/local/bin/prisma && \
-    echo 'exec node /app/node_modules/prisma/build/index.js "$@"' >> /usr/local/bin/prisma && \
-    chmod +x /usr/local/bin/prisma
 
 # Copy entrypoint (LF line endings enforced)
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
@@ -94,9 +93,6 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 
 # Copy public assets
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Copy package.json (used for version info)
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Create runtime directories
 RUN mkdir -p /app/tmp /app/db && chown -R nextjs:nodejs /app/tmp /app/db
