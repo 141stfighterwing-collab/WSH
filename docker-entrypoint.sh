@@ -3,7 +3,7 @@
 # Handles PostgreSQL connectivity check, first-run DB init, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 
-set -e
+#set -e  # Disabled: individual errors are handled below to prevent crash loops
 
 PRISMA_CLI="node /app/node_modules/prisma/build/index.js"
 SCHEMA_FLAG="--schema=./prisma/schema.prisma"
@@ -89,21 +89,28 @@ fi
 # ── Database initialization (first run only) ───────────────────
 if [ ! -f "$MARKER_FILE" ]; then
   echo "[*] First run — initializing database schema..."
-  $PRISMA_CLI db push $SCHEMA_FLAG 2>&1 || {
-    echo "[!] Retrying with prisma generate first..."
-    $PRISMA_CLI generate $SCHEMA_FLAG 2>&1
-    $PRISMA_CLI db push $SCHEMA_FLAG 2>&1
-  }
+  if $PRISMA_CLI db push $SCHEMA_FLAG 2>&1; then
+    echo "[+] Database schema pushed successfully"
+  else
+    echo "[!] db push failed — regenerating Prisma client and retrying..."
+    $PRISMA_CLI generate $SCHEMA_FLAG 2>&1 || echo "[!] prisma generate failed (non-fatal)"
+    if $PRISMA_CLI db push $SCHEMA_FLAG 2>&1; then
+      echo "[+] Database schema pushed on retry"
+    else
+      echo "[ERROR] Database initialization failed after retry."
+      echo "[ERROR] The server will still start — check /api/health after boot."
+    fi
+  fi
   mkdir -p /app/tmp
   touch "$MARKER_FILE"
-  echo "[+] Database initialized (marker: $MARKER_FILE)"
+  echo "[+] Database initialization complete (marker: $MARKER_FILE)"
 else
   echo "[+] Database already initialized (skipping schema push)"
 fi
 
 # ── Verify Prisma client ───────────────────────────────────────
 echo "[*] Verifying Prisma client..."
-$PRISMA_CLI generate $SCHEMA_FLAG 2>&1 | tail -1
+$PRISMA_CLI generate $SCHEMA_FLAG 2>&1 | tail -1 || echo "[!] prisma generate warning (non-fatal)"
 
 # ── Start server ───────────────────────────────────────────────
 echo "[*] Starting WSH server on port ${PORT:-8883}..."
