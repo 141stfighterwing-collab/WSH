@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { LogIn, Lock, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
+import { LogIn, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
+import Image from 'next/image';
 import Header from '@/components/wsh/Header';
 import LeftSidebar from '@/components/wsh/LeftSidebar';
 import NoteEditor from '@/components/wsh/NoteEditor';
@@ -38,16 +39,32 @@ function LockedOverlay() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-8">
-      <div className="text-center max-w-md animate-fadeIn">
-        <div className="w-20 h-20 rounded-2xl bg-pri-600/10 border border-pri-500/20 flex items-center justify-center mx-auto mb-6">
-          <Lock className="w-10 h-10 text-pri-400" />
+      <div className="text-center max-w-lg animate-fadeIn">
+        {/* Large Logo */}
+        <div className="relative mb-8">
+          <div className="mx-auto w-72 h-40 sm:w-96 sm:h-52 md:w-[28rem] md:h-56 rounded-2xl overflow-hidden shadow-2xl border border-border/50 bg-gradient-to-br from-pri-600/5 to-transparent">
+            <Image
+              src="/logo.png"
+              alt="WSH — WeaveNote Self-Hosted"
+              fill
+              className="object-contain p-4"
+              priority
+            />
+          </div>
+          {/* Glow effect behind logo */}
+          <div className="absolute -inset-4 bg-pri-600/5 rounded-3xl blur-2xl -z-10" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-3">Notes Locked</h2>
+
+        <h2 className="text-2xl font-bold text-foreground mb-3">
+          Welcome to <span className="text-pri-400">WSH</span>
+        </h2>
         <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          You need to be logged in to view and manage your notes. 
-          Click the <strong>Login</strong> button in the header to get started.
+          Your self-hosted, AI-powered workspace for notes, projects, and ideas. 
+          Sign in to unlock your workspace and get started.
         </p>
-        <div className="flex items-center justify-center gap-3 mb-8">
+
+        {/* Note type badges */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
             <BookOpen className="w-4 h-4 text-blue-400" />
             <span className="text-[10px] font-bold text-muted-foreground">Quick</span>
@@ -69,9 +86,11 @@ function LockedOverlay() {
             <span className="text-[10px] font-bold text-muted-foreground">Deep</span>
           </div>
         </div>
-        <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-pri-600/10 border border-pri-500/20 text-pri-400">
+
+        {/* Login CTA */}
+        <div className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-pri-600/10 border border-pri-500/20 text-pri-400 hover:bg-pri-600/15 transition-colors">
           <LogIn className="w-4 h-4" />
-          <span className="text-xs font-bold">Login to unlock your workspace</span>
+          <span className="text-xs font-bold">Login / Sign Up to unlock your workspace</span>
         </div>
       </div>
     </div>
