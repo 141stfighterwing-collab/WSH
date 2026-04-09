@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.6] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Admin "Registered Users" shows "No users found" despite users existing in the database** — The `UsersSection` component was calling `fetch('/api/admin/users')` without an `Authorization` header. The middleware (`middleware.ts`) rejects all non-public API routes that lack a valid JWT, returning 401. Since the component's `catch` block silently set `users` to `[]`, the admin panel always appeared empty even though the DB Viewer confirmed users existed. The fix adds an `authHeaders()` helper that includes the user's JWT token from the Zustand store (`Bearer ${user.token}`), and all 6 fetch calls in `UsersSection` now use it: `fetchUsers`, `handleCreateUser`, `handleUserAction` (PATCH), `handleDeleteUser` (DELETE), `handleChangePassword` (PATCH), and `handleChangeRole` (PATCH). The `useEffect` that triggers `fetchUsers` now also gates on `user.isLoggedIn && user.token` to avoid making unauthenticated requests.
+
+### 🔧 Changed
+
+- **Update scripts now stop containers before rebuilding** — Both `update.ps1` and `update.sh` now run `docker compose down` as a new Step 2 before the Docker image rebuild (Step 3). This prevents Docker DNS resolution failures that occur when the Docker daemon's network state is stale after containers have been running for extended periods. The scripts now have 5 steps instead of 4: (1) Pull code, (2) Stop containers, (3) Rebuild image, (4) Restart containers, (5) Validate.
+
+---
+
 ## [4.1.5] - 2026-04-10
 
 ### ✨ Added

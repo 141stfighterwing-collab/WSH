@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# WSH -- Non-destructive Update Script v4.1.5
+# WSH -- Non-destructive Update Script v4.1.6
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
@@ -27,13 +27,13 @@ $ErrorActionPreference = "SilentlyContinue"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH -- Update v4.1.5" -ForegroundColor Cyan
+Write-Host "  WSH -- Update v4.1.6" -ForegroundColor Cyan
 Write-Host "  (data-preserving update)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # -- Step 1: Pull latest code ---------------------------------
-Write-Host "[1/4] Pulling latest code from GitHub..." -ForegroundColor Yellow
+Write-Host "[1/5] Pulling latest code from GitHub..." -ForegroundColor Yellow
 $pullOutput = & git pull origin main 2>&1
 if ($pullOutput) {
     $pullOutput | ForEach-Object { Write-Host "  $_" }
@@ -53,9 +53,15 @@ if ($pullExit -ne 0) {
 }
 Write-Host "  [OK] Code updated" -ForegroundColor Green
 
-# -- Step 2: Rebuild Docker image -----------------------------
+# -- Step 2: Stop running containers ---------------------------
 Write-Host ""
-Write-Host "[2/4] Rebuilding Docker image..." -ForegroundColor Yellow
+Write-Host "[2/5] Stopping running containers..." -ForegroundColor Yellow
+& docker compose down 2>&1 | ForEach-Object { Write-Host "  $_" }
+Write-Host "  [OK] Containers stopped" -ForegroundColor Green
+
+# -- Step 3: Rebuild Docker image -----------------------------
+Write-Host ""
+Write-Host "[3/5] Rebuilding Docker image..." -ForegroundColor Yellow
 Write-Host "  (this may take 2-4 minutes on first run)" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -75,9 +81,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "  [OK] Image built" -ForegroundColor Green
 
-# -- Step 3: Restart containers -------------------------------
+# -- Step 4: Restart containers -------------------------------
 Write-Host ""
-Write-Host "[3/4] Restarting containers (preserving data)..." -ForegroundColor Yellow
+Write-Host "[4/5] Restarting containers (preserving data)..." -ForegroundColor Yellow
 & docker compose up -d --force-recreate 2>&1 | ForEach-Object { Write-Host "  $_" }
 
 if ($LASTEXITCODE -ne 0) {
@@ -88,9 +94,9 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "  [OK] Containers restarted" -ForegroundColor Green
 
-# -- Step 4: Validate -----------------------------------------
+# -- Step 5: Validate -----------------------------------------
 Write-Host ""
-Write-Host "[4/4] Validating services..." -ForegroundColor Yellow
+Write-Host "[5/5] Validating services..." -ForegroundColor Yellow
 Write-Host "  Waiting 15s for services to start..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 15
 

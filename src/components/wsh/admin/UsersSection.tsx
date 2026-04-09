@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Users, Plus, Loader2, Ban, Unlock, Clock, Trash2, KeyRound, ShieldAlert, UserCog, X } from 'lucide-react';
 import type { UserData } from './types';
+import { useWSHStore } from '@/store/wshStore';
 
 interface UserActionModal {
   type: 'delete' | 'change-password' | 'change-role' | null;
@@ -10,6 +11,7 @@ interface UserActionModal {
 }
 
 export default function UsersSection() {
+  const { user } = useWSHStore();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'user' });
@@ -21,6 +23,12 @@ export default function UsersSection() {
   const [modalLoading, setModalLoading] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
+  // Build auth headers from JWT token
+  const authHeaders = useCallback(() => ({
+    'Content-Type': 'application/json',
+    ...(user.token ? { Authorization: `Bearer ${user.token}` } : {}),
+  }), [user.token]);
+
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setActionLog((prev) => [`[${time}] ${msg}`, ...prev].slice(0, 20));
@@ -29,19 +37,28 @@ export default function UsersSection() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch('/api/admin/users', {
+        headers: authHeaders(),
+      });
       const data = await res.json();
-      setUsers(data.users || []);
+      if (res.ok) {
+        setUsers(data.users || []);
+      } else {
+        addLog(`Fetch failed: ${data.error || 'Auth required'}`);
+        setUsers([]);
+      }
     } catch {
       setUsers([]);
     }
     setLoading(false);
     setFetched(true);
-  }, []);
+  }, [addLog, authHeaders]);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (user.isLoggedIn && user.token) {
+      fetchUsers();
+    }
+  }, [user.isLoggedIn, user.token, fetchUsers]);
 
   const handleCreateUser = async () => {
     if (!newUser.username || !newUser.password) return;
@@ -49,7 +66,7 @@ export default function UsersSection() {
     try {
       const res = await fetch('/api/admin/users/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           username: newUser.username,
           password: newUser.password,
@@ -77,7 +94,7 @@ export default function UsersSection() {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ userId, action }),
       });
       const data = await res.json();
@@ -112,7 +129,7 @@ export default function UsersSection() {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ userId: modal.user.id }),
       });
       if (res.ok) {
@@ -137,7 +154,7 @@ export default function UsersSection() {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ userId: modal.user.id, action: 'change-password', password: modalInput }),
       });
       const data = await res.json();
@@ -156,7 +173,7 @@ export default function UsersSection() {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ userId: modal.user.id, action: 'change-role', role: modalInput }),
       });
       const data = await res.json();

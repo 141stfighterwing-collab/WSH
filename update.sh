@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# WSH — Non-destructive Update Script v4.1.5
+# WSH — Non-destructive Update Script v4.1.6
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
@@ -18,19 +18,25 @@ done
 
 echo ""
 echo "========================================"
-echo "  WSH — Update v4.1.5"
+echo "  WSH — Update v4.1.6"
 echo "  (data-preserving update)"
 echo "========================================"
 echo ""
 
 # ── Step 1: Pull latest code ─────────────────────────────────
-echo -e "\033[33m[1/4] Pulling latest code from GitHub...\033[0m"
+echo -e "\033[33m[1/5] Pulling latest code from GitHub...\033[0m"
 git pull origin main 2>&1
 echo "  \033[32m[OK] Code updated\033[0m"
 
-# ── Step 2: Rebuild Docker image ─────────────────────────────
+# ── Step 2: Stop running containers ──────────────────────────
 echo ""
-echo -e "\033[33m[2/4] Rebuilding Docker image...\033[0m"
+echo -e "\033[33m[2/5] Stopping running containers...\033[0m"
+docker compose down 2>&1
+echo "  \033[32m[OK] Containers stopped\033[0m"
+
+# ── Step 3: Rebuild Docker image ─────────────────────────────
+echo ""
+echo -e "\033[33m[3/5] Rebuilding Docker image...\033[0m"
 echo "  (this may take 2-4 minutes on first run)"
 echo ""
 
@@ -43,15 +49,15 @@ fi
 echo ""
 echo "  \033[32m[OK] Image built\033[0m"
 
-# ── Step 3: Restart containers ───────────────────────────────
+# ── Step 4: Restart containers ───────────────────────────────
 echo ""
-echo -e "\033[33m[3/4] Restarting containers (preserving data)...\033[0m"
+echo -e "\033[33m[4/5] Restarting containers (preserving data)...\033[0m"
 docker compose up -d --force-recreate 2>&1
 echo "  \033[32m[OK] Containers restarted\033[0m"
 
-# ── Step 4: Validate ─────────────────────────────────────────
+# ── Step 5: Validate ─────────────────────────────────────────
 echo ""
-echo -e "\033[33m[4/4] Validating services...\033[0m"
+echo -e "\033[33m[5/5] Validating services...\033[0m"
 echo "  Waiting 15s for services to start..."
 sleep 15
 
