@@ -177,6 +177,7 @@ function TodaySection() {
     code: 'text-orange-400',
     project: 'text-pink-400',
     document: 'text-cyan-400',
+    'ai-prompts': 'text-violet-400',
   };
 
   return (

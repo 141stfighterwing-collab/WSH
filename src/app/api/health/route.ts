@@ -40,7 +40,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: 'healthy',
-    version: '4.1.2',
+    version: '4.1.3',
     timestamp: new Date().toISOString(),
     database: {
       status: dbStatus,

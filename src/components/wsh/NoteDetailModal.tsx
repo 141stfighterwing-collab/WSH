@@ -10,6 +10,7 @@ const typeColors: Record<string, string> = {
   code: 'bg-orange-500/15 text-orange-400',
   project: 'bg-pink-500/15 text-pink-400',
   document: 'bg-cyan-500/15 text-cyan-400',
+  'ai-prompts': 'bg-violet-500/15 text-violet-400',
 };
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -19,7 +20,24 @@ const typeIcons: Record<string, React.ReactNode> = {
   code: <Code className="w-3.5 h-3.5" />,
   project: <Briefcase className="w-3.5 h-3.5" />,
   document: <FileText className="w-3.5 h-3.5" />,
+  'ai-prompts': <Brain className="w-3.5 h-3.5" />,
 };
+
+/** Safely coerce content to string */
+function safeString(val: unknown): string {
+  if (typeof val === 'string') return val;
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'object') {
+    try { return JSON.stringify(val); } catch { return String(val); }
+  }
+  return String(val);
+}
+
+/** Safely ensure tags is an array of strings */
+function safeTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  return tags.map((t) => (typeof t === 'string' ? t : String(t)));
+}
 
 export default function NoteDetailModal() {
   const {
@@ -38,6 +56,10 @@ export default function NoteDetailModal() {
   const note = noteDetailId ? notes.find((n) => n.id === noteDetailId) : null;
 
   if (!noteDetailId || !note) return null;
+
+  const safeNoteTags = safeTags(note.tags);
+  const safeContent = safeString(note.content);
+  const safeRawContent = safeString(note.rawContent || '');
 
   const createdDate = new Date(note.createdAt).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -134,10 +156,10 @@ export default function NoteDetailModal() {
         </div>
 
         {/* Tags */}
-        {note.tags.length > 0 && (
+        {safeNoteTags.length > 0 && (
           <div className="px-5 py-3 border-b border-border/30 shrink-0">
             <div className="flex flex-wrap gap-1.5">
-              {note.tags.map((tag) => (
+              {safeNoteTags.map((tag) => (
                 <span
                   key={tag}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-pri-500/10 text-pri-400"
@@ -155,16 +177,16 @@ export default function NoteDetailModal() {
           <div
             className="prose prose-sm prose-invert max-w-none text-sm text-foreground/80 leading-relaxed"
             dangerouslySetInnerHTML={{
-              __html: sanitizeHTML(note.content) || '<p class="text-muted-foreground/40 italic">No content</p>',
+              __html: sanitizeHTML(safeContent) || '<p class="text-muted-foreground/40 italic">No content</p>',
             }}
           />
 
           {/* Raw content preview */}
-          {note.rawContent && (
+          {note.rawContent && safeRawContent && (
             <div className="mt-6 pt-4 border-t border-border/30">
               <span className="micro-label text-muted-foreground block mb-2">Raw Content</span>
               <pre className="p-3 rounded-xl bg-secondary/30 border border-border/30 text-[10px] font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
-                {note.rawContent}
+                {safeRawContent}
               </pre>
             </div>
           )}

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.3] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Notebook reader crashes with React Error #310 ("Objects are not valid as a React child")** — The `NotebookView` component (and `NoteDetailModal`, `NotesGrid`, `TrashModal`, `AnalyticsPanel`, `RightSidebar`) all had `typeColors` and `typeIcons` maps that only covered 6 note types (`quick`, `notebook`, `deep`, `code`, `project`, `document`) but the `NoteType` union includes `ai-prompts`. When a note with `type: 'ai-prompts'` was loaded, `typeIcons['ai-prompts']` returned `undefined` and `typeColors['ai-prompts']?.split(' ')[0]` returned `undefined`, causing cascading render failures. All 6 components now include `ai-prompts` in their type maps with a violet color scheme.
+
+- **CRITICAL FIX — Missing `Brain` icon import in NotebookView** — The `NotebookView` component's `typeIcons` map referenced `<Brain>` for the `ai-prompts` type, but `Brain` was not imported from `lucide-react`. This caused a `ReferenceError: Brain is not defined` crash during server-side rendering, making the entire app fail to build once `ai-prompts` type notes existed. Added `Brain` to the lucide-react import.
+
+- **Defensive type guards for content rendering** — Added `safeString()` and `safeTags()` helper functions to `NotebookView` and `NoteDetailModal`. These ensure that `note.content`, `note.rawContent`, and `note.tags` are always properly typed (string and string[] respectively) before processing. This prevents crashes when data from localStorage or the API contains unexpected types (e.g., ProseMirror JSON objects stored by MdxEditor instead of HTML strings, or non-string tag values).
+
+- **favicon.ico 404 fixed** — Browsers automatically request `/favicon.ico` regardless of HTML metadata. Created a new API route at `/api/favicon` that serves the existing `favicon.png` file with `image/x-icon` content type. Also updated the layout metadata to declare both `/favicon.png` and `/favicon.ico` icon variants.
+
+### ✨ Verified
+
+- Production build passes with zero errors after all fixes
+- All 7 note types render correctly across NotebookView, NoteDetailModal, NotesGrid, TrashModal, and AnalyticsPanel
+
+---
+
 ## [4.1.2] - 2026-04-10
 
 ### 🐛 Fixed

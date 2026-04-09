@@ -11,6 +11,7 @@ const typeColors: Record<string, string> = {
   code: 'bg-orange-500/15 text-orange-400',
   project: 'bg-pink-500/15 text-pink-400',
   document: 'bg-cyan-500/15 text-cyan-400',
+  'ai-prompts': 'bg-violet-500/15 text-violet-400',
 };
 
 export default function TrashModal() {

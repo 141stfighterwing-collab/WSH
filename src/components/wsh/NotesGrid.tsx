@@ -11,6 +11,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   code: <Code className="w-3.5 h-3.5" />,
   project: <Briefcase className="w-3.5 h-3.5" />,
   document: <FileText className="w-3.5 h-3.5" />,
+  'ai-prompts': <Brain className="w-3.5 h-3.5" />,
 };
 
 const typeDescriptions: Record<string, string> = {
@@ -20,6 +21,7 @@ const typeDescriptions: Record<string, string> = {
   code: 'Code — snippets, scripts & technical notes',
   project: 'Project — task tracking & milestones',
   document: 'Document — formal reports & deliverables',
+  'ai-prompts': 'AI Prompts — saved prompt templates & snippets',
 };
 
 const typeColors: Record<string, string> = {
@@ -29,6 +31,7 @@ const typeColors: Record<string, string> = {
   code: 'bg-orange-500/15 text-orange-400',
   project: 'bg-pink-500/15 text-pink-400',
   document: 'bg-cyan-500/15 text-cyan-400',
+  'ai-prompts': 'bg-violet-500/15 text-violet-400',
 };
 
 function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onClick: () => void; onViewDetail: () => void; onDelete: () => void }) {

@@ -324,6 +324,7 @@ export default function AnalyticsPanel() {
                       code: 'bg-orange-500',
                       project: 'bg-pink-500',
                       document: 'bg-cyan-500',
+                      'ai-prompts': 'bg-violet-500',
                     };
                     return (
                       <div key={type} className="bg-secondary/30 rounded-xl p-3 border border-border/30">

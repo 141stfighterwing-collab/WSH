@@ -4,7 +4,7 @@ import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import {
   X, ChevronRight, Tag, Calendar, Link2, Quote,
   ImageIcon, ExternalLink, FileText, Code2, FolderKanban,
-  FileDown, BookOpen, Hash, Clock, Loader2, AlertCircle,
+  FileDown, BookOpen, Hash, Brain, Clock, Loader2, AlertCircle,
 } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
@@ -16,6 +16,7 @@ const typeColors: Record<string, string> = {
   code: 'bg-orange-500/15 text-orange-400',
   project: 'bg-pink-500/15 text-pink-400',
   document: 'bg-cyan-500/15 text-cyan-400',
+  'ai-prompts': 'bg-violet-500/15 text-violet-400',
 };
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -25,9 +26,26 @@ const typeIcons: Record<string, React.ReactNode> = {
   code: <Code2 className="w-3 h-3" />,
   project: <FolderKanban className="w-3 h-3" />,
   document: <FileDown className="w-3 h-3" />,
+  'ai-prompts': <Brain className="w-3 h-3" />,
 };
 
 // ─── Content Parsing Helpers ───────────────────────────────────
+
+/** Safely coerce content to string (handles objects, arrays, null, undefined) */
+function safeString(val: unknown): string {
+  if (typeof val === 'string') return val;
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'object') {
+    try { return JSON.stringify(val); } catch { return String(val); }
+  }
+  return String(val);
+}
+
+/** Safely ensure tags is an array of strings */
+function safeTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  return tags.map((t) => (typeof t === 'string' ? t : String(t)));
+}
 
 /** Extract all image URLs from note content (markdown, HTML, raw URLs) */
 function extractImages(content: string): string[] {
@@ -412,9 +430,10 @@ function SidebarCard({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const thumbnail = useMemo(() => extractThumbnail(note.rawContent || note.content), [note.rawContent, note.content]);
-  const description = useMemo(() => getDescriptionText(note.rawContent || note.content), [note.rawContent, note.content]);
+  const thumbnail = useMemo(() => extractThumbnail(safeString(note.rawContent || note.content)), [note.rawContent, note.content]);
+  const description = useMemo(() => getDescriptionText(safeString(note.rawContent || note.content)), [note.rawContent, note.content]);
   const relativeDate = useMemo(() => formatRelativeDate(note.createdAt), [note.createdAt]);
+  const safeNoteTags = useMemo(() => safeTags(note.tags), [note.tags]);
   const [imgError, setImgError] = useState(false);
 
   return (
@@ -467,9 +486,9 @@ function SidebarCard({
         </div>
 
         {/* Tags */}
-        {note.tags.length > 0 && (
+        {safeNoteTags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {note.tags.slice(0, 3).map((tag) => (
+            {safeNoteTags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
                 className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-pri-500/10 text-pri-400/80"
@@ -477,9 +496,9 @@ function SidebarCard({
                 {tag}
               </span>
             ))}
-            {note.tags.length > 3 && (
+            {safeNoteTags.length > 3 && (
               <span className="text-[8px] text-muted-foreground/40 font-bold">
-                +{note.tags.length - 3}
+                +{safeNoteTags.length - 3}
               </span>
             )}
           </div>
@@ -613,7 +632,8 @@ function DesignNoteBox({ label, content }: { label: string; content: string }) {
 // ─── Notebook Page Component ───────────────────────────────────
 
 function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLast: boolean }) {
-  const rawContent = note.rawContent || note.content;
+  const rawContent = safeString(note.rawContent || note.content);
+  const safeNoteTags = useMemo(() => safeTags(note.tags), [note.tags]);
   const images = useMemo(() => extractImages(rawContent), [rawContent]);
   const links = useMemo(() => extractLinks(rawContent), [rawContent]);
   const quotes = useMemo(() => extractQuotes(rawContent), [rawContent]);
@@ -744,10 +764,10 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
       )}
 
       {/* Tags */}
-      {note.tags.length > 0 && (
+      {safeNoteTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-4 mt-5 pt-4 border-t border-border/20">
           <Tag className="w-3 h-3 text-muted-foreground/30" />
-          {note.tags.map((tag) => (
+          {safeNoteTags.map((tag) => (
             <span
               key={tag}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-pri-500/10 text-pri-400"

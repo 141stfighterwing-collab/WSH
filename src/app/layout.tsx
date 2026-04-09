@@ -19,7 +19,10 @@ export const metadata: Metadata = {
   keywords: ["WSH", "WeaveNote", "Self-Hosted", "Notes", "AI", "Next.js"],
   authors: [{ name: "WSH Team" }],
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
   },
 };
 
