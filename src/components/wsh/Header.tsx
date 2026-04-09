@@ -302,7 +302,7 @@ export default function Header() {
           ) : (
             <>
               <LogIn className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Login</span>
+              <span className="hidden sm:inline">Login / Sign Up</span>
             </>
           )}
         </button>

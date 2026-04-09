@@ -1,6 +1,6 @@
 # WSH Documentation
 
-> WeaveNote Self-Hosted v3.9.3 — Complete reference documentation
+> WeaveNote Self-Hosted v3.9.4 — Complete reference documentation
 
 ---
 
@@ -23,6 +23,9 @@
 6. [Troubleshooting](#troubleshooting)
 7. [Architecture Overview](#architecture-overview)
 8. [API Reference](#api-reference)
+   - [Public Authentication API](#public-authentication-api)
+   - [Registration Flow](#registration-flow)
+   - [Default Admin Account](#default-admin-account)
 9. [Environment Variables Reference](#environment-variables-reference)
 10. [Security Considerations](#security-considerations)
 
@@ -183,7 +186,7 @@ The install and cleanup scripts (`install.sh`, `install.ps1`) only remove the fo
 | Resource Type | Exact Names/Tags Removed | Method |
 |---------------|--------------------------|--------|
 | **Containers** | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match via `docker compose down` + explicit `docker rm -f` for orphans |
-| **Images** | `weavenote:3.9.3`, `weavenote:latest`, `weavenote-app` | Exact tag match |
+| **Images** | `weavenote:3.9.4`, `weavenote:latest`, `weavenote-app` | Exact tag match |
 | **Volumes** | `postgres-data`, `weavenote-data`, `pgadmin-data` (with Docker Compose project prefix like `WSH_`) | Exact name match |
 | **Networks** | `wsh-net` (with Docker Compose project prefix) | Exact name match |
 | **Build Cache** | Only cache entries labeled with WSH's project name | `--filter "label=com.docker.compose.project=<name>"` |
@@ -422,7 +425,7 @@ If the install scripts are not working and you need to manually clean up:
 docker rm -f wsh-postgres weavenote-app wsh-dbviewer wsh-pgadmin 2>/dev/null
 
 # Remove WSH image
-docker rmi -f weavenote:3.9.3 2>/dev/null
+docker rmi -f weavenote:3.9.4 2>/dev/null
 
 # Remove WSH volumes
 docker volume rm WSH_postgres-data WSH_weavenote-data WSH_pgadmin-data 2>/dev/null
@@ -474,7 +477,7 @@ docker compose up -d
 
 | Container | Image | Purpose | Ports |
 |-----------|-------|---------|-------|
-| `weavenote-app` | `weavenote:3.9.3` (built locally) | Main Next.js application | 8883 |
+| `weavenote-app` | `weavenote:3.9.4` (built locally) | Main Next.js application | 8883 |
 | `wsh-postgres` | `postgres:16-alpine` | PostgreSQL 16 database | 5432 (internal) |
 | `wsh-dbviewer` | `adminer:latest` | Web database browser | 5682 |
 | `wsh-pgadmin` | `dpage/pgadmin4:latest` | Full PostgreSQL admin UI | 5050 (optional) |
@@ -509,8 +512,8 @@ Returns application health status.
 ```json
 {
   "status": "healthy",
-  "version": "3.9.3",
-  "timestamp": "2026-04-08T12:00:00.000Z"
+  "version": "3.9.4",
+  "timestamp": "2026-04-09T12:00:00.000Z"
 }
 ```
 
@@ -573,6 +576,129 @@ All admin endpoints require authentication with `admin` or `super-admin` role.
 | `/api/admin/system` | GET | System info (version, uptime, resources) |
 | `/api/admin/users` | GET, POST | User management (CRUD, roles, status) |
 | `/api/admin/logs` | GET | Application logs (filterable) |
+
+### Public Authentication API
+
+These endpoints are publicly accessible (no authentication required).
+
+#### User Registration
+
+```
+POST /api/admin/users/register
+```
+
+Creates a new user account and returns a JWT token for immediate login.
+
+**Request Body:**
+```json
+{
+  "username": "newuser",
+  "password": "MyP@ss1234",
+  "confirmPassword": "MyP@ss1234",
+  "email": "user@example.com"
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `username` | Yes | Minimum 2 characters, must be unique |
+| `password` | Yes | Minimum 8 characters, at least 2 of: uppercase, lowercase, digit, special character |
+| `confirmPassword` | Recommended | Must match `password` — validated server-side |
+| `email` | No | Valid email format; defaults to `username@example.com` if omitted |
+
+**Response (201 Created):**
+```json
+{
+  "user": {
+    "id": "clx...",
+    "username": "newuser",
+    "email": "user@example.com",
+    "role": "user",
+    "status": "active",
+    "createdAt": "2026-04-09T12:00:00.000Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "message": "Registration successful — logged in automatically"
+}
+```
+
+**Error Responses:**
+- `400` — Validation failure (username too short, password too weak, passwords don't match, invalid email)
+- `409` — Username or email already exists
+- `429` — Rate limit exceeded (3 registrations per minute per IP)
+- `503` — Database unavailable
+
+**Rate Limit:** 3 registrations per minute per IP address.
+
+#### User Login
+
+```
+POST /api/admin/users/login
+```
+
+Authenticates an existing user and returns a JWT token.
+
+**Request Body:**
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "user": {
+    "id": "clx...",
+    "username": "admin",
+    "email": "admin@example.com",
+    "role": "super-admin",
+    "status": "active"
+  },
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "message": "Login successful"
+}
+```
+
+**Error Responses:**
+- `400` — Missing username or password
+- `401` — Invalid username or password
+- `403` — Account banned or suspended (includes remaining suspension time)
+- `429` — Rate limit exceeded (10 login attempts per minute per IP)
+- `503` — Database unavailable
+
+**Rate Limit:** 10 login attempts per minute per IP address.
+
+### Registration Flow
+
+When a new user visits the WSH application, they will see a "Login / Sign Up" button in the top-right corner of the header. Clicking this button opens the authentication widget, which provides two modes accessible via a tabbed interface:
+
+1. **Login Tab** — Existing users enter their username and password to authenticate. A show/hide toggle is available for the password field. On successful login, the user is granted immediate access to the application with all features gated by their assigned role.
+
+2. **Sign Up Tab** — New users fill in a registration form with four fields: username (required), email (optional), password (required), and confirm password (required). Password requirements are displayed below the form. On successful registration, the user is automatically logged in with a fresh JWT token and gains immediate access to the application without needing to re-enter their credentials on the login tab.
+
+Both modes share rate limiting protections to prevent abuse, and all validation errors are displayed inline within the widget with clear, actionable error messages. The default role for all self-registered users is `user`, which grants access to personal notes and basic features. Users who need elevated privileges (admin, super-admin) must be assigned those roles by an existing administrator through the Admin Panel's User Base section.
+
+### Default Admin Account
+
+On a fresh Docker deployment, WSH automatically creates a default super-admin account during the first-run database initialization. This account uses the following environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ADMIN_DEFAULT_USERNAME` | `admin` | Initial admin username |
+| `ADMIN_DEFAULT_EMAIL` | `admin@example.com` | Initial admin email |
+| `ADMIN_DEFAULT_PASSWORD` | `admin123` | Initial admin password (**change immediately!**) |
+
+The seeding process is idempotent — if the admin user already exists (determined by checking both username and email uniqueness), the script skips creation silently. The seeding step is non-fatal: if it fails for any reason, the WSH server still starts successfully, and an admin can be created manually through the API or by running the seed script in the container.
+
+For non-Docker development environments, you can run the seed manually:
+
+```bash
+bun run db:seed
+```
+
+**Security warning:** Always change the default admin password immediately after your first login. The default credentials are intentionally simple to facilitate initial setup, but they are not secure for production use.
 
 ---
 

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { hashPassword, checkRateLimit, getRateLimitInfo } from '@/lib/auth';
+import { hashPassword, signToken, checkRateLimit, getRateLimitInfo } from '@/lib/auth';
 
-// POST /api/admin/users/register — Register a new user
+// POST /api/admin/users/register — Register a new user (public endpoint)
+// Now returns a JWT token so the user is auto-logged-in after registration
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting (BUG-005 fix): 3 registrations per minute per IP
@@ -30,9 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, password, email } = body as {
+    const { username, password, confirmPassword, email } = body as {
       username: string;
       password: string;
+      confirmPassword?: string;
       email?: string;
     };
 
@@ -54,6 +56,14 @@ export async function POST(request: NextRequest) {
     if (password.length < 8) {
       return NextResponse.json(
         { error: 'Password must be at least 8 characters' },
+        { status: 400 },
+      );
+    }
+
+    // Password confirmation check
+    if (confirmPassword && password !== confirmPassword) {
+      return NextResponse.json(
+        { error: 'Passwords do not match' },
         { status: 400 },
       );
     }
@@ -131,9 +141,16 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Issue JWT token for auto-login after registration
+      const token = await signToken({
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+      });
+
       const info = getRateLimitInfo(rateLimitKey, 3, 60 * 1000);
       return NextResponse.json(
-        { user, message: 'Registration successful' },
+        { user, token, message: 'Registration successful — logged in automatically' },
         {
           status: 201,
           headers: {

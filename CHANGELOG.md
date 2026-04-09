@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.9.4] - 2026-04-09
+
+### ✨ Added
+
+- **Public User Registration (Sign Up)** — Added a full registration UI to the LoginWidget, allowing new users to create accounts directly from the login popover without needing admin intervention. The widget now features a tabbed interface with "Login" and "Sign Up" modes, matching the existing dark theme design language. The registration form includes username, email (optional), password, and confirm password fields with show/hide toggles for each password field. A password requirements hint is displayed below the form for user guidance.
+- **Auto-login after registration** — The `/api/admin/users/register` endpoint now issues a JWT token upon successful registration. Users are automatically logged into their new account immediately after signing up, without needing to manually enter their credentials on the login form. If the token is not returned for any reason, the widget gracefully falls back to switching to the login form with the username pre-filled.
+- **Password confirmation on registration** — Added `confirmPassword` field validation to the register API endpoint. When the client sends a `confirmPassword` value, the server validates that it matches the `password` field before proceeding with user creation. A clear error message is returned if the passwords do not match.
+- **Show/hide password toggles** — Added eye icon toggles to both the login and registration password fields, allowing users to reveal or conceal their passwords as needed. This improves usability and reduces the likelihood of registration errors caused by mistyped passwords.
+- **Default admin seed script** — Added `prisma/seed.ts` that creates a default super-admin user on first run using the `ADMIN_DEFAULT_USERNAME`, `ADMIN_DEFAULT_EMAIL`, and `ADMIN_DEFAULT_PASSWORD` environment variables. The script is idempotent — it checks whether the admin user already exists before attempting creation, and also verifies that the admin email is not already in use by another user. Added `db:seed` script to `package.json` for manual seeding during development.
+- **Automated admin seeding in Docker** — The `docker-entrypoint.sh` now runs the admin seed check during first-run database initialization (after `prisma db push`). This ensures that a default admin account is always available immediately after a fresh Docker deployment. The seeding step is non-fatal — if it fails for any reason, the server still starts and admins can be created manually.
+
+### 🔧 Changed
+
+- **LoginWidget redesigned as tabbed auth widget** — The popover now features a "Login" / "Sign Up" tab switcher at the top, replacing the previous login-only interface. The widget width has been increased from `w-72` to `w-80` to accommodate the additional registration fields. Both forms share a common error banner and loading state.
+- **Header button text updated** — The header login button now displays "Login / Sign Up" when no user is authenticated (previously just "Login"), making the registration option discoverable without requiring the user to click the button first.
+- **Register API response format** — The `/api/admin/users/register` response now includes a `token` field in addition to the existing `user` and `message` fields, enabling auto-login. The `message` has been updated to "Registration successful — logged in automatically".
+
+---
+
 ## [3.9.3] - 2026-04-09
 
 ### 🐛 Fixed

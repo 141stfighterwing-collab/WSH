@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.9.3
+# WSH — WeaveNote Self-Hosted v3.9.4
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -252,15 +252,19 @@ A flexible **organizational system** combining hierarchical folders with flat ta
 
 ### 🔐 User Authentication
 
-A secure **authentication system** with role-based access control for multi-user deployments.
+A secure **authentication system** with role-based access control for multi-user deployments, featuring both login and public self-registration.
 
-- **Login/registration** — Built-in login widget with username, email, and password fields
+- **Login & Sign Up** — Built-in tabbed auth widget with Login and Sign Up modes. New users can create accounts directly from the login popover with username, email (optional), password, and password confirmation fields. Password show/hide toggles are provided for usability.
+- **Auto-login after registration** — Users are automatically logged in with a JWT token immediately after creating an account — no need to re-enter credentials.
 - **Role-based access** — Three roles with escalating permissions:
   - `user` — Standard access to personal notes and basic features
   - `admin` — Access to the Admin Panel and user management
   - `super-admin` — Full system access including ENV settings and system logs
-- **JWT tokens** — Secure token-based authentication
-- **Status management** — User accounts can be set to `active` or `suspended` status
+- **JWT tokens** — Secure token-based authentication with 7-day expiration
+- **Rate limiting** — Login (10/min) and registration (3/min) rate limits per IP to prevent brute-force attacks
+- **Password requirements** — Minimum 8 characters with at least 2 of: uppercase, lowercase, digit, special character
+- **Status management** — User accounts can be set to `active`, `suspended` (auto-expires after 24h), or `banned` status
+- **Default admin seeding** — On first Docker run, a super-admin account is automatically created from `ADMIN_DEFAULT_*` environment variables. A `prisma/seed.ts` script is also available for manual seeding during development (`bun run db:seed`).
 
 ### 🐳 Docker Support
 
@@ -366,7 +370,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:3.9.3`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:3.9.4`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -445,7 +449,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:3.9.3` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:3.9.4` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -457,7 +461,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:3.9.3`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:3.9.4`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -579,7 +583,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.9.3", "timestamp": "2026-04-09T12:00:00.000Z" }
+{ "status": "healthy", "version": "3.9.4", "timestamp": "2026-04-09T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
@@ -629,6 +633,44 @@ Admin endpoint for retrieving system information (version, uptime, resource usag
 ### `GET|POST /api/admin/users`
 
 Admin endpoint for user management (list, create, update roles, suspend accounts).
+
+### `POST /api/admin/users/register`
+
+Public registration endpoint for creating new user accounts. No authentication required.
+
+**Request body:**
+```json
+{ "username": "newuser", "password": "MyP@ss1234", "confirmPassword": "MyP@ss1234", "email": "user@example.com" }
+```
+
+**Response (201 Created):**
+```json
+{ "user": { "id": "...", "username": "newuser", "email": "user@example.com", "role": "user", "status": "active" }, "token": "eyJ...", "message": "Registration successful — logged in automatically" }
+```
+
+**Validation rules:**
+- Username: minimum 2 characters, must be unique
+- Password: minimum 8 characters, at least 2 of: uppercase, lowercase, digit, special character
+- Email: optional, must be valid format if provided (defaults to `username@example.com`)
+- `confirmPassword`: must match `password` field
+
+**Rate limit:** 3 registrations per minute per IP address. Returns HTTP 429 when exceeded.
+
+### `POST /api/admin/users/login`
+
+Public authentication endpoint for logging in. No authentication required.
+
+**Request body:**
+```json
+{ "username": "admin", "password": "admin123" }
+```
+
+**Response:**
+```json
+{ "user": { "id": "...", "username": "admin", "email": "admin@example.com", "role": "super-admin", "status": "active" }, "token": "eyJ...", "message": "Login successful" }
+```
+
+**Rate limit:** 10 login attempts per minute per IP address.
 
 ### `GET /api/admin/logs`
 

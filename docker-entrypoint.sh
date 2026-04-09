@@ -1,5 +1,5 @@
 #!/bin/sh
-# WSH Docker Entrypoint v3.9.3
+# WSH Docker Entrypoint v3.9.4
 # Handles PostgreSQL connectivity check, first-run DB init, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 
@@ -23,7 +23,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-3.9.3}"
+echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-3.9.4}"
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 
@@ -104,6 +104,44 @@ if [ ! -f "$MARKER_FILE" ]; then
   mkdir -p /app/tmp
   touch "$MARKER_FILE"
   echo "[+] Database initialization complete (marker: $MARKER_FILE)"
+
+  # Seed default admin user on first run
+  echo "[*] Seeding default admin user (if not exists)..."
+  if node -e "
+    const { PrismaClient } = require('@prisma/client');
+    const { hashPassword } = require('./src/lib/auth.js');
+    async function seed() {
+      const prisma = new PrismaClient();
+      try {
+        const username = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
+        const email = process.env.ADMIN_DEFAULT_EMAIL || 'admin@example.com';
+        const password = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+        const existing = await prisma.user.findUnique({ where: { username } });
+        if (existing) {
+          console.log('[seed] Admin user already exists — skipping.');
+          return;
+        }
+        const existingEmail = await prisma.user.findUnique({ where: { email } });
+        if (existingEmail) {
+          console.log('[seed] Admin email already in use — skipping.');
+          return;
+        }
+        const hashed = await hashPassword(password);
+        const admin = await prisma.user.create({
+          data: { username, email, password: hashed, role: 'super-admin', status: 'active' },
+          select: { id: true, username: true, email: true, role: true }
+        });
+        console.log('[seed] Default admin user created: ' + admin.username + ' (' + admin.role + ')');
+        console.log('[seed] WARNING: Change the default admin password immediately!');
+      } catch(e) { console.error('[seed] Error:', e.message); }
+      finally { await prisma.\$disconnect(); }
+    }
+    seed();
+  " 2>&1; then
+    echo "[+] Admin seed check complete"
+  else
+    echo "[!] Admin seed check failed (non-fatal — admin can be created manually via /api/admin/users/register)"
+  fi
 else
   echo "[+] Database already initialized (skipping schema push)"
 fi
