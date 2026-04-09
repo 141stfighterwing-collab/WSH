@@ -1,4 +1,4 @@
-# ── WSH Dockerfile v4.2.0 ────────────────────────────────────────
+# ── WSH Dockerfile v4.2.1 ────────────────────────────────────────
 # Multi-stage build with progress output. Update with: ./update.sh
 #
 # Stage 1 (deps):   npm install (cached unless package.json changes)
@@ -7,7 +7,7 @@
 
 FROM node:20-alpine AS deps
 
-ARG BUILD_VERSION=4.2.0
+ARG BUILD_VERSION=4.2.1
 
 # System deps for building
 RUN echo "[1/6] Installing system dependencies..." && \
@@ -50,7 +50,7 @@ RUN echo "[5/6] Building Next.js application..." && \
 # ── Stage 3: Production Runner ─────────────────────────────────
 FROM node:20-alpine AS runner
 
-ARG BUILD_VERSION=4.2.0
+ARG BUILD_VERSION=4.2.1
 ENV BUILD_VERSION=${BUILD_VERSION}
 
 RUN echo "[6/6] Creating production image (v${BUILD_VERSION})..." && \

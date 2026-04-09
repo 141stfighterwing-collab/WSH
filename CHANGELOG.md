@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.1] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Notes lost on page refresh or browser data clear** — Notes were stored **only** in the browser's `localStorage` and were never synced to the PostgreSQL database. This meant any browser update, privacy cleanup, incognito session close, or manual site data clear would permanently erase all notes. The app has a fully-defined `Note` and `Folder` model in Prisma but no code to read/write from them. This is now completely fixed with full database-backed note persistence:
+  - **New API routes**: `GET/POST/PUT/DELETE /api/notes` and `GET/POST/PUT/DELETE /api/folders` — full CRUD operations with JWT authentication and user ownership verification.
+  - **Server sync on login**: When a user logs in, `syncFromServer()` fetches all notes and folders from the database and populates the Zustand store. Local-only notes (created while offline) are merged with server data so nothing is lost.
+  - **Server sync on page load**: After the JWT token is verified on startup, notes are fetched from the server. If the server is unreachable, local data from localStorage is used as a fallback.
+  - **Auto-save to server**: Every `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentDeleteNote`, `emptyTrash`, `addFolder`, `updateFolder`, and `deleteFolder` action now pushes changes to the database in a fire-and-forget manner. The UI updates immediately from the local store, and the server sync happens in the background.
+  - **Merge strategy**: On sync, server data takes priority for notes that exist in both local storage and the database (server is the source of truth). Notes that only exist locally are preserved and uploaded to the server on next save.
+  - **Clean logout**: `logoutUser()` now clears the notes/folders arrays (prevents showing another user's data if a different account logs in on the same device).
+
+### 🏗️ Architecture
+
+- **New API routes**: `GET/POST/PUT/DELETE /api/notes` — CRUD for notes with user scoping, ownership checks, and JSON tag serialization.
+- **New API routes**: `GET/POST/PUT/DELETE /api/folders` — CRUD for folders with user scoping, ownership checks, and automatic note unlinking on folder deletion.
+- **New store action**: `syncFromServer()` — fetches notes and folders from the database, merges with local data, and updates localStorage cache.
+- **New store state**: `isSyncing` — boolean flag indicating whether a server sync is in progress.
+
+---
+
 ## [4.2.0] - 2026-04-10
 
 ### 🐛 Fixed

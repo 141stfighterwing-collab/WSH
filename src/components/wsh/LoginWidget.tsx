@@ -24,7 +24,7 @@ interface AuthResponse {
 type AuthMode = 'login' | 'register';
 
 export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
-  const { user, setUser, logoutUser, saveToLocalStorage } = useWSHStore();
+  const { user, setUser, logoutUser, saveToLocalStorage, syncFromServer } = useWSHStore();
   const [mode, setMode] = useState<AuthMode>('login');
 
   // Login fields
@@ -77,6 +77,8 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
         role: loginData.user.role,
       });
       saveToLocalStorage();
+      // Sync notes from server after login
+      syncFromServer();
       setError('');
       onClose();
     } catch {
@@ -131,6 +133,8 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
           role: regData.user.role,
         });
         saveToLocalStorage();
+        // Sync notes from server after registration
+        syncFromServer();
         setError('');
         onClose();
       } else {

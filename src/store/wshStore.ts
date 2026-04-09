@@ -125,6 +125,10 @@ interface WSHState {
   // Persistence
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
+
+  // Server Sync
+  syncFromServer: () => Promise<void>;
+  isSyncing: boolean;
 }
 
 const defaultUser: UserState = {
@@ -137,16 +141,56 @@ const defaultUser: UserState = {
 
 const STORAGE_KEY = 'wsh-state';
 
+/** Get auth headers for API calls */
+function authHeaders(): Record<string, string> {
+  const token = useWSHStore.getState().user.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
 export const useWSHStore = create<WSHState>((set, get) => ({
   // Notes
   notes: [],
   setNotes: (notes) => set({ notes }),
-  addNote: (note) => set((state) => ({ notes: [note, ...state.notes] })),
-  updateNote: (id, updates) => set((state) => ({
-    notes: state.notes.map((n) =>
-      n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n
-    ),
-  })),
+  addNote: (note) => {
+    set((state) => ({ notes: [note, ...state.notes] }));
+    get().saveToLocalStorage();
+    // Push to server (fire-and-forget)
+    if (get().user.token) {
+      fetch('/api/notes', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          title: note.title,
+          content: note.content,
+          rawContent: note.rawContent,
+          type: note.type,
+          tags: note.tags,
+          color: note.color,
+          folderId: note.folderId,
+        }),
+      }).catch(() => { /* server sync failed, note exists locally */ });
+    }
+  },
+  updateNote: (id, updates) => {
+    const updated = new Date().toISOString();
+    set((state) => ({
+      notes: state.notes.map((n) =>
+        n.id === id ? { ...n, ...updates, updatedAt: updated } : n
+      ),
+    }));
+    get().saveToLocalStorage();
+    // Push to server (fire-and-forget)
+    if (get().user.token) {
+      fetch('/api/notes', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ id, ...updates }),
+      }).catch(() => { /* server sync failed, update exists locally */ });
+    }
+  },
   deleteNote: (id) => {
     set((state) => ({
       notes: state.notes.map((n) =>
@@ -154,6 +198,14 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       ),
     }));
     get().saveToLocalStorage();
+    // Push to server (fire-and-forget)
+    if (get().user.token) {
+      fetch('/api/notes', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ id, isDeleted: true }),
+      }).catch(() => { /* server sync failed */ });
+    }
   },
 
   // Current Editor
@@ -181,15 +233,45 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   // Folders
   folders: [],
   setFolders: (folders) => set({ folders }),
-  addFolder: (folder) => set((state) => ({ folders: [...state.folders, folder] })),
-  updateFolder: (id, updates) => set((state) => ({
-    folders: state.folders.map((f) =>
-      f.id === id ? { ...f, ...updates } : f
-    ),
-  })),
-  deleteFolder: (id) => set((state) => ({
-    folders: state.folders.filter((f) => f.id !== id),
-  })),
+  addFolder: (folder) => {
+    set((state) => ({ folders: [...state.folders, folder] }));
+    get().saveToLocalStorage();
+    // Push to server
+    if (get().user.token) {
+      fetch('/api/folders', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ name: folder.name, order: folder.order }),
+      }).catch(() => {});
+    }
+  },
+  updateFolder: (id, updates) => {
+    set((state) => ({
+      folders: state.folders.map((f) =>
+        f.id === id ? { ...f, ...updates } : f
+      ),
+    }));
+    get().saveToLocalStorage();
+    if (get().user.token) {
+      fetch('/api/folders', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ id, ...updates }),
+      }).catch(() => {});
+    }
+  },
+  deleteFolder: (id) => {
+    set((state) => ({
+      folders: state.folders.filter((f) => f.id !== id),
+    }));
+    get().saveToLocalStorage();
+    if (get().user.token) {
+      fetch(`/api/folders?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      }).catch(() => {});
+    }
+  },
   activeFolderId: null,
   setActiveFolderId: (id) => set({ activeFolderId: id }),
 
@@ -238,18 +320,41 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       ),
     }));
     get().saveToLocalStorage();
+    if (get().user.token) {
+      fetch('/api/notes', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ id, isDeleted: false }),
+      }).catch(() => {});
+    }
   },
   permanentDeleteNote: (id) => {
     set((state) => ({
       notes: state.notes.filter((n) => n.id !== id),
     }));
     get().saveToLocalStorage();
+    if (get().user.token) {
+      fetch(`/api/notes?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      }).catch(() => {});
+    }
   },
   emptyTrash: () => {
+    const deletedIds = get().notes.filter((n) => n.isDeleted).map((n) => n.id);
     set((state) => ({
       notes: state.notes.filter((n) => !n.isDeleted),
     }));
     get().saveToLocalStorage();
+    // Delete all trashed notes from server
+    if (get().user.token) {
+      deletedIds.forEach((noteId) => {
+        fetch(`/api/notes?id=${encodeURIComponent(noteId)}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        }).catch(() => {});
+      });
+    }
   },
 
   // Mind Map
@@ -274,7 +379,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
     user: { ...state.user, ...user },
   })),
   logoutUser: () => {
-    set({ user: { ...defaultUser } });
+    set({ user: { ...defaultUser }, notes: [], folders: [] });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wsh-auth');
     }
@@ -287,7 +392,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  // Persistence — user auth is stored in a separate key for session persistence
+  // Persistence — notes/folders also cached in localStorage as backup
   saveToLocalStorage: () => {
     const state = get();
     const toSave = {
@@ -320,8 +425,10 @@ export const useWSHStore = create<WSHState>((set, get) => ({
     if (saved) {
       try {
         const data = JSON.parse(saved);
-        if (data.notes) set({ notes: data.notes });
-        if (data.folders) set({ folders: data.folders });
+        // Only load notes/folders from localStorage as initial fallback;
+        // they will be overwritten by server data if available
+        if (data.notes && Array.isArray(data.notes)) set({ notes: data.notes });
+        if (data.folders && Array.isArray(data.folders)) set({ folders: data.folders });
         if (data.theme) {
           set({ theme: data.theme });
           document.body.className = `theme-${data.theme}`;
@@ -356,6 +463,57 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         console.error('Failed to load auth state from localStorage');
         localStorage.removeItem('wsh-auth');
       }
+    }
+  },
+
+  // Server Sync — fetch notes and folders from the database
+  isSyncing: false,
+  syncFromServer: async () => {
+    const token = get().user.token;
+    if (!token) return;
+
+    set({ isSyncing: true });
+    try {
+      // Fetch notes from server
+      const notesRes = await fetch('/api/notes', {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (notesRes.ok) {
+        const notesData = await notesRes.json();
+        if (Array.isArray(notesData.notes)) {
+          // Merge: server data wins for notes that exist in both,
+          // local-only notes are preserved
+          const serverNotes = notesData.notes as Note[];
+          const localNotes = get().notes;
+          const localOnlyNotes = localNotes.filter(
+            (ln) => !serverNotes.some((sn) => sn.id === ln.id)
+          );
+          const merged = [...serverNotes, ...localOnlyNotes];
+          // Sort by updatedAt descending
+          merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+          set({ notes: merged });
+          get().saveToLocalStorage();
+        }
+      }
+
+      // Fetch folders from server
+      const foldersRes = await fetch('/api/folders', {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (foldersRes.ok) {
+        const foldersData = await foldersRes.json();
+        if (Array.isArray(foldersData.folders)) {
+          set({ folders: foldersData.folders as Folder[] });
+          get().saveToLocalStorage();
+        }
+      }
+    } catch (err) {
+      // Server unreachable — keep local data, no problem
+      console.warn('Server sync failed, using local data:', err);
+    } finally {
+      set({ isSyncing: false });
     }
   },
 }));

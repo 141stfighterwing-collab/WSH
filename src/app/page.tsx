@@ -97,17 +97,18 @@ function LockedOverlay() {
 }
 
 export default function Home() {
-  const { loadFromLocalStorage, viewMode, user, setUser, logoutUser } = useWSHStore();
+  const { loadFromLocalStorage, viewMode, user, setUser, logoutUser, syncFromServer } = useWSHStore();
   const sessionVerified = useRef(false);
+  const syncDone = useRef(false);
 
   // Load persisted state (notes, theme, auth session) on mount
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
 
-  // Verify the restored JWT token with the server
+  // Verify the restored JWT token + sync notes from server
   useEffect(() => {
-    const verifySession = async () => {
+    const verifyAndSync = async () => {
       // Only run once after loadFromLocalStorage has hydrated the store
       const store = useWSHStore.getState();
       if (sessionVerified.current || !store.user.token) return;
@@ -126,18 +127,28 @@ export default function Home() {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('wsh-auth');
           }
+          return;
         }
-        // If valid, the restored session is good — no action needed
+
+        // Token is valid — sync notes/folders from server
+        if (!syncDone.current) {
+          syncDone.current = true;
+          await syncFromServer();
+        }
       } catch {
-        // Network error — keep the session, verify later
-        // The token itself is signed so it's safe to use until we can verify
+        // Network error — keep the session, use local data
+        // Still try to sync in background
+        if (!syncDone.current) {
+          syncDone.current = true;
+          syncFromServer();
+        }
       }
     };
 
     // Small delay to allow loadFromLocalStorage to complete
-    const timer = setTimeout(verifySession, 100);
+    const timer = setTimeout(verifyAndSync, 100);
     return () => clearTimeout(timer);
-  }, [logoutUser]);
+  }, [logoutUser, syncFromServer]);
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
