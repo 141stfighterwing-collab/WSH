@@ -1,19 +1,33 @@
 #!/usr/bin/env pwsh
-# WSH -- Non-destructive Update Script v4.1.1
+# WSH -- Non-destructive Update Script v4.1.2
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
 # Usage:
 #   .\update.ps1
 #   .\update.ps1 -NoCache    # Force full rebuild
+#
+# TROUBLESHOOTING:
+#   If you see "NativeCommandError" from git, that is cosmetic only —
+#   git writes progress to stderr, which PowerShell treats as errors.
+#   This script suppresses those via $ErrorActionPreference.
 
 param(
     [switch]$NoCache
 )
 
+# ── CRITICAL: Suppress PowerShell's NativeCommandError for git/docker ──
+# Both git and docker write progress/info to stderr. PowerShell treats all
+# stderr output from native commands as errors (NativeCommandError), even
+# when the command succeeds. Setting SilentlyContinue prevents these
+# cosmetic errors from appearing while still allowing us to check
+# $LASTEXITCODE for real failures.
+# This matches the behavior in install.ps1 (which works correctly).
+$ErrorActionPreference = "SilentlyContinue"
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH -- Update v4.1.1" -ForegroundColor Cyan
+Write-Host "  WSH -- Update v4.1.2" -ForegroundColor Cyan
 Write-Host "  (data-preserving update)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
@@ -21,12 +35,20 @@ Write-Host ""
 # -- Step 1: Pull latest code ---------------------------------
 Write-Host "[1/4] Pulling latest code from GitHub..." -ForegroundColor Yellow
 $pullOutput = & git pull origin main 2>&1
-$pullOutput | ForEach-Object { Write-Host "  $_" }
+if ($pullOutput) {
+    $pullOutput | ForEach-Object { Write-Host "  $_" }
+}
 $pullExit = $LASTEXITCODE
 if ($pullExit -ne 0) {
     Write-Host ""
     Write-Host "[FAIL] Git pull failed (exit code $pullExit)!" -ForegroundColor Red
-    Write-Host "  Try: git stash && git pull origin main && git stash pop" -ForegroundColor DarkGray
+    Write-Host "  Possible causes:" -ForegroundColor DarkGray
+    Write-Host "    - Local changes conflict with upstream" -ForegroundColor DarkGray
+    Write-Host "    - Not on the 'main' branch" -ForegroundColor DarkGray
+    Write-Host "    - Network connectivity issues" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  Fix: git stash && git pull origin main && git stash pop" -ForegroundColor Yellow
+    Write-Host "  Or:  git checkout main && git pull origin main" -ForegroundColor Yellow
     exit 1
 }
 Write-Host "  [OK] Code updated" -ForegroundColor Green
@@ -46,6 +68,7 @@ if ($NoCache) {
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "[FAIL] Docker build failed!" -ForegroundColor Red
+    Write-Host "  Try: .\update.ps1 -NoCache" -ForegroundColor Yellow
     exit 1
 }
 
@@ -59,6 +82,7 @@ Write-Host "[3/4] Restarting containers (preserving data)..." -ForegroundColor Y
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[FAIL] Container restart failed!" -ForegroundColor Red
+    Write-Host "  Try: docker compose down && docker compose up -d" -ForegroundColor Yellow
     exit 1
 }
 
@@ -90,6 +114,7 @@ try {
     }
 } catch {
     Write-Host "  [WARN] Health check not ready yet (container may still be initializing)" -ForegroundColor Yellow
+    Write-Host "         Check: docker compose logs -f weavenote" -ForegroundColor DarkGray
 }
 
 Write-Host ""

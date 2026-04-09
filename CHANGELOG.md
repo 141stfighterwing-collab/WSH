@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.2] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — PowerShell `update.ps1` throws `NativeCommandError` and stops** — The `update.ps1` script was missing `$ErrorActionPreference = "SilentlyContinue"`, which `install.ps1` already has. Both `git` and `docker` write progress/info text to **stderr** (not just errors). PowerShell interprets all stderr output from native commands as a `NativeCommandError`, displays it in red, and depending on context, may terminate the script. This caused the update script to show scary red errors from `git pull origin main 2>&1` on every Windows run, and in some PowerShell versions, the script would stop after Step 1. The fix adds `$ErrorActionPreference = "SilentlyContinue"` at the top of `update.ps1`, matching `install.ps1`'s behavior. Real failures are still detected via `$LASTEXITCODE` checks, which remain functional regardless of the ErrorActionPreference setting.
+
+- **Improved error recovery messages in update.ps1** — When git pull fails, the script now shows specific possible causes (local changes, wrong branch, network issues) and provides two fix commands (`git stash && git pull && git stash pop` or `git checkout main && git pull`). Similarly, Docker build and container restart failures now suggest concrete next steps (`.\update.ps1 -NoCache` or `docker compose down && docker compose up -d`).
+
+### 📝 Documentation
+
+- **Added Troubleshooting section to README** — New section covering common update issues: NativeCommandError explanation and fix, git merge conflict resolution, Docker build failures, health check timing, and "already up to date" scenarios. Each issue includes symptom description, root cause explanation, and copy-paste fix commands.
+
+### 🔧 Changed
+
+- **All version references unified to 4.1.2** — Updated across 13 files: `package.json`, `Dockerfile` (header comment + both ARG defaults), `docker-compose.yml` (build arg + image tag), `docker-entrypoint.sh` (header + fallback version), `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, and `README.md`.
+
+---
+
 ## [4.1.1] - 2026-04-10
 
 ### 🐛 Fixed

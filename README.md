@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v4.1.1
+# WSH — WeaveNote Self-Hosted v4.1.2
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -34,6 +34,7 @@ Inspired by [WeaveNote](https://weavenote.com), WSH gives you full control over 
   - [Manual Docker Commands](#manual-docker-commands)
   - [Docker Configuration](#docker-configuration)
   - [Docker Safety](#docker-safety)
+- [Troubleshooting](#troubleshooting)
 - [PowerShell Installer](#powershell-installer)
 - [Project Structure](#project-structure)
 - [API Routes](#api-routes)
@@ -388,7 +389,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:4.1.1`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:4.1.2`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -481,7 +482,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:4.1.1` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:4.1.2` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -493,7 +494,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:4.1.1`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:4.1.2`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -508,6 +509,85 @@ The `docker-compose.yml` includes:
 - Containers, images, volumes, or networks from other Docker Compose projects
 
 **Why this matters:** If you have other applications running in Docker (e.g., a WordPress site, a home automation stack, or another development project), running `./install.sh` or `./install.ps1` will NOT affect them. The old scripts used broad `grep` pattern matching and `docker system prune -af`, which could destroy unrelated containers and data.
+
+---
+
+## Troubleshooting
+
+### `update.ps1` shows "NativeCommandError" from git pull
+
+**Symptom:** When running `.\update.ps1` on Windows PowerShell, you see red error output like:
+
+```
+git : From https://github.com/141stfighterwing-collab/WSH
+    + CategoryInfo          : NotSpecified: (String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+```
+
+**Cause:** This is a known PowerShell behavior, not an actual failure. Git writes progress information (like `From https://...`) to **stderr**. PowerShell treats all stderr output from native (non-PowerShell) commands as errors and displays them in red, even when the command succeeds. The update itself completes normally despite the red text.
+
+**Fix:** This was fixed in **v4.1.2** by adding `$ErrorActionPreference = "SilentlyContinue"` to `update.ps1` (matching the behavior already present in `install.ps1`). To get the fix:
+
+```powershell
+git pull origin main
+.\update.ps1
+```
+
+If you're still seeing the error after pulling v4.1.2, you can manually suppress it:
+
+```powershell
+$ErrorActionPreference = "SilentlyContinue"
+.\update.ps1
+```
+
+### Git pull fails with "local changes" or merge conflicts
+
+If `git pull` fails because you have local modifications:
+
+```powershell
+git stash          # Temporarily save your changes
+git pull origin main
+git stash pop      # Restore your changes
+```
+
+Or if you want to discard local changes and reset to upstream:
+
+```powershell
+git fetch origin
+git reset --hard origin/main
+```
+
+### Docker build fails after update
+
+If the Docker image fails to build after pulling new code, try a clean rebuild:
+
+```powershell
+.\update.ps1 -NoCache    # Windows
+./update.sh --no-cache   # Linux/macOS
+```
+
+### Containers start but health check fails
+
+The health check waits 15 seconds after starting containers. Some systems may need more time. Wait 30-60 seconds and check manually:
+
+```bash
+curl http://localhost:8883/api/health
+```
+
+Or check container logs:
+
+```bash
+docker compose logs -f weavenote
+```
+
+### "Already up to date" but version hasn't changed
+
+This means your local code is already at the latest commit. If you expected a new version, verify you're on the `main` branch:
+
+```powershell
+git branch            # Should show * main
+git log --oneline -3  # Check recent commits
+```
 
 ---
 
@@ -616,7 +696,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "4.1.1", "timestamp": "2026-04-10T12:00:00.000Z" }
+{ "status": "healthy", "version": "4.1.2", "timestamp": "2026-04-10T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`
