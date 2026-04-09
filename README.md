@@ -28,6 +28,7 @@ Inspired by [WeaveNote](https://weavenote.com), WSH gives you full control over 
   - [Quick Install (Recommended)](#quick-install-recommended)
   - [Updating WSH (Non-Destructive)](#updating-wsh-non-destructive)
   - [Available URLs](#available-urls)
+  - [Default Login Credentials](#default-login-credentials)
   - [Custom Port](#custom-port)
   - [Include pgAdmin](#include-pgadmin)
   - [Manual Docker Commands](#manual-docker-commands)
@@ -411,6 +412,20 @@ The update script will:
 | **pgAdmin** | http://localhost:5050 | Full PostgreSQL admin UI (requires `-WithPgAdmin` / `--with-pgadmin`) |
 
 **pgAdmin login:** `admin@example.com` / `admin123` (configurable via `PGADMIN_EMAIL` / `PGADMIN_PASSWORD`)
+
+### Default Login Credentials
+
+The following table lists all default credentials created during a fresh WSH deployment. **Change all of these before exposing any service to a network.**
+
+| Service | URL | Username / Email | Password | Configured Via |
+|---------|-----|-------------------|----------|----------------|
+| **WSH App** (admin) | http://localhost:8883 | `admin` | `admin123` | `ADMIN_DEFAULT_USERNAME` / `ADMIN_DEFAULT_PASSWORD` |
+| **WSH App** (email) | http://localhost:8883 | `admin@example.com` | *(same as above)* | `ADMIN_DEFAULT_EMAIL` |
+| **PostgreSQL** | `postgres:5432` *(internal)* | `wsh` | `wsh-secret-pw` | `POSTGRES_USER` / `POSTGRES_PASSWORD` |
+| **DB Viewer** (Adminer) | http://localhost:5682 | *(see PostgreSQL)* | *(see PostgreSQL)* | `POSTGRES_USER` / `POSTGRES_PASSWORD` |
+| **pgAdmin** *(optional)* | http://localhost:5050 | `admin@example.com` | `admin123` | `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` |
+
+> ⚠️ **Security Warning:** The defaults above are for local development and first-run convenience only. Before deploying to any network-accessible environment, you must change at minimum `POSTGRES_PASSWORD`, `JWT_SECRET`, and `ADMIN_DEFAULT_PASSWORD`. The `JWT_SECRET` defaults to `change-me-in-production` — see the [Environment Variables](#environment-variables) table for the full list of security-critical settings.
 
 ### Custom Port
 
