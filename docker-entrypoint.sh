@@ -1,6 +1,6 @@
 #!/bin/sh
 # WSH Docker Entrypoint v3.9.4
-# Handles PostgreSQL connectivity check, first-run DB init, and server startup.
+# Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 
 #set -e  # Disabled: individual errors are handled below to prevent crash loops
@@ -8,6 +8,7 @@
 PRISMA_CLI="node /app/node_modules/prisma/build/index.js"
 SCHEMA_FLAG="--schema=./prisma/schema.prisma"
 MARKER_FILE="/app/tmp/.db-initialized"
+SEED_MARKER="/app/tmp/.admin-seeded"
 
 # ── Pre-flight checks ──────────────────────────────────────────
 if [ ! -f "/app/node_modules/prisma/build/index.js" ]; then
@@ -104,46 +105,111 @@ if [ ! -f "$MARKER_FILE" ]; then
   mkdir -p /app/tmp
   touch "$MARKER_FILE"
   echo "[+] Database initialization complete (marker: $MARKER_FILE)"
+else
+  echo "[+] Database already initialized (skipping schema push)"
+fi
 
-  # Seed default admin user on first run
+# ── Seed default admin user (runs on EVERY startup — idempotent) ──
+# This runs outside the first-run guard so that if the seed failed on a
+# previous start (e.g. DB wasn't ready yet), it will self-heal on restart.
+# It checks whether the admin user already exists before attempting creation.
+if [ ! -f "$SEED_MARKER" ]; then
   echo "[*] Seeding default admin user (if not exists)..."
-  if node -e "
+  SEED_OUTPUT=$(node -e "
+    const bcrypt = require('bcryptjs');
     const { PrismaClient } = require('@prisma/client');
-    const { hashPassword } = require('./src/lib/auth.js');
+
     async function seed() {
       const prisma = new PrismaClient();
       try {
         const username = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
         const email = process.env.ADMIN_DEFAULT_EMAIL || 'admin@example.com';
         const password = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+
+        // Check if admin user already exists (by username)
         const existing = await prisma.user.findUnique({ where: { username } });
         if (existing) {
-          console.log('[seed] Admin user already exists — skipping.');
-          return;
+          console.log('[seed] Admin user already exists (' + existing.username + ', role=' + existing.role + ') — skipping.');
+          return 'exists';
         }
+
+        // Check if admin email is already taken by a different user
         const existingEmail = await prisma.user.findUnique({ where: { email } });
         if (existingEmail) {
-          console.log('[seed] Admin email already in use — skipping.');
-          return;
+          console.log('[seed] Admin email already in use by user ' + existingEmail.username + ' — skipping.');
+          return 'exists';
         }
-        const hashed = await hashPassword(password);
+
+        // Hash password using bcryptjs directly (no src/lib/auth.js needed in Docker)
+        const saltRounds = 12;
+        const hashed = await bcrypt.hash(password, saltRounds);
+
         const admin = await prisma.user.create({
-          data: { username, email, password: hashed, role: 'super-admin', status: 'active' },
-          select: { id: true, username: true, email: true, role: true }
+          data: {
+            username: username,
+            email: email,
+            password: hashed,
+            role: 'super-admin',
+            status: 'active'
+          },
+          select: { id: true, username: true, email: true, role: true, status: true }
         });
-        console.log('[seed] Default admin user created: ' + admin.username + ' (' + admin.role + ')');
+
+        console.log('[seed] Default admin user CREATED:');
+        console.log('[seed]   Username: ' + admin.username);
+        console.log('[seed]   Email: ' + admin.email);
+        console.log('[seed]   Role: ' + admin.role);
+        console.log('[seed]   Status: ' + admin.status);
+        console.log('[seed]   ID: ' + admin.id);
         console.log('[seed] WARNING: Change the default admin password immediately!');
-      } catch(e) { console.error('[seed] Error:', e.message); }
-      finally { await prisma.\$disconnect(); }
+        return 'created';
+      } catch(e) {
+        console.error('[seed] ERROR: ' + e.message);
+        console.error('[seed] Stack: ' + e.stack);
+        return 'error';
+      } finally {
+        await prisma.\$disconnect();
+      }
     }
-    seed();
-  " 2>&1; then
-    echo "[+] Admin seed check complete"
+
+    seed().then(function(result) {
+      process.exit(result === 'error' ? 1 : 0);
+    });
+  " 2>&1)
+  SEED_EXIT=$?
+  echo "$SEED_OUTPUT"
+
+  if [ $SEED_EXIT -eq 0 ]; then
+    # Check if user was created or already existed
+    if echo "$SEED_OUTPUT" | grep -q "CREATED"; then
+      echo "[+] Default admin user seeded successfully"
+    else
+      echo "[+] Admin seed check complete (user already exists or no action needed)"
+    fi
+    # Mark as seeded so we don't re-run on every restart (only needed once)
+    mkdir -p /app/tmp
+    touch "$SEED_MARKER"
   else
-    echo "[!] Admin seed check failed (non-fatal — admin can be created manually via /api/admin/users/register)"
+    echo "[!] Admin seed failed — will retry on next container restart"
+    echo "[!] Check the error above. You can also seed manually via the /api/admin/users/register endpoint."
   fi
 else
-  echo "[+] Database already initialized (skipping schema push)"
+  echo "[+] Admin seed already completed (marker: $SEED_MARKER) — skipping"
+  # Still verify the admin user exists
+  node -e "
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    prisma.user.findFirst({ where: { role: { in: ['admin', 'super-admin'] } }, select: { username: true, role: true } })
+      .then(function(admin) {
+        if (admin) {
+          console.log('[+] Admin user verified: ' + admin.username + ' (role=' + admin.role + ')');
+        } else {
+          console.log('[!] WARNING: No admin user found in database!');
+          console.log('[!] Remove /app/tmp/.admin-seeded and restart to re-seed.');
+        }
+        return prisma.\$disconnect();
+      });
+  " 2>&1
 fi
 
 # ── Verify Prisma client ───────────────────────────────────────

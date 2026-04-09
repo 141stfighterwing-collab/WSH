@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Header button text updated** — The header login button now displays "Login / Sign Up" when no user is authenticated (previously just "Login"), making the registration option discoverable without requiring the user to click the button first.
 - **Register API response format** — The `/api/admin/users/register` response now includes a `token` field in addition to the existing `user` and `message` fields, enabling auto-login. The `message` has been updated to "Registration successful — logged in automatically".
 
+### 🐛 Fixed
+
+- **CRITICAL FIX — Default admin user never seeded in Docker** — The `docker-entrypoint.sh` seed script used `require('./src/lib/auth.js')` to import the password hashing function, but the Next.js standalone Docker build does not include the `src/` directory (only compiled `.next/standalone/` output is copied). This caused the seed to silently fail on every startup, leaving the User table empty. The fix replaces the import with direct usage of `bcryptjs.hash()` which is available as a production dependency in the Docker image.
+- **Seed now runs on every startup** — The admin seed check was previously nested inside the first-run-only block (gated by `.db-initialized` marker). If the seed failed on the first run, it would never retry because the marker was already set. The seed is now gated by its own `.admin-seeded` marker and runs independently of the DB schema push. It also verifies the admin user exists on subsequent starts, and logs a warning if no admin is found.
+- **`prisma/seed.ts` import fixed for Docker compatibility** — The development seed script also imported from `../src/lib/auth`, which would fail in environments where the source tree isn't available. Now uses `bcryptjs` directly.
+
 ---
 
 ## [3.9.3] - 2026-04-09

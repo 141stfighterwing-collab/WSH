@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { hashPassword } from '../src/lib/auth';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -33,8 +33,8 @@ async function main() {
     return;
   }
 
-  // Create the default admin user
-  const hashedPassword = await hashPassword(adminPassword);
+  // Create the default admin user using bcryptjs directly
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   const admin = await prisma.user.create({
     data: {
@@ -58,6 +58,7 @@ async function main() {
   console.log(`[seed]   Username: ${admin.username}`);
   console.log(`[seed]   Email: ${admin.email}`);
   console.log(`[seed]   Role: ${admin.role}`);
+  console.log(`[seed]   Status: ${admin.status}`);
   console.log(`[seed]   ID: ${admin.id}`);
   console.log(`[seed]`);
   console.log(`[seed] ⚠️  IMPORTANT: Change the default admin password immediately after first login!`);
