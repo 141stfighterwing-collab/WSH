@@ -8,9 +8,9 @@ export default function Logo() {
       <Image
         src="/logo.png"
         alt="WSH Logo"
-        width={40}
-        height={40}
-        className="h-10 w-auto rounded-lg shadow-sm"
+        width={64}
+        height={64}
+        className="h-16 w-auto rounded-lg shadow-sm"
         priority
       />
       <span className="text-lg font-black tracking-tight text-foreground hidden sm:inline">

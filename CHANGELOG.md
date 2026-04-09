@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.4] - 2026-04-10
+
+### 🔧 Changed
+
+- **Logo background made transparent** — The WSH logo now has a fully transparent background (previously white/light gray). This was achieved using flood-fill edge detection from all four image edges with a 45-unit color distance threshold, followed by smooth alpha blending on border pixels for clean anti-aliased edges. The logo renders cleanly on any background color or gradient without visible white boxes or halos.
+
+- **Logo resolution increased to 4× (2140×1732)** — The main logo has been upscaled from 535×433 to 2140×1732 pixels using Lanczos resampling for crisp rendering on high-DPI displays and large format display contexts. The favicon has also been upgraded to 180×180px, and a 32×32 favicon.ico has been generated for legacy browser support.
+
+- **Header logo enlarged from 40px to 64px** — The logo in the top-left header has been increased from `h-10` (40px) to `h-16` (64px) height. This makes the logo text and emblem significantly more readable, especially on smaller screens where the WSH text label is hidden (`hidden sm:inline`).
+
+- **Sign-in page logo dramatically enlarged** — The logo on the locked/sign-in overlay has been increased from a max of `28rem × 14rem` to `42rem × 20rem` on large screens. The container now uses responsive sizing: `w-80 h-48` (mobile) → `w-[28rem] h-64` (sm) → `w-[36rem] h-72` (md) → `w-[42rem] h-80` (lg). The background gradient and border have been removed from the container to let the transparent logo blend with the page. The glow effect behind the logo has been expanded (`-inset-6`, `blur-3xl`).
+
+---
+
 ## [4.1.3] - 2026-04-10
 
 ### 🐛 Fixed

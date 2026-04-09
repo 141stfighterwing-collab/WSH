@@ -42,17 +42,17 @@ function LockedOverlay() {
       <div className="text-center max-w-lg animate-fadeIn">
         {/* Large Logo */}
         <div className="relative mb-8">
-          <div className="mx-auto w-72 h-40 sm:w-96 sm:h-52 md:w-[28rem] md:h-56 rounded-2xl overflow-hidden shadow-2xl border border-border/50 bg-gradient-to-br from-pri-600/5 to-transparent">
+          <div className="mx-auto w-80 h-48 sm:w-[28rem] sm:h-64 md:w-[36rem] md:h-72 lg:w-[42rem] lg:h-80 rounded-2xl overflow-hidden shadow-2xl">
             <Image
               src="/logo.png"
               alt="WSH — WeaveNote Self-Hosted"
               fill
-              className="object-contain p-4"
+              className="object-contain"
               priority
             />
           </div>
           {/* Glow effect behind logo */}
-          <div className="absolute -inset-4 bg-pri-600/5 rounded-3xl blur-2xl -z-10" />
+          <div className="absolute -inset-6 bg-pri-600/5 rounded-3xl blur-3xl -z-10" />
         </div>
 
         <h2 className="text-2xl font-bold text-foreground mb-3">
