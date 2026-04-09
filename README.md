@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v4.0.1
+# WSH — WeaveNote Self-Hosted v4.1.0
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -200,9 +200,9 @@ A comprehensive **system administration dashboard** with six distinct sections f
 
 ### 🧠 AI Prompt Library
 
-A comprehensive **prompt management system** for saving, organizing, and quickly accessing reusable AI prompt templates.
+A comprehensive **prompt management system** for saving, organizing, and quickly accessing reusable AI prompt templates, integrated as a dedicated tab in the Note Editor alongside Quick, Notebook, Deep, Code, Project, and Document.
 
-- **Full-screen overlay panel** — Opens as a dedicated full-screen panel via the "Prompts" button in the header toolbar, providing maximum screen space for managing your prompt collection
+- **Editor tab integration** — Accessible via the "AI Prompts" tab in the Note Editor's tab bar, positioned directly alongside the six note type tabs for instant access without leaving the editing context
 - **Create, edit, and delete prompts** — Full CRUD operations with inline editing, title and content fields, and confirmation-free quick actions
 - **8 categories** — Organize prompts by type: General, Writing, Code, Analysis, Creative, Business, Research, Education
 - **Custom tags** — Add comma-separated tags to each prompt for flexible cross-category search and filtering
@@ -616,7 +616,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "4.0.1", "timestamp": "2026-04-10T12:00:00.000Z" }
+{ "status": "healthy", "version": "4.1.0", "timestamp": "2026-04-10T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`

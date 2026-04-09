@@ -18,7 +18,6 @@ import {
   FlaskConical,
   Wifi,
   WifiOff,
-  Sparkles,
 } from 'lucide-react';
 import Logo from './Logo';
 import LoginWidget from './LoginWidget';
@@ -39,7 +38,6 @@ export default function Header() {
     setAdminPanelOpen,
     setMindMapOpen,
     setNotebookOpen,
-    setPromptLibraryOpen,
     searchQuery,
     setSearchQuery,
     user,
@@ -164,7 +162,7 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Map, Notebook, Prompts, Analytics */}
+        {/* Map, Notebook, Analytics */}
         <div className="hidden lg:flex items-center gap-1">
           <button
             onClick={() => setMindMapOpen(true)}
@@ -179,13 +177,6 @@ export default function Header() {
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Notebook</span>
-          </button>
-          <button
-            onClick={() => setPromptLibraryOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Prompts</span>
           </button>
           <button
             onClick={() => setAnalyticsOpen(true)}

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.0] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — JSX syntax error preventing production build** — The `NoteEditor.tsx` status bar section was missing a closing `</div>` tag for the outer status bar container (line 519). This caused Turbopack to fail with "Unexpected token" during every production build, making deployment impossible. The missing `</div>` for the flex container that wraps the engine status indicator and the save/synthesis button group has been added.
+- **CRITICAL FIX — `setActiveNoteId` crash when saving new notes** — The `setActiveNoteId` function was used in the `handleSave` callback (line 169) to associate a newly created note with the editor, but it was never destructured from the Zustand store. This caused a `ReferenceError: setActiveNoteId is not defined` crash every time a user tried to save a new note (clicking Save without an active note). The function is now properly included in the store destructuring.
+- **Dead code cleanup in `page.tsx`** — Removed an unused `loginAnchorEl` reference in the `LockedOverlay` component that was attempting to read from `globalThis.__wshLoginAnchor` (a global variable that was never set anywhere in the codebase). Also removed the unused `setLoginOpen` destructuring from the same component.
+
+### ✨ Verified
+
+- **3 consecutive production builds passed** — Verified the build completes successfully across 3 independent iterations with zero errors after the JSX fix.
+- **All 7 editor tabs render correctly** — Confirmed that Quick, Notebook, Deep, Code, Project, Document, and AI Prompts tabs all render within the NoteEditor component's tab bar. The AI Prompts tab is properly positioned alongside the other note type tabs as requested.
+- **Header navigation buttons functional** — Map, Notebook, and Analytics buttons in the header toolbar are present and correctly styled with the unified `text-muted-foreground hover:text-foreground hover:bg-secondary` visual language.
+- **Login/Sign Up widget accessible** — The Login button in the header properly opens the LoginWidget popover with tabbed Login/Sign Up modes.
+- **Admin button visibility gated by role** — The Admin panel button only renders for users with `admin` or `super-admin` roles, as verified by the `isAdmin` computed property in `Header.tsx`.
+- **DB health indicator polling** — The header's green/red DB status dot polls `/api/health` every 30 seconds and displays connection status with latency information.
+- **App screenshots captured** — Generated screenshots showing the admin-logged-in state with the AI Prompts tab active and the Quick note editor tab active.
+
+### 📝 Documentation
+
+- Updated version references to 4.1.0 across package.json
+- Updated CHANGELOG.md with v4.1.0 release notes
+- README reflects current feature set including AI Prompt Library as editor tab
+
+---
+
 ## [4.0.1] - 2026-04-10
 
 ### 🔧 Changed

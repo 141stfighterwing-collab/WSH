@@ -111,10 +111,6 @@ interface WSHState {
   dbViewerOpen: boolean;
   setDbViewerOpen: (open: boolean) => void;
 
-  // Prompt Library
-  promptLibraryOpen: boolean;
-  setPromptLibraryOpen: (open: boolean) => void;
-
   // User
   user: UserState;
   setUser: (user: Partial<UserState>) => void;
@@ -271,10 +267,6 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   // DB Viewer
   dbViewerOpen: false,
   setDbViewerOpen: (open) => set({ dbViewerOpen: open }),
-
-  // Prompt Library
-  promptLibraryOpen: false,
-  setPromptLibraryOpen: (open) => set({ promptLibraryOpen: open }),
 
   // User
   user: defaultUser,

@@ -31,14 +31,16 @@ import { useWSHStore, type NoteType } from '@/store/wshStore';
 import CodeEditor from './editors/CodeEditor';
 import ProjectEditor from './editors/ProjectEditor';
 import DocumentEditor from './editors/DocumentEditor';
+import PromptLibrary from './PromptLibrary';
 
-const NOTE_TYPES: { type: NoteType; label: string }[] = [
+const NOTE_TYPES: { type: NoteType | 'ai-prompts'; label: string }[] = [
   { type: 'quick', label: 'Quick' },
   { type: 'notebook', label: 'Notebook' },
   { type: 'deep', label: 'Deep' },
   { type: 'code', label: 'Code' },
   { type: 'project', label: 'Project' },
   { type: 'document', label: 'Document' },
+  { type: 'ai-prompts', label: 'AI Prompts' },
 ];
 
 type SynthesisMode = 'summarize' | 'expand' | 'improve' | 'tags' | 'outline';
@@ -64,6 +66,7 @@ export default function NoteEditor() {
     addEditorTag,
     removeEditorTag,
     activeNoteId,
+    setActiveNoteId,
     addNote,
     updateNote,
     setEditorRawContent,
@@ -302,7 +305,8 @@ export default function NoteEditor() {
         />
       </div>
 
-      {/* Toolbar */}
+      {/* Toolbar — hidden for AI Prompts tab */}
+      {activeNoteType !== 'ai-prompts' && (
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/50 overflow-x-auto">
         {/* Font selector */}
         <select className="bg-transparent text-xs text-muted-foreground px-1.5 py-1 rounded-md hover:bg-secondary focus:outline-none cursor-pointer">
@@ -433,9 +437,14 @@ export default function NoteEditor() {
           <ImageIcon className="w-3.5 h-3.5" />
         </button>
       </div>
+      )}
 
       {/* Content Editor — Specialized per note type */}
-      {activeNoteType === 'code' ? (
+      {activeNoteType === 'ai-prompts' ? (
+        <div className="h-[500px] overflow-hidden">
+          <PromptLibrary />
+        </div>
+      ) : activeNoteType === 'code' ? (
         <CodeEditor
           title={editorTitle}
           setTitle={setEditorTitle}
@@ -469,7 +478,8 @@ export default function NoteEditor() {
         </div>
       )}
 
-      {/* Hashtags */}
+      {/* Hashtags — hidden for AI Prompts tab */}
+      {activeNoteType !== 'ai-prompts' && (
       <div className="px-3 pb-2">
         <div
           onClick={() => tagInputRef.current?.focus()}
@@ -503,8 +513,10 @@ export default function NoteEditor() {
           />
         </div>
       </div>
+      )}
 
-      {/* Status Bar */}
+      {/* Status Bar — hidden for AI Prompts tab */}
+      {activeNoteType !== 'ai-prompts' && (
       <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-t border-border/30">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-muted-foreground">
@@ -578,6 +590,7 @@ export default function NoteEditor() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
