@@ -49,161 +49,182 @@ function safeTags(tags: unknown): string[] {
 
 /** Extract all image URLs from note content (markdown, HTML, raw URLs) */
 function extractImages(content: string): string[] {
-  const images: string[] = [];
+  try {
+    const images: string[] = [];
+    const safeContent = safeString(content);
 
-  // HTML <img src="...">
-  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
-  let m;
-  while ((m = imgRegex.exec(content)) !== null) {
-    if (m[1] && !images.includes(m[1])) images.push(m[1]);
+    // HTML <img src="...">
+    const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+    let m;
+    while ((m = imgRegex.exec(safeContent)) !== null) {
+      if (m[1] && !images.includes(m[1])) images.push(m[1]);
+    }
+
+    // Markdown ![alt](url)
+    const mdImgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+    while ((m = mdImgRegex.exec(safeContent)) !== null) {
+      if (m[1] && !images.includes(m[1])) images.push(m[1]);
+    }
+
+    // Bare image URLs (ending in image extensions)
+    const urlRegex = /(?:https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|avif))/gi;
+    while ((m = urlRegex.exec(safeContent)) !== null) {
+      if (!images.includes(m[0])) images.push(m[0]);
+    }
+
+    return images;
+  } catch {
+    return [];
   }
-
-  // Markdown ![alt](url)
-  const mdImgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
-  while ((m = mdImgRegex.exec(content)) !== null) {
-    if (m[1] && !images.includes(m[1])) images.push(m[1]);
-  }
-
-  // Bare image URLs (ending in image extensions)
-  const urlRegex = /(?:https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|avif))/gi;
-  while ((m = urlRegex.exec(content)) !== null) {
-    if (!images.includes(m[0])) images.push(m[0]);
-  }
-
-  return images;
 }
 
 /** Extract all URLs from content that are NOT image URLs */
 function extractLinks(content: string): { url: string; text: string }[] {
-  const links: { url: string; text: string }[] = [];
+  try {
+    const links: { url: string; text: string }[] = [];
+    const safeContent = safeString(content);
+    let m;
 
-  // Markdown [text](url)
-  const mdLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-  let m;
-  while ((m = mdLinkRegex.exec(content)) !== null) {
-    const url = m[2];
-    const text = m[1];
-    if (!url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)$/i)) {
-      links.push({ url, text });
+    // Markdown [text](url)
+    const mdLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    while ((m = mdLinkRegex.exec(safeContent)) !== null) {
+      const url = m[2];
+      const text = m[1];
+      if (!url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)$/i)) {
+        links.push({ url, text });
+      }
     }
-  }
 
-  // HTML <a href="url">text</a>
-  const htmlLinkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi;
-  while ((m = htmlLinkRegex.exec(content)) !== null) {
-    const url = m[1];
-    const text = m[2];
-    if (!url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)$/i)) {
-      links.push({ url, text });
+    // HTML <a href="url">text</a>
+    const htmlLinkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi;
+    while ((m = htmlLinkRegex.exec(safeContent)) !== null) {
+      const url = m[1];
+      const text = m[2];
+      if (!url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)$/i)) {
+        links.push({ url, text });
+      }
     }
-  }
 
-  // Bare URLs (not images) — collect image URLs from content first to exclude them
-  const imgUrls = new Set<string>();
-  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
-  let imgMatch;
-  while ((imgMatch = imgRegex.exec(content)) !== null) {
-    if (imgMatch[1]) imgUrls.add(imgMatch[1]);
-  }
-  const mdImgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
-  while ((imgMatch = mdImgRegex.exec(content)) !== null) {
-    if (imgMatch[1]) imgUrls.add(imgMatch[1]);
-  }
-
-  const bareUrlRegex = /(?:https?:\/\/[^\s<>"')\]]+)(?![^\s]*\.(?:jpg|jpeg|png|gif|webp|svg|bmp|avif))/gi;
-  while ((m = bareUrlRegex.exec(content)) !== null) {
-    const url = m[0];
-    if (!links.some((l) => l.url === url) && !imgUrls.has(url)) {
-      links.push({ url, text: '' });
+    // Bare URLs (not images)
+    const imgUrls = new Set<string>();
+    const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+    let imgMatch;
+    while ((imgMatch = imgRegex.exec(safeContent)) !== null) {
+      if (imgMatch[1]) imgUrls.add(imgMatch[1]);
     }
-  }
+    const mdImgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+    while ((imgMatch = mdImgRegex.exec(safeContent)) !== null) {
+      if (imgMatch[1]) imgUrls.add(imgMatch[1]);
+    }
 
-  return links;
+    const bareUrlRegex = /(?:https?:\/\/[^\s<>"')\]]+)(?![^\s]*\.(?:jpg|jpeg|png|gif|webp|svg|bmp|avif))/gi;
+    while ((m = bareUrlRegex.exec(safeContent)) !== null) {
+      const url = m[0];
+      if (!links.some((l) => l.url === url) && !imgUrls.has(url)) {
+        links.push({ url, text: '' });
+      }
+    }
+
+    return links;
+  } catch {
+    return [];
+  }
 }
 
-/** Extract quote blocks from content (markdown > quotes, HTML blockquotes, "quoted" text) */
+/** Extract quote blocks from content */
 function extractQuotes(content: string): string[] {
-  const quotes: string[] = [];
+  try {
+    const quotes: string[] = [];
+    const safeContent = safeString(content);
 
-  // HTML blockquotes
-  const blockquoteRegex = /<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi;
-  let m;
-  while ((m = blockquoteRegex.exec(content)) !== null) {
-    const text = m[1].replace(/<[^>]+>/g, '').trim();
-    if (text) quotes.push(text);
-  }
+    // HTML blockquotes
+    const blockquoteRegex = /<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi;
+    let m;
+    while ((m = blockquoteRegex.exec(safeContent)) !== null) {
+      const text = m[1].replace(/<[^>]+>/g, '').trim();
+      if (text) quotes.push(text);
+    }
 
-  // Markdown blockquotes (> at start of line)
-  const lines = content.split('\n');
-  let currentQuote = '';
-  let inQuote = false;
-  for (const line of lines) {
-    const trimmed = line.replace(/^>\s?/, '').trim();
-    if (line.match(/^>\s?/) || (inQuote && line.trim() === '')) {
-      if (line.match(/^>\s?/)) {
-        inQuote = true;
-        currentQuote += (currentQuote ? ' ' : '') + trimmed;
-      }
-    } else {
-      if (inQuote && currentQuote) {
-        const clean = currentQuote.replace(/<[^>]+>/g, '').trim();
-        if (clean) quotes.push(clean);
-        currentQuote = '';
-        inQuote = false;
+    // Markdown blockquotes (> at start of line)
+    const lines = safeContent.split('\n');
+    let currentQuote = '';
+    let inQuote = false;
+    for (const line of lines) {
+      const trimmed = line.replace(/^>\s?/, '').trim();
+      if (line.match(/^>\s?/) || (inQuote && line.trim() === '')) {
+        if (line.match(/^>\s?/)) {
+          inQuote = true;
+          currentQuote += (currentQuote ? ' ' : '') + trimmed;
+        }
+      } else {
+        if (inQuote && currentQuote) {
+          const clean = currentQuote.replace(/<[^>]+>/g, '').trim();
+          if (clean) quotes.push(clean);
+          currentQuote = '';
+          inQuote = false;
+        }
       }
     }
-  }
-  if (inQuote && currentQuote) {
-    const clean = currentQuote.replace(/<[^>]+>/g, '').trim();
-    if (clean) quotes.push(clean);
-  }
+    if (inQuote && currentQuote) {
+      const clean = currentQuote.replace(/<[^>]+>/g, '').trim();
+      if (clean) quotes.push(clean);
+    }
 
-  return quotes;
+    return quotes;
+  } catch {
+    return [];
+  }
 }
 
 /** Extract first thumbnail image from content */
 function extractThumbnail(content: string): string | null {
-  const images = extractImages(content);
-  return images.length > 0 ? images[0] : null;
+  try {
+    const images = extractImages(safeString(content));
+    return images.length > 0 ? images[0] : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Strip images, links, and quotes from content for description text */
 function getDescriptionText(content: string): string {
-  let text = content;
-  // Remove HTML tags
-  text = text.replace(/<[^>]+>/g, '');
-  // Remove markdown image syntax
-  text = text.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
-  // Remove markdown link syntax (keep text)
-  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  // Remove markdown blockquotes
-  text = text.replace(/^>\s?.*/gm, '');
-  // Remove bare URLs
-  text = text.replace(/https?:\/\/[^\s]+/g, '');
-  // Remove markdown headers
-  text = text.replace(/^#{1,6}\s+/gm, '');
-  // Clean up whitespace
-  text = text.replace(/\n{3,}/g, '\n\n').trim();
-  return text;
+  try {
+    let text = safeString(content);
+    text = text.replace(/<[^>]+>/g, '');
+    text = text.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
+    text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    text = text.replace(/^>\s?.*/gm, '');
+    text = text.replace(/https?:\/\/[^\s]+/g, '');
+    text = text.replace(/^#{1,6}\s+/gm, '');
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    return text;
+  } catch {
+    return '';
+  }
 }
 
 /** Format relative date for sidebar cards */
 function formatRelativeDate(dateStr: string): { label: string; isRecent: boolean } {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return { label: 'Unknown', isRecent: false };
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return { label: 'Just now', isRecent: true };
-  if (diffMins < 60) return { label: `${diffMins}m ago`, isRecent: true };
-  if (diffHours < 24 && date.getDate() === now.getDate()) {
-    return { label: `Today, ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`, isRecent: true };
+    if (diffMins < 1) return { label: 'Just now', isRecent: true };
+    if (diffMins < 60) return { label: `${diffMins}m ago`, isRecent: true };
+    if (diffHours < 24 && date.getDate() === now.getDate()) {
+      return { label: `Today, ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`, isRecent: true };
+    }
+    if (diffDays < 2) return { label: 'Yesterday', isRecent: false };
+    if (diffDays < 7) return { label: `${diffDays}d ago`, isRecent: false };
+    return { label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), isRecent: false };
+  } catch {
+    return { label: 'Unknown', isRecent: false };
   }
-  if (diffDays < 2) return { label: 'Yesterday', isRecent: false };
-  if (diffDays < 7) return { label: `${diffDays}d ago`, isRecent: false };
-  return { label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), isRecent: false };
 }
 
 /** Sanitize HTML content for safe rendering */
@@ -230,20 +251,11 @@ function getDomain(url: string): string {
     const hostname = new URL(url).hostname;
     return hostname.replace(/^www\./, '');
   } catch {
-    return url;
+    return String(url);
   }
 }
 
-// ─── Main NotebookView Component ────────────────────────────────
-
 // ─── Error Boundary for individual pages ──────────────────────
-function ErrorCatch({ children }: { children: React.ReactNode }) {
-  return (
-    <ErrorBoundary>
-      {children}
-    </ErrorBoundary>
-  );
-}
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -271,7 +283,7 @@ class ErrorBoundary extends React.Component<
             This note contains content that could not be displayed. The content may be malformed or corrupted.
           </p>
           <p className="text-[9px] text-muted-foreground/50 font-mono break-all">
-            {this.state.error?.message}
+            {this.state.error?.message || 'Unknown error'}
           </p>
         </div>
       );
@@ -280,16 +292,105 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+function ErrorCatch({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+// ─── Main NotebookView Component ────────────────────────────────
+// CRITICAL: ALL hooks must be called BEFORE any conditional returns.
+// React requires the same number of hooks in the same order on every render.
+
 export default function NotebookView() {
+  // ── ALL HOOKS FIRST — no conditional returns before this point ──
   const { notebookOpen, setNotebookOpen, notes } = useWSHStore();
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [filterType, setFilterType] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
 
+  // Sort notes — always computed, even when closed (trivial cost)
+  const sortedNotes = useMemo(() => {
+    try {
+      return (notes || [])
+        .filter((n) => n && !n.isDeleted)
+        .sort((a, b) => {
+          const aTime = new Date(a.createdAt).getTime() || 0;
+          const bTime = new Date(b.createdAt).getTime() || 0;
+          return bTime - aTime;
+        });
+    } catch {
+      return [];
+    }
+  }, [notes]);
+
+  // Filter notes by type
+  const filteredNotes = useMemo(() => {
+    try {
+      if (!filterType) return sortedNotes;
+      return sortedNotes.filter((n) => n && n.type === filterType);
+    } catch {
+      return sortedNotes;
+    }
+  }, [sortedNotes, filterType]);
+
+  // Collect all unique types for filter
+  const noteTypes = useMemo(() => {
+    try {
+      const types = new Set(sortedNotes.map((n) => n && n.type).filter(Boolean));
+      return Array.from(types);
+    } catch {
+      return [];
+    }
+  }, [sortedNotes]);
+
+  // Scroll handler
+  useEffect(() => {
+    if (!notebookOpen) return;
+    const container = contentRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      try {
+        const pages = container.querySelectorAll('[data-notebook-page]');
+        let currentIdx = 0;
+        pages.forEach((page, idx) => {
+          const rect = page.getBoundingClientRect();
+          if (rect.top < window.innerHeight / 2) {
+            currentIdx = idx;
+          }
+        });
+        setActiveIndex(currentIdx);
+      } catch { /* ignore scroll errors */ }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [notebookOpen]);
+
+  // Reset active index when filter changes
+  useEffect(() => {
+    try {
+      setActiveIndex(filteredNotes.length > 0 ? 0 : -1);
+    } catch { /* ignore */ }
+  }, [filterType]);
+
+  const scrollToNote = useCallback((index: number) => {
+    setActiveIndex(index);
+    try {
+      const el = document.getElementById(`notebook-page-${index}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // ── NOW we can do conditional rendering ──
   if (!notebookOpen) return null;
 
-  // Top-level error fallback for the entire notebook view
   if (hasError) {
     return (
       <div className="fixed inset-0 z-[105] flex items-center justify-center animate-fadeIn">
@@ -309,56 +410,7 @@ export default function NotebookView() {
     );
   }
 
-  const sortedNotes = useMemo(() => {
-    return notes
-      .filter((n) => !n.isDeleted)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [notes]);
-
-  const filteredNotes = useMemo(() => {
-    if (!filterType) return sortedNotes;
-    return sortedNotes.filter((n) => n.type === filterType);
-  }, [sortedNotes, filterType]);
-
-  const scrollToNote = (index: number) => {
-    setActiveIndex(index);
-    const el = document.getElementById(`notebook-page-${index}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  useEffect(() => {
-    if (!notebookOpen) return;
-    const container = contentRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const pages = container.querySelectorAll('[data-notebook-page]');
-      let currentIdx = 0;
-      pages.forEach((page, idx) => {
-        const rect = page.getBoundingClientRect();
-        if (rect.top < window.innerHeight / 2) {
-          currentIdx = idx;
-        }
-      });
-      setActiveIndex(currentIdx);
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [notebookOpen]);
-
-  // Reset active index when filter changes
-  useEffect(() => {
-    setActiveIndex(filteredNotes.length > 0 ? 0 : -1);
-  }, [filterType]);
-
-  // Collect all unique types for filter
-  const noteTypes = useMemo(() => {
-    const types = new Set(sortedNotes.map((n) => n.type));
-    return Array.from(types);
-  }, [sortedNotes]);
+  const activeNote = filteredNotes[activeIndex] || null;
 
   return (
     <div className="fixed inset-0 z-[105] flex animate-fadeIn">
@@ -398,7 +450,7 @@ export default function NotebookView() {
           </button>
           {noteTypes.map((type) => (
             <button
-              key={type}
+              key={String(type)}
               onClick={() => setFilterType(filterType === type ? null : type)}
               className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
                 filterType === type
@@ -407,7 +459,7 @@ export default function NotebookView() {
               }`}
             >
               {typeIcons[type]}
-              {type}
+              {String(type)}
             </button>
           ))}
         </div>
@@ -436,7 +488,7 @@ export default function NotebookView() {
           ) : (
             filteredNotes.map((note, index) => (
               <SidebarCard
-                key={note.id}
+                key={String(note.id)}
                 note={note}
                 index={index}
                 isActive={activeIndex === index}
@@ -455,11 +507,11 @@ export default function NotebookView() {
             <span className="micro-label text-pri-400 shrink-0">Notebook</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
             <span className="text-xs text-foreground font-semibold truncate">
-              {filteredNotes[activeIndex]?.title || 'Browse notes'}
+              {activeNote ? safeString(activeNote.title || 'Untitled') : 'Browse notes'}
             </span>
-            {filteredNotes[activeIndex] && (
-              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${typeColors[filteredNotes[activeIndex].type] || ''}`}>
-                {filteredNotes[activeIndex].type}
+            {activeNote && (
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${typeColors[activeNote.type] || ''}`}>
+                {String(activeNote.type)}
               </span>
             )}
           </div>
@@ -482,7 +534,7 @@ export default function NotebookView() {
           ) : (
             <div className="max-w-3xl mx-auto px-8 py-8">
               {filteredNotes.map((note, index) => (
-                <ErrorCatch key={note.id}>
+                <ErrorCatch key={String(note.id)}>
                   <NotebookPage
                     note={note}
                     index={index}
@@ -511,11 +563,15 @@ function SidebarCard({
   isActive: boolean;
   onClick: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
+
+  // ALL hooks before any conditional logic
+  const safeTitle = useMemo(() => safeString(note.title || 'Untitled'), [note.title]);
+  const safeType = useMemo(() => String(note.type || 'quick'), [note.type]);
   const thumbnail = useMemo(() => extractThumbnail(safeString(note.rawContent || note.content)), [note.rawContent, note.content]);
   const description = useMemo(() => getDescriptionText(safeString(note.rawContent || note.content)), [note.rawContent, note.content]);
-  const relativeDate = useMemo(() => formatRelativeDate(note.createdAt), [note.createdAt]);
+  const relativeDate = useMemo(() => formatRelativeDate(safeString(note.createdAt)), [note.createdAt]);
   const safeNoteTags = useMemo(() => safeTags(note.tags), [note.tags]);
-  const [imgError, setImgError] = useState(false);
 
   return (
     <button
@@ -532,9 +588,9 @@ function SidebarCard({
           <span className={`text-[9px] font-bold uppercase tracking-wider ${relativeDate.isRecent ? 'text-pri-400' : 'text-muted-foreground/50'}`}>
             {relativeDate.label}
           </span>
-          <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${typeColors[note.type] || ''}`}>
-            {typeIcons[note.type]}
-            {note.type}
+          <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${typeColors[safeType] || ''}`}>
+            {typeIcons[safeType]}
+            {safeType}
           </span>
         </div>
 
@@ -542,7 +598,7 @@ function SidebarCard({
         <p className={`text-[11px] font-bold leading-tight mb-1.5 truncate ${
           isActive ? 'text-foreground' : 'text-foreground/80 group-hover:text-foreground'
         }`}>
-          {note.title || 'Untitled'}
+          {safeTitle}
         </p>
 
         {/* Content row: description + optional thumbnail */}
@@ -562,7 +618,7 @@ function SidebarCard({
 
           {/* Description */}
           <p className="text-[10px] text-muted-foreground/60 leading-relaxed line-clamp-3 min-w-0">
-            {description.slice(0, 150) || 'No description'}
+            {String(description).slice(0, 150) || 'No description'}
           </p>
         </div>
 
@@ -571,10 +627,10 @@ function SidebarCard({
           <div className="flex flex-wrap gap-1 mt-2">
             {safeNoteTags.slice(0, 3).map((tag) => (
               <span
-                key={tag}
+                key={String(tag)}
                 className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-pri-500/10 text-pri-400/80"
               >
-                {tag}
+                {String(tag)}
               </span>
             ))}
             {safeNoteTags.length > 3 && (
@@ -641,7 +697,7 @@ function QuoteBlock({ text }: { text: string }) {
             Quote
           </span>
           <p className="text-sm text-foreground/75 leading-relaxed italic">
-            &ldquo;{text}&rdquo;
+            &ldquo;{safeString(text)}&rdquo;
           </p>
         </div>
       </div>
@@ -653,20 +709,22 @@ function QuoteBlock({ text }: { text: string }) {
 
 function LinkCard({ url, text }: { url: string; text: string }) {
   const [favicon, setFavicon] = useState<string | null>(null);
-  const domain = getDomain(url);
+  const safeUrl = safeString(url);
+  const safeText = safeString(text);
+  const domain = getDomain(safeUrl);
 
   useEffect(() => {
     try {
-      const u = new URL(url);
+      const u = new URL(safeUrl);
       setFavicon(`https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`);
     } catch {
       setFavicon(null);
     }
-  }, [url]);
+  }, [safeUrl]);
 
   return (
     <a
-      href={url}
+      href={safeUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="my-3 flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/20 hover:bg-secondary/50 hover:border-pri-500/20 transition-all duration-200 group/link no-underline"
@@ -684,7 +742,7 @@ function LinkCard({ url, text }: { url: string; text: string }) {
       {/* Link Info */}
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-semibold text-foreground/80 group-hover/link:text-pri-400 truncate transition-colors">
-          {text || domain}
+          {safeText || domain}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className="text-[9px] text-muted-foreground/50 truncate">{domain}</span>
@@ -701,10 +759,10 @@ function DesignNoteBox({ label, content }: { label: string; content: string }) {
   return (
     <div className="my-4 p-4 rounded-xl bg-pri-50/30 dark:bg-pri-900/10 border border-pri-500/15">
       <span className="text-[8px] font-black uppercase tracking-widest text-pri-400/70 mb-2 block">
-        {label}
+        {safeString(label)}
       </span>
       <p className="text-sm text-foreground/65 leading-relaxed italic">
-        {content}
+        {safeString(content)}
       </p>
     </div>
   );
@@ -713,70 +771,91 @@ function DesignNoteBox({ label, content }: { label: string; content: string }) {
 // ─── Notebook Page Component ───────────────────────────────────
 
 function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLast: boolean }) {
+  // ALL hooks before any conditional logic
+  const safeTitle = useMemo(() => safeString(note.title || 'Untitled Note'), [note.title]);
+  const safeType = useMemo(() => String(note.type || 'quick'), [note.type]);
+
   const rawContent = useMemo(() => {
     try { return safeString(note.rawContent || note.content); }
     catch { return ''; }
   }, [note.rawContent, note.content]);
-  const safeNoteTags = useMemo(() => { try { return safeTags(note.tags); } catch { return []; } }, [note.tags]);
-  const images = useMemo(() => { try { return extractImages(rawContent); } catch { return []; } }, [rawContent]);
-  const links = useMemo(() => { try { return extractLinks(rawContent); } catch { return []; } }, [rawContent]);
-  const quotes = useMemo(() => { try { return extractQuotes(rawContent); } catch { return []; } }, [rawContent]);
+
+  const safeNoteTags = useMemo(() => {
+    try { return safeTags(note.tags); } catch { return []; }
+  }, [note.tags]);
+
+  const images = useMemo(() => {
+    try { return extractImages(rawContent); } catch { return []; }
+  }, [rawContent]);
+
+  const links = useMemo(() => {
+    try { return extractLinks(rawContent); } catch { return []; }
+  }, [rawContent]);
+
+  const quotes = useMemo(() => {
+    try { return extractQuotes(rawContent); } catch { return []; }
+  }, [rawContent]);
 
   // Clean the main content by removing images, quotes, and standalone links
   const cleanContent = useMemo(() => {
     try {
       let html = rawContent;
-      // Remove blockquote HTML
       html = html.replace(/<blockquote[^>]*>[\s\S]*?<\/blockquote>/gi, '');
-      // Remove img tags
       html = html.replace(/<img[^>]*>/gi, '');
-      // Remove markdown images
       html = html.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
-      // Remove markdown quotes
       html = html.replace(/^>\s?.*$/gm, '');
-      // Remove markdown links but keep text
       html = html.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-      // Remove HTML links but keep text
       html = html.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
-      // Clean up
       html = html.replace(/\n{3,}/g, '\n\n').trim();
       return html;
     } catch {
-      return rawContent;
+      return '';
     }
   }, [rawContent]);
 
   // Detect "design note" style patterns in content
   const designNotes = useMemo(() => {
-    const notes: { label: string; content: string }[] = [];
-    // Look for patterns like "DESIGN NOTE" followed by quote
-    const pattern = /(?:DESIGN\s+NOTE|NOTE|INSIGHT|THOUGHT)[:\s]+(?:["""]|&ldquo;)?([\s\S]*?)(?:["""]|&rdquo;|$)/gi;
-    let m;
-    while ((m = pattern.exec(rawContent)) !== null) {
-      const text = m[1].replace(/<[^>]+>/g, '').trim().slice(0, 300);
-      if (text.length > 10) {
-        notes.push({ label: m[0].match(/DESIGN\s+NOTE/i) ? 'Design Note' : 'Note', content: text });
+    try {
+      const dnNotes: { label: string; content: string }[] = [];
+      const pattern = /(?:DESIGN\s+NOTE|NOTE|INSIGHT|THOUGHT)[:\s]+(?:[""\u201C\u201D]|&ldquo;)?([\s\S]*?)(?:[""\u201C\u201D]|&rdquo;|$)/gi;
+      let m;
+      while ((m = pattern.exec(rawContent)) !== null) {
+        const text = m[1].replace(/<[^>]+>/g, '').trim().slice(0, 300);
+        if (text.length > 10) {
+          dnNotes.push({
+            label: m[0].match(/DESIGN\s+NOTE/i) ? 'Design Note' : 'Note',
+            content: text,
+          });
+        }
       }
+      return dnNotes;
+    } catch {
+      return [];
     }
-    return notes;
   }, [rawContent]);
 
-  const createdDate = new Date(note.createdAt).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const createdDate = useMemo(() => {
+    try {
+      return new Date(note.createdAt).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Unknown date';
+    }
+  }, [note.createdAt]);
 
   return (
     <div id={`notebook-page-${index}`} data-notebook-page className="animate-fadeIn">
       {/* Metadata Bar */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || ''}`}>
-          {typeIcons[note.type]}
-          {note.type}
+        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${typeColors[safeType] || ''}`}>
+          {typeIcons[safeType]}
+          {safeType}
         </span>
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
           <Calendar className="w-3 h-3" />
@@ -786,7 +865,7 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
 
       {/* Title */}
       <h2 className="text-2xl font-extrabold text-foreground mb-5 leading-tight tracking-tight">
-        {note.title || 'Untitled Note'}
+        {safeTitle}
       </h2>
 
       {/* Image Gallery */}
@@ -798,7 +877,7 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
             'grid-cols-2 lg:grid-cols-3'
           }`}>
             {images.slice(0, 6).map((src, i) => (
-              <ImageThumbnail key={`${src}-${i}`} src={src} alt={note.title || 'Note image'} />
+              <ImageThumbnail key={`img-${i}-${String(src).slice(0, 40)}`} src={String(src)} alt={safeTitle} />
             ))}
           </div>
           {images.length > 6 && (
@@ -820,13 +899,13 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
       )}
 
       {/* Design Note Boxes */}
-      {designNotes.length > 0 && designNotes.map((note, i) => (
-        <DesignNoteBox key={`dn-${i}`} label={note.label} content={note.content} />
+      {designNotes.length > 0 && designNotes.map((dn, i) => (
+        <DesignNoteBox key={`dn-${i}`} label={dn.label} content={dn.content} />
       ))}
 
       {/* Quote Blocks */}
       {quotes.length > 0 && quotes.map((quote, i) => (
-        <QuoteBlock key={`q-${i}`} text={quote} />
+        <QuoteBlock key={`q-${i}`} text={String(quote)} />
       ))}
 
       {/* Link Cards */}
@@ -840,7 +919,7 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
           </div>
           <div className="space-y-2">
             {links.slice(0, 10).map((link, i) => (
-              <LinkCard key={`l-${i}`} url={link.url} text={link.text} />
+              <LinkCard key={`l-${i}`} url={String(link.url)} text={String(link.text)} />
             ))}
           </div>
           {links.length > 10 && (
@@ -857,11 +936,11 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
           <Tag className="w-3 h-3 text-muted-foreground/30" />
           {safeNoteTags.map((tag) => (
             <span
-              key={tag}
+              key={String(tag)}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-pri-500/10 text-pri-400"
             >
               <Hash className="w-2 h-2" />
-              {tag}
+              {String(tag)}
             </span>
           ))}
         </div>
