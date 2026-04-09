@@ -22,6 +22,7 @@ const PUBLIC_PATHS = [
   '/api/db-test',
   '/api/admin/users/login',
   '/api/admin/users/register',
+  '/api/admin/users/verify',
   '/api/graph',
 ];
 

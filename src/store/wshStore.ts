@@ -275,6 +275,9 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   })),
   logoutUser: () => {
     set({ user: { ...defaultUser } });
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('wsh-auth');
+    }
     get().saveToLocalStorage();
   },
   aiUsageCount: 0,
@@ -284,7 +287,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  // Persistence (BUG-014 fix: do NOT persist user auth state to localStorage)
+  // Persistence — user auth is stored in a separate key for session persistence
   saveToLocalStorage: () => {
     const state = get();
     const toSave = {
@@ -293,12 +296,22 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       theme: state.theme,
       darkMode: state.darkMode,
       viewMode: state.viewMode,
-      // user state intentionally excluded from localStorage
-      // auth is managed via JWT token from server
       aiUsageCount: state.aiUsageCount,
     };
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      // Persist auth session separately
+      if (state.user.isLoggedIn && state.user.token) {
+        localStorage.setItem('wsh-auth', JSON.stringify({
+          isLoggedIn: true,
+          username: state.user.username,
+          email: state.user.email,
+          token: state.user.token,
+          role: state.user.role,
+        }));
+      } else {
+        localStorage.removeItem('wsh-auth');
+      }
     }
   },
   loadFromLocalStorage: () => {
@@ -318,11 +331,30 @@ export const useWSHStore = create<WSHState>((set, get) => ({
           document.documentElement.classList.toggle('dark', data.darkMode);
         }
         if (data.viewMode) set({ viewMode: data.viewMode });
-        // BUG-014 fix: do NOT restore user auth state from localStorage
-        // User must log in via the login API to get a valid JWT token
         if (typeof data.aiUsageCount === 'number') set({ aiUsageCount: data.aiUsageCount });
       } catch {
         console.error('Failed to load WSH state from localStorage');
+      }
+    }
+    // Restore auth session from separate storage key
+    const authSaved = localStorage.getItem('wsh-auth');
+    if (authSaved) {
+      try {
+        const auth = JSON.parse(authSaved);
+        if (auth && auth.token) {
+          set({
+            user: {
+              isLoggedIn: true,
+              username: auth.username || '',
+              email: auth.email || '',
+              token: auth.token,
+              role: auth.role || 'user',
+            },
+          });
+        }
+      } catch {
+        console.error('Failed to load auth state from localStorage');
+        localStorage.removeItem('wsh-auth');
       }
     }
   },

@@ -98,11 +98,22 @@ function extractLinks(content: string): { url: string; text: string }[] {
     }
   }
 
-  // Bare URLs (not images)
+  // Bare URLs (not images) — collect image URLs from content first to exclude them
+  const imgUrls = new Set<string>();
+  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let imgMatch;
+  while ((imgMatch = imgRegex.exec(content)) !== null) {
+    if (imgMatch[1]) imgUrls.add(imgMatch[1]);
+  }
+  const mdImgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+  while ((imgMatch = mdImgRegex.exec(content)) !== null) {
+    if (imgMatch[1]) imgUrls.add(imgMatch[1]);
+  }
+
   const bareUrlRegex = /(?:https?:\/\/[^\s<>"')\]]+)(?![^\s]*\.(?:jpg|jpeg|png|gif|webp|svg|bmp|avif))/gi;
   while ((m = bareUrlRegex.exec(content)) !== null) {
     const url = m[0];
-    if (!links.some((l) => l.url === url) && !images.includes(url)) {
+    if (!links.some((l) => l.url === url) && !imgUrls.has(url)) {
       links.push({ url, text: '' });
     }
   }

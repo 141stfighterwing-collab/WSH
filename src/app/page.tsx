@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { LogIn, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
 import Header from '@/components/wsh/Header';
 import Logo from '@/components/wsh/Logo';
@@ -97,11 +97,47 @@ function LockedOverlay() {
 }
 
 export default function Home() {
-  const { loadFromLocalStorage, viewMode, user } = useWSHStore();
+  const { loadFromLocalStorage, viewMode, user, setUser, logoutUser } = useWSHStore();
+  const sessionVerified = useRef(false);
 
+  // Load persisted state (notes, theme, auth session) on mount
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
+
+  // Verify the restored JWT token with the server
+  useEffect(() => {
+    const verifySession = async () => {
+      // Only run once after loadFromLocalStorage has hydrated the store
+      const store = useWSHStore.getState();
+      if (sessionVerified.current || !store.user.token) return;
+      sessionVerified.current = true;
+
+      try {
+        const res = await fetch('/api/admin/users/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: store.user.token }),
+        });
+
+        if (!res.ok) {
+          // Token is expired or invalid — log out
+          logoutUser();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('wsh-auth');
+          }
+        }
+        // If valid, the restored session is good — no action needed
+      } catch {
+        // Network error — keep the session, verify later
+        // The token itself is signed so it's safe to use until we can verify
+      }
+    };
+
+    // Small delay to allow loadFromLocalStorage to complete
+    const timer = setTimeout(verifySession, 100);
+    return () => clearTimeout(timer);
+  }, [logoutUser]);
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">

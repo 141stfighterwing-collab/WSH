@@ -26,6 +26,9 @@ import {
   Maximize2,
   Hash,
   ListTree,
+  Highlighter,
+  Indent,
+  Outdent,
 } from 'lucide-react';
 import { useWSHStore, type NoteType } from '@/store/wshStore';
 import CodeEditor from './editors/CodeEditor';
@@ -85,6 +88,13 @@ export default function NoteEditor() {
   const [synthesisMode, setSynthesisMode] = useState<SynthesisMode>('summarize');
   const [showSynthesisMenu, setShowSynthesisMenu] = useState(false);
   const [synthesisLoading, setSynthesisLoading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [showFontSizePicker, setShowFontSizePicker] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const attachFileRef = useRef<HTMLInputElement>(null);
 
   // Sync content from active note
   useEffect(() => {
@@ -121,6 +131,138 @@ export default function NoteEditor() {
     editorRef.current?.focus();
     handleContentInput();
   };
+
+  const closeAllPopups = () => {
+    setShowEmojiPicker(false);
+    setShowColorPicker(false);
+    setShowHighlightPicker(false);
+    setShowFontSizePicker(false);
+    setShowImageDialog(false);
+  };
+
+  const EMOJI_LIST = [
+    '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊',
+    '😋','😎','😍','🥰','😘','😗','😙','😚','🙂','🤗',
+    '🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥',
+    '😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝',
+    '🤤','😒','😓','😔','😕','🙃','🤑','😲','🙁','😖',
+    '😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯',
+    '😬','😰','😱','🥵','🥶','😳','🤪','😵','🥴','😠',
+    '😡','🤬','😷','🤒','🤕','🤢','🤮','🥺','🥹','😇',
+    '🤠','🤡','🥳','🥸','😈','👿','👹','👺','💀','☠️',
+    '👻','👽','👾','🤖','💩','😺','😸','😹','😻','😼',
+    '😽','🙀','😿','😾','❤️','🧡','💛','💚','💙','💜',
+    '🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖',
+    '💘','💝','👍','👎','👊','✊','🤛','🤜','👏','🙌',
+    '👐','🤲','🤝','🙏','✍️','💪','🦾','🦿','🦵','🦶',
+    '👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️',
+    '👅','👄','🔥','⭐','🌟','✨','💫','🌈','☀️','🌤️',
+    '⛅','🌥️','☁️','🌧️','⛈️','🌩️','❄️','🌊','💧','💦',
+    '🎉','🎊','🎈','🎁','✅','❌','❗','❓','⚠️','💯',
+    '📌','📎','🔗','💡','📝','📋','📅','🎯','🏆','🥇',
+  ];
+
+  const COLOR_OPTIONS = [
+    { label: 'Red', value: '#ef4444' },
+    { label: 'Orange', value: '#f97316' },
+    { label: 'Yellow', value: '#eab308' },
+    { label: 'Green', value: '#22c55e' },
+    { label: 'Blue', value: '#3b82f6' },
+    { label: 'Purple', value: '#a855f7' },
+    { label: 'Pink', value: '#ec4899' },
+    { label: 'Black', value: '#000000' },
+    { label: 'White', value: '#ffffff' },
+    { label: 'Gray', value: '#6b7280' },
+  ];
+
+  const HIGHLIGHT_OPTIONS = [
+    { label: 'Yellow', value: '#fef08a' },
+    { label: 'Green', value: '#bbf7d0' },
+    { label: 'Blue', value: '#bfdbfe' },
+    { label: 'Pink', value: '#fbcfe8' },
+    { label: 'Orange', value: '#fed7aa' },
+    { label: 'Purple', value: '#e9d5ff' },
+    { label: 'Red', value: '#fecaca' },
+    { label: 'Clear', value: 'transparent' },
+  ];
+
+  const FONT_SIZES = [
+    { label: 'Tiny', value: '1' },
+    { label: 'Small', value: '2' },
+    { label: 'Normal', value: '3' },
+    { label: 'Medium', value: '4' },
+    { label: 'Large', value: '5' },
+    { label: 'X-Large', value: '6' },
+    { label: 'Huge', value: '7' },
+  ];
+
+  const insertEmoji = (emoji: string) => {
+    editorRef.current?.focus();
+    document.execCommand('insertText', false, emoji);
+    handleContentInput();
+    setShowEmojiPicker(false);
+  };
+
+  const applyFontColor = (color: string) => {
+    execCommand('foreColor', color);
+    setShowColorPicker(false);
+  };
+
+  const applyHighlight = (color: string) => {
+    if (color === 'transparent') {
+      execCommand('removeFormat');
+    } else {
+      execCommand('hiliteColor', color);
+    }
+    setShowHighlightPicker(false);
+  };
+
+  const applyFontSize = (size: string) => {
+    execCommand('fontSize', size);
+    setShowFontSizePicker(false);
+  };
+
+  const insertImage = () => {
+    if (imageUrl.trim()) {
+      editorRef.current?.focus();
+      document.execCommand('insertHTML', false, `<img src="${imageUrl.trim()}" alt="image" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0" />`);
+      handleContentInput();
+      setImageUrl('');
+      setShowImageDialog(false);
+    }
+  };
+
+  const handleAttachFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (file.type.startsWith('image/')) {
+        editorRef.current?.focus();
+        document.execCommand('insertHTML', false, `<img src="${dataUrl}" alt="${file.name}" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0" />`);
+        handleContentInput();
+      } else {
+        editorRef.current?.focus();
+        document.execCommand('insertHTML', false, `<a href="${dataUrl}" download="${file.name}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155;text-decoration:none;margin:4px 0">📎 ${file.name}</a>`);
+        handleContentInput();
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Close popups on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.toolbar-popup') && !target.closest('.toolbar-popup-trigger')) {
+        closeAllPopups();
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && tagInput.trim()) {
@@ -406,36 +548,180 @@ export default function NoteEditor() {
 
         <div className="w-px h-4 bg-border/50 mx-1" />
 
+        {/* Attach File */}
         <button
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+          onClick={() => attachFileRef.current?.click()}
+          className="toolbar-popup-trigger p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
           title="Attach File"
         >
           <Paperclip className="w-3.5 h-3.5" />
         </button>
+        <input
+          ref={attachFileRef}
+          type="file"
+          className="hidden"
+          onChange={handleAttachFile}
+          accept="image/*,.pdf,.txt,.md,.docx,.doc,.csv,.json,.xml,.yaml,.yml,.py,.js,.ts,.html,.css"
+        />
+
+        {/* Indent */}
         <button
+          onClick={() => execCommand('indent')}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
-          title="Emoji"
+          title="Indent"
         >
-          <Smile className="w-3.5 h-3.5" />
+          <Indent className="w-3.5 h-3.5" />
         </button>
         <button
+          onClick={() => execCommand('outdent')}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
-          title="Text Color"
+          title="Outdent"
         >
-          <Palette className="w-3.5 h-3.5" />
+          <Outdent className="w-3.5 h-3.5" />
         </button>
-        <button
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
-          title="Font Size"
-        >
-          <Type className="w-3.5 h-3.5" />
-        </button>
-        <button
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
-          title="Insert Image"
-        >
-          <ImageIcon className="w-3.5 h-3.5" />
-        </button>
+
+        {/* Emoji Picker */}
+        <div className="relative">
+          <button
+            onClick={() => { closeAllPopups(); setShowEmojiPicker(!showEmojiPicker); }}
+            className={`toolbar-popup-trigger p-1.5 rounded-md transition-all active:scale-95 ${showEmojiPicker ? 'text-pri-400 bg-pri-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+            title="Emoji"
+          >
+            <Smile className="w-3.5 h-3.5" />
+          </button>
+          {showEmojiPicker && (
+            <div className="toolbar-popup absolute top-full left-0 mt-1 w-72 max-h-56 bg-card border border-border rounded-xl shadow-2xl p-2 overflow-y-auto z-50 animate-fadeIn">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Emojis</p>
+              <div className="grid grid-cols-10 gap-0.5">
+                {EMOJI_LIST.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => insertEmoji(emoji)}
+                    className="w-7 h-7 flex items-center justify-center text-base hover:bg-secondary rounded-md transition-all active:scale-95"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Text Color */}
+        <div className="relative">
+          <button
+            onClick={() => { closeAllPopups(); setShowColorPicker(!showColorPicker); }}
+            className={`toolbar-popup-trigger p-1.5 rounded-md transition-all active:scale-95 ${showColorPicker ? 'text-pri-400 bg-pri-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+            title="Text Color"
+          >
+            <Palette className="w-3.5 h-3.5" />
+          </button>
+          {showColorPicker && (
+            <div className="toolbar-popup absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-2xl p-2 z-50 animate-fadeIn">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Text Color</p>
+              <div className="grid grid-cols-5 gap-1">
+                {COLOR_OPTIONS.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => applyFontColor(c.value)}
+                    className="w-7 h-7 rounded-lg border border-border/50 hover:scale-110 transition-all active:scale-95"
+                    style={{ backgroundColor: c.value }}
+                    title={c.label}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Highlight Color */}
+        <div className="relative">
+          <button
+            onClick={() => { closeAllPopups(); setShowHighlightPicker(!showHighlightPicker); }}
+            className={`toolbar-popup-trigger p-1.5 rounded-md transition-all active:scale-95 ${showHighlightPicker ? 'text-pri-400 bg-pri-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+            title="Highlight Color"
+          >
+            <Highlighter className="w-3.5 h-3.5" />
+          </button>
+          {showHighlightPicker && (
+            <div className="toolbar-popup absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-2xl p-2 z-50 animate-fadeIn">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Highlight</p>
+              <div className="grid grid-cols-4 gap-1">
+                {HIGHLIGHT_OPTIONS.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => applyHighlight(c.value)}
+                    className="h-7 rounded-lg border border-border/50 hover:scale-110 transition-all active:scale-95 text-[9px] font-bold px-1"
+                    style={c.value === 'transparent' ? {} : { backgroundColor: c.value }}
+                    title={c.label}
+                  >
+                    {c.value === 'transparent' ? '✕' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Font Size */}
+        <div className="relative">
+          <button
+            onClick={() => { closeAllPopups(); setShowFontSizePicker(!showFontSizePicker); }}
+            className={`toolbar-popup-trigger p-1.5 rounded-md transition-all active:scale-95 ${showFontSizePicker ? 'text-pri-400 bg-pri-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+            title="Font Size"
+          >
+            <Type className="w-3.5 h-3.5" />
+          </button>
+          {showFontSizePicker && (
+            <div className="toolbar-popup absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-2xl p-2 z-50 animate-fadeIn">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">Font Size</p>
+              <div className="flex flex-col gap-0.5">
+                {FONT_SIZES.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => applyFontSize(s.value)}
+                    className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95 text-left"
+                  >
+                    <span style={{ fontSize: `${parseInt(s.value) * 4 + 8}px` }}>{s.label}</span>
+                    <span className="text-[9px] text-muted-foreground/40 ml-2">({s.value})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Insert Image */}
+        <div className="relative">
+          <button
+            onClick={() => { closeAllPopups(); setShowImageDialog(!showImageDialog); }}
+            className={`toolbar-popup-trigger p-1.5 rounded-md transition-all active:scale-95 ${showImageDialog ? 'text-pri-400 bg-pri-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+            title="Insert Image"
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+          </button>
+          {showImageDialog && (
+            <div className="toolbar-popup absolute top-full right-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-2xl p-3 z-50 animate-fadeIn">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Insert Image from URL</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') insertImage(); }}
+                  placeholder="https://example.com/image.png"
+                  className="flex-1 px-3 py-1.5 rounded-lg text-xs bg-secondary border border-transparent focus:border-pri-500 focus:outline-none"
+                />
+                <button
+                  onClick={insertImage}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95"
+                >
+                  Insert
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       )}
 

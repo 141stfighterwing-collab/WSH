@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.0] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Editor toolbar buttons (Emoji, Attach File, Font Size, Font Color, Highlight, Insert Image) non-functional** — The toolbar in `NoteEditor.tsx` rendered 6 feature buttons (Paperclip, Smile, Palette, Type, ImageIcon) that had no `onClick` handlers — they were purely decorative and did nothing when clicked. Only basic formatting buttons (Bold, Italic, Underline, etc.) and Indent actually worked. This has been completely reimplemented with full functionality:
+  - **Emoji Picker**: Grid-based popup with 170+ emojis across faces, gestures, hearts, hands, nature, and symbols categories. Clicking any emoji inserts it at the cursor position in the editor.
+  - **Attach File**: Opens a native file picker. Image files (JPG, PNG, GIF, etc.) are embedded inline as `<img>` tags with base64 data URLs. Non-image files are embedded as styled download link buttons that preserve the filename.
+  - **Font Size**: Dropdown with 7 preset sizes (Tiny through Huge) using `execCommand('fontSize', ...)`. Each option displays a live-preview of the actual size.
+  - **Text Color / Font Color**: Color palette popup with 10 colors (Red, Orange, Yellow, Green, Blue, Purple, Pink, Black, White, Gray) using `execCommand('foreColor', ...)`.
+  - **Highlight Color**: New toolbar button (Highlighter icon) with 8 highlight presets (Yellow, Green, Blue, Pink, Orange, Purple, Red) plus a "Clear" option using `execCommand('hiliteColor', ...)` and `execCommand('removeFormat')`.
+  - **Insert Image**: URL input dialog that inserts an `<img>` tag at the cursor position with responsive styling (max-width, auto height, border radius).
+  - **Indent / Outdent**: Explicit Indent and Outdent buttons added alongside the existing toolbar formatting buttons using `execCommand('indent')` and `execCommand('outdent')`.
+  - All popups close on outside click and use CSS classes (`toolbar-popup`, `toolbar-popup-trigger`) for proper event delegation.
+
+- **CRITICAL FIX — Notebook reader crashes with client-side exception** — The `extractLinks()` function in `NotebookView.tsx` referenced an out-of-scope variable `images` (which was defined only inside `extractImages()`) in its bare URL filtering logic. This caused a `ReferenceError` whenever the Notebook View tried to render any note that contained bare URLs (e.g., `https://example.com`), crashing the entire page with a "client-side exception has occurred" error. The fix extracts image URLs locally within `extractLinks()` using a `Set<string>` for efficient deduplication, making the function self-contained.
+
+- **CRITICAL FIX — Page refresh logs user out (no persistent sessions)** — The Zustand store's `saveToLocalStorage()` and `loadFromLocalStorage()` deliberately excluded all user authentication state (token, username, email, role, isLoggedIn) from localStorage. This meant every page refresh reset the user to logged-out state, forcing re-authentication. The fix implements persistent sessions:
+  - User auth state is now stored in a separate `wsh-auth` localStorage key, independent of the main `wsh-state` key used for notes, theme, etc.
+  - On page load, `loadFromLocalStorage()` restores the auth state from `wsh-auth` immediately, so the UI shows the logged-in state without a flash of the login screen.
+  - A new `/api/admin/users/verify` endpoint validates the stored JWT token against the server on startup, checking that the user still exists and their account is not banned/suspended. If the token is expired or invalid, the user is gracefully logged out.
+  - The `logoutUser()` action now explicitly removes the `wsh-auth` key from localStorage to ensure clean logout.
+  - The verify endpoint is added to the middleware's `PUBLIC_PATHS` so it doesn't require auth itself.
+
+### ✨ Added
+
+- **New Highlight Color toolbar button** — A Highlighter icon has been added to the editor toolbar, providing text highlighting functionality that was previously missing entirely.
+- **New Indent/Outdent toolbar buttons** — Explicit Indent and Outdent icons now appear in the toolbar for better discoverability.
+
+### 🏗️ Architecture
+
+- **New API route: `POST /api/admin/users/verify`** — Validates a JWT token and returns the associated user info if valid. Used by the client on page load to verify restored sessions. Returns 401 if the token is expired, 403 if the user is banned, and 400 if the request is malformed. Falls back to trusting the JWT payload if the database is unavailable (offline tolerance).
+
+---
+
 ## [4.1.6] - 2026-04-10
 
 ### 🐛 Fixed
