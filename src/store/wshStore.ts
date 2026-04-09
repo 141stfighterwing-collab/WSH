@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type NoteType = 'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document';
+export type NoteType = 'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document' | 'ai-prompts';
 export type ViewMode = 'grid' | 'focus';
 export type ThemeName = 'default' | 'ocean' | 'forest' | 'sunset' | 'rose' | 'midnight' | 'coffee' | 'neon' | 'cyberpunk' | 'nord' | 'dracula' | 'lavender' | 'earth' | 'yellow' | 'hyperblue';
 

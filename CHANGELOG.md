@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.1] - 2026-04-10
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Version mismatch across Docker and deployment scripts** — The `Dockerfile` was hardcoded to `BUILD_VERSION=3.9.4` while `docker-compose.yml` passed `BUILD_VERSION=4.0.1`. All install/update scripts (`install.sh`, `install.ps1`, `update.sh`, `update.ps1`) and the `docker-entrypoint.sh` displayed version `4.0.1` in their banners. Meanwhile, `package.json`, the health API, and the system API reported `4.1.0`. This inconsistency meant the Docker image reported a different version than the running application, the VersioningSection in Admin Panel could show conflicting version numbers depending on the data source, and the update script banner was misleading. All version references have been unified to `4.1.1` across every file: `package.json`, `Dockerfile` (both ARG defaults), `docker-compose.yml` (build arg and image tag), `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, and `README.md`.
+
+- **TypeScript type error — `NoteType` missing `ai-prompts` variant** — The `NoteType` union in `wshStore.ts` was defined as `'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document'`, but the `NoteEditor.tsx` component's tab system includes an `AI Prompts` tab that sets `activeNoteType` to `'ai-prompts'`. Since `setActiveNoteType` expects a `NoteType` argument, this created a type mismatch that could cause subtle runtime issues or fail under strict TypeScript compilation. The `ai-prompts` variant has been added to the `NoteType` union.
+
+### 🔧 Changed
+
+- **Docker image tag updated** — The `docker-compose.yml` image tag changed from `weavenote:4.0.1` to `weavenote:4.1.1`. The install scripts' image cleanup lists have been updated to match. Users updating from v4.0.x will get a fresh image build automatically via `update.ps1` / `update.sh`.
+- **README image tag references updated** — All references to `weavenote:4.0.0` in the Docker Safety, Docker Configuration, and install script documentation sections have been updated to `weavenote:4.1.1` to reflect the current version.
+
+### ✨ Verified
+
+- **Production build verified** — Confirmed the application builds successfully with zero TypeScript and compilation errors after the type fix and version unification.
+
+---
+
 ## [4.1.0] - 2026-04-10
 
 ### 🐛 Fixed

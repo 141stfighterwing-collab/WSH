@@ -33,7 +33,7 @@ import ProjectEditor from './editors/ProjectEditor';
 import DocumentEditor from './editors/DocumentEditor';
 import PromptLibrary from './PromptLibrary';
 
-const NOTE_TYPES: { type: NoteType | 'ai-prompts'; label: string }[] = [
+const NOTE_TYPES: { type: NoteType; label: string }[] = [
   { type: 'quick', label: 'Quick' },
   { type: 'notebook', label: 'Notebook' },
   { type: 'deep', label: 'Deep' },
