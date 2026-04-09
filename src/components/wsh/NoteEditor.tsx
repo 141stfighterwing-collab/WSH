@@ -275,49 +275,59 @@ export default function NoteEditor() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Clear any pending timers to prevent stale status
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
 
     setSaveStatus('Saving...');
 
-    // Use a ref-guarded timer so rapid clicks don't leave it stuck
-    saveTimerRef.current = setTimeout(() => {
-      try {
-        if (activeNoteId) {
-          updateNote(activeNoteId, {
-            title: editorTitle,
-            content: editorContent,
-            rawContent: editorRef.current?.innerText || '',
-            type: activeNoteType,
-            tags: editorTags,
-          });
-        } else {
-          const newNote = {
-            id: `note-${Date.now()}`,
-            title: editorTitle || 'Untitled Note',
-            content: editorContent,
-            rawContent: editorRef.current?.innerText || '',
-            type: activeNoteType,
-            tags: editorTags,
-            color: 'yellow',
-            folderId: null,
-            userId: 'local',
-            isDeleted: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          addNote(newNote);
-          setActiveNoteId(newNote.id);
+    try {
+      if (activeNoteId) {
+        // Update existing note on server
+        const ok = await updateNote(activeNoteId, {
+          title: editorTitle,
+          content: editorContent,
+          rawContent: editorRef.current?.innerText || '',
+          type: activeNoteType,
+          tags: editorTags,
+        });
+        if (!ok) {
+          setSaveStatus('Save Failed');
+          clearTimerRef.current = setTimeout(() => setSaveStatus(''), 3000);
+          return;
         }
-        saveToLocalStorage();
-      } catch {
-        // Even if save throws, clear the status
+      } else {
+        // Create new note on server — server assigns the real ID
+        const newNote = {
+          id: '', // Server will assign the real ID
+          title: editorTitle || 'Untitled Note',
+          content: editorContent,
+          rawContent: editorRef.current?.innerText || '',
+          type: activeNoteType,
+          tags: editorTags,
+          color: 'yellow',
+          folderId: null,
+          userId: useWSHStore.getState().user.username || '', // For reference, server uses JWT
+          isDeleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const serverId = await addNote(newNote);
+        if (serverId) {
+          setActiveNoteId(serverId);
+        } else {
+          setSaveStatus('Save Failed');
+          clearTimerRef.current = setTimeout(() => setSaveStatus(''), 3000);
+          return;
+        }
       }
-      setSaveStatus('Saved');
+      setSaveStatus('Saved ✓');
       clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1500);
-    }, 300);
+    } catch {
+      setSaveStatus('Save Failed');
+      clearTimerRef.current = setTimeout(() => setSaveStatus(''), 3000);
+    }
   };
 
   const handleSynthesis = async () => {

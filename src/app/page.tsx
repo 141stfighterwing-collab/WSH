@@ -101,7 +101,8 @@ export default function Home() {
   const sessionVerified = useRef(false);
   const syncDone = useRef(false);
 
-  // Load persisted state (notes, theme, auth session) on mount
+  // Load persisted UI preferences + auth session on mount
+  // Notes/folders are loaded from database via syncFromServer
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
