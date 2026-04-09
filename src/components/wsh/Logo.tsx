@@ -10,7 +10,7 @@ export default function Logo() {
         alt="WSH Logo"
         width={32}
         height={32}
-        className="w-8 h-8 rounded-lg"
+        className="w-8 h-8 rounded-md"
         priority
       />
       <span className="text-lg font-black tracking-tight text-foreground hidden sm:inline">

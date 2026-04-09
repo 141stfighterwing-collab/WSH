@@ -164,7 +164,7 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Map & Notebook buttons */}
+        {/* Map, Notebook, Prompts, Analytics */}
         <div className="hidden lg:flex items-center gap-1">
           <button
             onClick={() => setMindMapOpen(true)}
@@ -180,25 +180,21 @@ export default function Header() {
             <BookOpen className="w-3.5 h-3.5" />
             <span>Notebook</span>
           </button>
+          <button
+            onClick={() => setPromptLibraryOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Prompts</span>
+          </button>
+          <button
+            onClick={() => setAnalyticsOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Analytics</span>
+          </button>
         </div>
-
-        {/* AI Prompt Library */}
-        <button
-          onClick={() => setPromptLibraryOpen(true)}
-          className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 border border-violet-500/20 transition-all duration-200 active:scale-95"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Prompts</span>
-        </button>
-
-        {/* Analytics */}
-        <button
-          onClick={() => setAnalyticsOpen(true)}
-          className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
-          <span>Analytics</span>
-        </button>
 
         {/* DB Connection Indicator — visible for ALL logged-in users */}
         {mounted && user.isLoggedIn && (

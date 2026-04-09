@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.1] - 2026-04-10
+
+### 🔧 Changed
+
+- **Official WeaveNote logo and banner applied** — Replaced the auto-generated logo with the official WeaveNote brand assets. The new `logo.png` features the hexagonal spider-web and fountain-pen-nib design with the "WeaveNote" wordmark and "Your Ideas, Connected." tagline on a white background. A separate `banner.png` (transparent background variant) has also been added to the `public/` directory for use in marketing materials or wide-format display.
+- **AI Prompts button relocated to navigation group** — The "Prompts" button has been moved from its standalone position in the header into the unified navigation group alongside Map, Notebook, and Analytics. All four buttons now share the same visual style (`text-muted-foreground hover:text-foreground hover:bg-secondary`) for a consistent, clean header layout.
+
+### 📝 Documentation
+
+- Updated version references to 4.0.1 across README and CHANGELOG
+
+---
+
 ## [4.0.0] - 2026-04-10
 
 ### ✨ Added
