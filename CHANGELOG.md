@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0] - 2026-04-10
+
+### ✨ Added
+
+- **AI Prompt Library** — A full-featured prompt management system that allows users to save, organize, search, and quickly copy AI prompts for reuse. The library is accessible via a new "Prompts" button in the header toolbar and opens as a full-screen overlay panel. Prompts are persisted to `localStorage` and include support for categories (General, Writing, Code, Analysis, Creative, Business, Research, Education), custom tags, favorites with star toggling, inline editing, one-click copy to clipboard, and sorting by newest, oldest, alphabetical, or recently updated. Five starter prompts are included by default (Summarize Text, Code Review Assistant, SWOT Analysis, Explain Like I'm 5, Blog Post Outline) to help users get started immediately.
+- **New WSH logo and favicon** — Replaced the old SVG-only geometric logo with a newly designed, professionally generated app icon. The new logo features a hexagonal woven-thread neural network pattern with a gradient from deep indigo to cyan, reflecting the app's AI-powered knowledge management identity. Both the main `logo.png` (1024x1024) and `favicon.png` have been added to the `public/` directory, along with an updated `logo.svg` for vector use. The Logo component now uses `next/image` for optimized rendering with a rounded corner style.
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — PDF text extraction completely broken** — The `extract-text` API route was passing the raw `Buffer` directly to the `PDFParse` constructor (`new PDFParse(buffer)`), but pdf-parse v2.4.5 expects a `LoadParameters` object (`new PDFParse({ data: buffer })`). This caused every PDF upload to fail with an initialization error, silently falling through to the regex-based fallback which produces very poor results for most PDFs. The fix passes the correct object structure and properly calls `parser.destroy()` after extraction to release resources. The fallback still exists as a safety net for unusual PDF formats.
+- **CRITICAL FIX — DOCX text extraction non-functional** — The `extractDocxText()` function was attempting to match `<w:t>` XML tags with regex directly against the raw file buffer. However, DOCX files are ZIP archives — the XML content is compressed inside the archive and cannot be matched by regex on raw bytes. This meant every DOCX upload would either return empty text or garbage. The fix integrates the `mammoth` library, a purpose-built DOCX parser that properly unzips the archive and extracts text from `word/document.xml` with full Unicode support, paragraph structure preservation, and proper handling of embedded formatting. The old regex approach is retained as a last-resort fallback.
+
+### 🔧 Changed
+
+- **Logo component upgraded** — The `Logo.tsx` component now uses `next/image` for optimized, lazy-loaded image rendering instead of an inline SVG. The logo displays with a subtle rounded corner for a modern look.
+- **Favicon updated** — The browser tab favicon has been changed from an emoji-based data URI to the new custom `favicon.png`, providing a professional branded appearance in browser tabs and bookmarks.
+- **New `mammoth` dependency added** — Added `mammoth` to `package.json` for robust DOCX text extraction. This replaces the broken regex-based approach with a proper OOXML parser.
+- **Prompt Library state added to Zustand store** — Added `promptLibraryOpen` and `setPromptLibraryOpen` to the global store for managing the Prompt Library overlay panel visibility.
+
+### 📝 Documentation
+
+- Updated README.md version reference to 4.0.0
+- Updated CHANGELOG.md with v4.0.0 release notes
+
+---
+
 ## [3.9.4] - 2026-04-09
 
 ### ✨ Added

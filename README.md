@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v3.9.4
+# WSH — WeaveNote Self-Hosted v4.0.0
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -198,6 +198,23 @@ A comprehensive **system administration dashboard** with six distinct sections f
 
 ### 🎨 15 Color Themes
 
+### 🧠 AI Prompt Library
+
+A comprehensive **prompt management system** for saving, organizing, and quickly accessing reusable AI prompt templates.
+
+- **Full-screen overlay panel** — Opens as a dedicated full-screen panel via the "Prompts" button in the header toolbar, providing maximum screen space for managing your prompt collection
+- **Create, edit, and delete prompts** — Full CRUD operations with inline editing, title and content fields, and confirmation-free quick actions
+- **8 categories** — Organize prompts by type: General, Writing, Code, Analysis, Creative, Business, Research, Education
+- **Custom tags** — Add comma-separated tags to each prompt for flexible cross-category search and filtering
+- **Favorites system** — Star your most-used prompts for quick access with a dedicated favorites-only filter toggle
+- **One-click copy** — Copy any prompt to clipboard with a single click, with visual "Copied!" confirmation feedback
+- **Search and filter** — Real-time search across titles, content, and tags, plus category filtering and favorites-only mode
+- **Multiple sort options** — Sort by newest, oldest, alphabetical (A-Z), or recently updated
+- **localStorage persistence** — All prompts are saved to your browser's localStorage, surviving page reloads and browser restarts
+- **5 starter prompts included** — Comes pre-loaded with useful templates: Summarize Text, Code Review Assistant, SWOT Analysis, Explain Like I'm 5, and Blog Post Outline
+
+### 🎨 15 Color Themes
+
 WSH ships with **15 hand-crafted color themes** that transform the entire application's look and feel with a single click.
 
 | Theme | Mood |
@@ -371,7 +388,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:3.9.4`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:4.0.0`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -464,7 +481,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:3.9.4` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:4.0.0` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -476,7 +493,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:3.9.4`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:4.0.0`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -564,7 +581,8 @@ wsh/
 │   │       ├── Calendar.tsx       # Compact calendar view
 │   │       ├── QuickReferences.tsx # Template quick access
 │   │       ├── FarRightSidebar.tsx # Legacy (content merged into RightSidebar)
-│   │       └── Logo.tsx           # WSH logo component
+│   │       ├── Logo.tsx           # WSH logo component
+│   │       └── PromptLibrary.tsx   # AI Prompt Library management
 │   ├── hooks/
 │   │   ├── use-toast.ts      # Toast notification hook
 │   │   └── use-mobile.ts     # Mobile detection hook
@@ -598,7 +616,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "3.9.4", "timestamp": "2026-04-09T12:00:00.000Z" }
+{ "status": "healthy", "version": "4.0.0", "timestamp": "2026-04-10T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`

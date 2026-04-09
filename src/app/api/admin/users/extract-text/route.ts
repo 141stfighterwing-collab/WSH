@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
 
 // POST /api/admin/users/extract-text — Extract text from uploaded files (PDF, DOCX, etc.)
 export async function POST(request: NextRequest) {
@@ -28,14 +29,18 @@ export async function POST(request: NextRequest) {
       text = buffer.toString('utf-8');
     }
     // Handle PDF files using pdf-parse v2 (class-based API)
+    // Constructor expects { data: buffer } not raw buffer
     else if (ext === 'pdf') {
       try {
-        const parser = new PDFParse(buffer);
+        const parser = new PDFParse({ data: buffer });
         const result = await parser.getText();
-        // getText() returns { pages: [{text, num}], total } — join all pages
-        if (result && result.pages && result.pages.length > 0) {
+        // getText() returns { pages: [{text, num}], text, total }
+        if (result && result.text) {
+          text = result.text;
+        } else if (result && result.pages && result.pages.length > 0) {
           text = result.pages.map((p: { text: string; num: number }) => p.text).join('\n\n');
         }
+        await parser.destroy();
         // If pdf-parse returned nothing, fall back to regex extraction
         if (!text.trim()) {
           text = extractPdfTextFallback(buffer);
@@ -45,9 +50,20 @@ export async function POST(request: NextRequest) {
         text = extractPdfTextFallback(buffer);
       }
     }
-    // Handle DOCX files
+    // Handle DOCX files using mammoth (proper ZIP-based extraction)
     else if (ext === 'docx') {
-      text = extractDocxText(buffer);
+      try {
+        const result = await mammoth.extractRawText({ buffer });
+        text = result.value;
+        // If mammoth produced warnings, log them (but don't fail)
+        if (result.messages && result.messages.length > 0) {
+          console.warn('DOCX extraction warnings:', result.messages);
+        }
+      } catch (err) {
+        console.error('Mammoth DOCX extraction failed:', err);
+        // Fallback to regex-based extraction
+        text = extractDocxTextFallback(buffer);
+      }
     }
     // Handle RTF files
     else if (ext === 'rtf') {
@@ -89,7 +105,6 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       chars: text.length,
-      pages: ext === 'pdf' ? undefined : undefined,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to extract text';
@@ -154,8 +169,8 @@ function extractPdfTextFallback(buffer: Buffer): string {
   return result || '[PDF text extraction produced no results. The PDF may be image-based or use non-standard encoding.]';
 }
 
-// Basic DOCX text extraction — DOCX is a ZIP containing word/document.xml
-function extractDocxText(buffer: Buffer): string {
+// Fallback DOCX text extraction — basic regex on raw bytes (last resort)
+function extractDocxTextFallback(buffer: Buffer): string {
   const content = buffer.toString('utf-8');
   const textParts: string[] = [];
   const tagRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;

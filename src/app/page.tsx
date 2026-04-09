@@ -17,6 +17,7 @@ import NotebookView from '@/components/wsh/NotebookView';
 import NoteDetailModal from '@/components/wsh/NoteDetailModal';
 import DBViewer from '@/components/wsh/DBViewer';
 import LoginWidget from '@/components/wsh/LoginWidget';
+import PromptLibrary from '@/components/wsh/PromptLibrary';
 import { useWSHStore } from '@/store/wshStore';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -77,6 +78,32 @@ function LockedOverlay() {
           <LogIn className="w-4 h-4" />
           <span className="text-xs font-bold">Login to unlock your workspace</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function PromptLibraryWrapper() {
+  const { promptLibraryOpen, setPromptLibraryOpen } = useWSHStore();
+
+  if (!promptLibraryOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] animate-fadeIn">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={() => setPromptLibraryOpen(false)}
+      />
+      {/* Panel */}
+      <div className="absolute inset-4 md:inset-8 lg:inset-12 xl:inset-16 z-10">
+        <PromptLibrary />
+        <button
+          onClick={() => setPromptLibraryOpen(false)}
+          className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-card border border-border shadow-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-90 z-20"
+        >
+          ×
+        </button>
       </div>
     </div>
   );
@@ -146,6 +173,9 @@ export default function Home() {
       </AuthGate>
       <AuthGate>
         <DBViewer />
+      </AuthGate>
+      <AuthGate>
+        <PromptLibraryWrapper />
       </AuthGate>
     </div>
   );
