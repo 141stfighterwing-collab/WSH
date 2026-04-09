@@ -133,10 +133,10 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 h-16 glass border-b border-border">
+    <header className="sticky top-0 z-50 h-20 glass border-b border-border">
       <div className="flex items-center justify-between h-full px-4 gap-3">
         {/* Logo */}
-        <Logo />
+        <Logo size={44} showText={true} />
 
         {/* View Toggles */}
         <div className="hidden md:flex items-center bg-secondary rounded-full px-1 py-1 gap-0.5">

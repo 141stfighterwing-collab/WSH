@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.5] - 2026-04-10
+
+### ✨ Added
+
+- **Mathematically precise SVG logo (Logo.tsx)** — Completely rebuilt the logo mark from the ground up using exact geometric coordinates instead of raster images. The new SVG logo consists of four precisely defined layers: (1) a **regular hexagon frame** computed from 6 trigonometric vertices with flat-top orientation, (2) **8 radial spider-web lines** extending from center to edge, (3) **3 concentric web rings** drawn with **quadratic Bézier curves** whose control points are displaced downward to simulate realistic gravity-driven droop (not flat arcs or straight lines), and (4) a **fountain-pen nib** constructed from cubic Bézier curves for the flared outline, with a horizontal band, center slit, and breather hole rendered as separate sub-elements. A 3-stop linear gradient (`#0ea5e9` → `#0284c7` → `#0f172a`) flows top-to-bottom across all elements, matching the teal-to-navy brand identity.
+
+- **Typography lockup in header** — The header now displays a proper brand lockup alongside the SVG logo mark: "WeaveNote" in `text-xl font-extrabold tracking-tight` with "Your Ideas, Connected." tagline in `text-[10px] font-bold uppercase tracking-[0.2em]` beneath it. The text and logo are wrapped in a flex container with `gap-3` for consistent vertical centering at any screen size.
+
+### 🔧 Changed
+
+- **Header height increased from h-16 (64px) to h-20 (80px)** — The taller header gives the logo mark and text lockup proper breathing room without crowding against the top and bottom edges. All header content (view toggles, navigation buttons, search, login, settings) remains properly centered within the increased height.
+
+- **Sign-in page logo replaced with SVG component** — The `LockedOverlay` no longer renders a raster `logo.png` via `next/image` (which produced a visible checkered transparency pattern on the dark background). Instead it uses the inline `<Logo>` component at `size={160}`, which renders the SVG directly with no transparency artifacts. The sign-in page now shows the logo mark + "WeaveNote" text + tagline centered with an ambient glow effect behind it.
+
+- **Sign-in welcome text upgraded** — The "Welcome to WSH" heading now uses `font-extrabold` and displays "WeaveNote" in a gradient (`from-pri-400 to-cyan-400`) instead of plain text. The subtitle paragraph now has `max-w-sm mx-auto` for better line length control.
+
+- **logo.svg in public/ updated** — The SVG file used by README and Open Graph previews now matches the new mathematical design with hexagon, spider web, pen nib, and gradient.
+
+---
+
 ## [4.1.4] - 2026-04-10
 
 ### 🔧 Changed

@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { LogIn, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
-import Image from 'next/image';
 import Header from '@/components/wsh/Header';
+import Logo from '@/components/wsh/Logo';
 import LeftSidebar from '@/components/wsh/LeftSidebar';
 import NoteEditor from '@/components/wsh/NoteEditor';
 import NotesGrid from '@/components/wsh/NotesGrid';
@@ -41,25 +41,24 @@ function LockedOverlay() {
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="text-center max-w-lg animate-fadeIn">
         {/* Large Logo */}
-        <div className="relative mb-8">
-          <div className="mx-auto w-80 h-48 sm:w-[28rem] sm:h-64 md:w-[36rem] md:h-72 lg:w-[42rem] lg:h-80 rounded-2xl overflow-hidden shadow-2xl">
-            <Image
-              src="/logo.png"
-              alt="WSH — WeaveNote Self-Hosted"
-              fill
-              className="object-contain"
-              priority
-            />
+        <div className="relative mb-10">
+          {/* Ambient glow behind the logo mark */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-40 h-40 bg-pri-500/10 rounded-full blur-3xl" />
           </div>
-          {/* Glow effect behind logo */}
-          <div className="absolute -inset-6 bg-pri-600/5 rounded-3xl blur-3xl -z-10" />
+          <div className="relative flex items-center justify-center">
+            <Logo size={160} showText={true} />
+          </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-foreground mb-3">
-          Welcome to <span className="text-pri-400">WSH</span>
+        <h2 className="text-2xl font-extrabold tracking-tight text-foreground mb-3">
+          Welcome to{' '}
+          <span className="bg-gradient-to-r from-pri-400 to-cyan-400 bg-clip-text text-transparent">
+            WeaveNote
+          </span>
         </h2>
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          Your self-hosted, AI-powered workspace for notes, projects, and ideas. 
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed max-w-sm mx-auto">
+          Your self-hosted, AI-powered workspace for notes, projects, and ideas.{' '}
           Sign in to unlock your workspace and get started.
         </p>
 
