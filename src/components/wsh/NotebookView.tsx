@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import {
   X, ChevronRight, Tag, Calendar, Link2, Quote,
   ImageIcon, ExternalLink, FileText, Code2, FolderKanban,
@@ -208,16 +208,20 @@ function formatRelativeDate(dateStr: string): { label: string; isRecent: boolean
 
 /** Sanitize HTML content for safe rendering */
 function sanitizeHTML(html: string): string {
-  if (typeof window === 'undefined') return html;
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  tmp.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
-  tmp.querySelectorAll('*').forEach((el) => {
-    [...el.attributes].forEach((attr) => {
-      if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+  try {
+    if (typeof window === 'undefined') return String(html || '');
+    const tmp = document.createElement('div');
+    tmp.innerHTML = String(html || '');
+    tmp.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
+    tmp.querySelectorAll('*').forEach((el) => {
+      [...el.attributes].forEach((attr) => {
+        if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+      });
     });
-  });
-  return tmp.innerHTML;
+    return tmp.innerHTML;
+  } catch {
+    return String(html || '').replace(/<[^>]+>/g, '');
+  }
 }
 
 /** Extract domain from URL */
@@ -232,11 +236,78 @@ function getDomain(url: string): string {
 
 // ─── Main NotebookView Component ────────────────────────────────
 
+// ─── Error Boundary for individual pages ──────────────────────
+function ErrorCatch({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[NotebookView] Error rendering page:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="my-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-4 h-4 text-red-400" />
+            <span className="text-xs font-bold text-red-400">Error rendering this note</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground mb-2">
+            This note contains content that could not be displayed. The content may be malformed or corrupted.
+          </p>
+          <p className="text-[9px] text-muted-foreground/50 font-mono break-all">
+            {this.state.error?.message}
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function NotebookView() {
   const { notebookOpen, setNotebookOpen, notes } = useWSHStore();
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
+
+  if (!notebookOpen) return null;
+
+  // Top-level error fallback for the entire notebook view
+  if (hasError) {
+    return (
+      <div className="fixed inset-0 z-[105] flex items-center justify-center animate-fadeIn">
+        <div className="absolute inset-0 bg-background/98" onClick={() => setNotebookOpen(false)} />
+        <div className="relative bg-card rounded-2xl shadow-2xl border border-border/50 p-8 max-w-md mx-4 text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-foreground mb-2">Notebook Reader Error</h2>
+          <p className="text-sm text-muted-foreground mb-4">An error occurred while rendering the notebook. This may be caused by malformed note content.</p>
+          <button
+            onClick={() => { setHasError(false); setNotebookOpen(false); }}
+            className="px-4 py-2 rounded-full text-xs font-bold bg-pri-600 text-white hover:bg-pri-700 transition-all"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const sortedNotes = useMemo(() => {
     return notes
@@ -282,8 +353,6 @@ export default function NotebookView() {
   useEffect(() => {
     setActiveIndex(filteredNotes.length > 0 ? 0 : -1);
   }, [filterType]);
-
-  if (!notebookOpen) return null;
 
   // Collect all unique types for filter
   const noteTypes = useMemo(() => {
@@ -413,12 +482,13 @@ export default function NotebookView() {
           ) : (
             <div className="max-w-3xl mx-auto px-8 py-8">
               {filteredNotes.map((note, index) => (
-                <NotebookPage
-                  key={note.id}
-                  note={note}
-                  index={index}
-                  isLast={index === filteredNotes.length - 1}
-                />
+                <ErrorCatch key={note.id}>
+                  <NotebookPage
+                    note={note}
+                    index={index}
+                    isLast={index === filteredNotes.length - 1}
+                  />
+                </ErrorCatch>
               ))}
             </div>
           )}
@@ -643,30 +713,37 @@ function DesignNoteBox({ label, content }: { label: string; content: string }) {
 // ─── Notebook Page Component ───────────────────────────────────
 
 function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLast: boolean }) {
-  const rawContent = safeString(note.rawContent || note.content);
-  const safeNoteTags = useMemo(() => safeTags(note.tags), [note.tags]);
-  const images = useMemo(() => extractImages(rawContent), [rawContent]);
-  const links = useMemo(() => extractLinks(rawContent), [rawContent]);
-  const quotes = useMemo(() => extractQuotes(rawContent), [rawContent]);
+  const rawContent = useMemo(() => {
+    try { return safeString(note.rawContent || note.content); }
+    catch { return ''; }
+  }, [note.rawContent, note.content]);
+  const safeNoteTags = useMemo(() => { try { return safeTags(note.tags); } catch { return []; } }, [note.tags]);
+  const images = useMemo(() => { try { return extractImages(rawContent); } catch { return []; } }, [rawContent]);
+  const links = useMemo(() => { try { return extractLinks(rawContent); } catch { return []; } }, [rawContent]);
+  const quotes = useMemo(() => { try { return extractQuotes(rawContent); } catch { return []; } }, [rawContent]);
 
   // Clean the main content by removing images, quotes, and standalone links
   const cleanContent = useMemo(() => {
-    let html = rawContent;
-    // Remove blockquote HTML
-    html = html.replace(/<blockquote[^>]*>[\s\S]*?<\/blockquote>/gi, '');
-    // Remove img tags
-    html = html.replace(/<img[^>]*>/gi, '');
-    // Remove markdown images
-    html = html.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
-    // Remove markdown quotes
-    html = html.replace(/^>\s?.*$/gm, '');
-    // Remove markdown links but keep text
-    html = html.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    // Remove HTML links but keep text
-    html = html.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
-    // Clean up
-    html = html.replace(/\n{3,}/g, '\n\n').trim();
-    return html;
+    try {
+      let html = rawContent;
+      // Remove blockquote HTML
+      html = html.replace(/<blockquote[^>]*>[\s\S]*?<\/blockquote>/gi, '');
+      // Remove img tags
+      html = html.replace(/<img[^>]*>/gi, '');
+      // Remove markdown images
+      html = html.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
+      // Remove markdown quotes
+      html = html.replace(/^>\s?.*$/gm, '');
+      // Remove markdown links but keep text
+      html = html.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+      // Remove HTML links but keep text
+      html = html.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+      // Clean up
+      html = html.replace(/\n{3,}/g, '\n\n').trim();
+      return html;
+    } catch {
+      return rawContent;
+    }
   }, [rawContent]);
 
   // Detect "design note" style patterns in content

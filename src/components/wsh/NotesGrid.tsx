@@ -191,13 +191,9 @@ export default function NotesGrid() {
   }, [notes, activeFolderId, searchQuery]);
 
   const handleNoteClick = (note: Note) => {
-    setActiveNoteId(note.id);
-    setEditorTitle(note.title);
-    setEditorContent(note.content);
-    setEditorRawContent(note.rawContent || '');
-    setActiveNoteType(note.type as 'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document');
-    setEditorTags(note.tags);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Click on a note opens the detail view (read mode)
+    // User can then click "Edit Note" to load into the editor
+    setNoteDetailId(note.id);
   };
 
   const handleViewDetail = (note: Note) => {

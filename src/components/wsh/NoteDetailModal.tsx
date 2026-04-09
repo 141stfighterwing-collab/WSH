@@ -78,16 +78,32 @@ export default function NoteDetailModal() {
   });
 
   const sanitizeHTML = (html: string) => {
-    if (typeof window === 'undefined') return html;
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    tmp.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
-    tmp.querySelectorAll('*').forEach((el) => {
-      [...el.attributes].forEach((attr) => {
-        if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+    try {
+      if (typeof window === 'undefined') return String(html || '');
+      const tmp = document.createElement('div');
+      tmp.innerHTML = String(html || '');
+      tmp.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
+      tmp.querySelectorAll('*').forEach((el) => {
+        [...el.attributes].forEach((attr) => {
+          if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+        });
       });
-    });
-    return tmp.innerHTML;
+      // Ensure images have max-width for proper display
+      tmp.querySelectorAll('img').forEach((img) => {
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.borderRadius = '8px';
+        img.style.margin = '8px 0';
+      });
+      // Ensure links open in new tab and are styled
+      tmp.querySelectorAll('a').forEach((link) => {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+      });
+      return tmp.innerHTML;
+    } catch {
+      return String(html || '').replace(/<[^>]+>/g, '');
+    }
   };
 
   const handleEdit = () => {
@@ -175,7 +191,7 @@ export default function NoteDetailModal() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
           <div
-            className="prose prose-sm prose-invert max-w-none text-sm text-foreground/80 leading-relaxed"
+            className="prose prose-sm prose-invert max-w-none text-sm text-foreground/80 leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2 [&_a]:text-pri-400 [&_a]:underline [&_a:hover]:text-pri-300 [&_a]:break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words"
             dangerouslySetInnerHTML={{
               __html: sanitizeHTML(safeContent) || '<p class="text-muted-foreground/40 italic">No content</p>',
             }}
