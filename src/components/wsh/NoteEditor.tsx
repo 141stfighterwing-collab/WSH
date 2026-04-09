@@ -284,7 +284,7 @@ export default function NoteEditor() {
 
     try {
       if (activeNoteId) {
-        // Update existing note on server
+        // Updating an EXISTING note (user clicked Edit on a note)
         const ok = await updateNote(activeNoteId, {
           title: editorTitle,
           content: editorContent,
@@ -297,10 +297,12 @@ export default function NoteEditor() {
           clearTimerRef.current = setTimeout(() => setSaveStatus(''), 3000);
           return;
         }
+        // After updating existing note, clear editor for new note entry
+        clearEditor();
       } else {
-        // Create new note on server — server assigns the real ID
+        // Creating a BRAND NEW note on server
         const newNote = {
-          id: '', // Server will assign the real ID
+          id: '',
           title: editorTitle || 'Untitled Note',
           content: editorContent,
           rawContent: editorRef.current?.innerText || '',
@@ -308,14 +310,16 @@ export default function NoteEditor() {
           tags: editorTags,
           color: 'yellow',
           folderId: null,
-          userId: useWSHStore.getState().user.username || '', // For reference, server uses JWT
+          userId: useWSHStore.getState().user.username || '',
           isDeleted: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
         const serverId = await addNote(newNote);
         if (serverId) {
-          setActiveNoteId(serverId);
+          // NOTE: Do NOT set activeNoteId — clear the editor so user can
+          // immediately write a NEW note. The saved note is in the notes list.
+          clearEditor();
         } else {
           setSaveStatus('Save Failed');
           clearTimerRef.current = setTimeout(() => setSaveStatus(''), 3000);
@@ -327,6 +331,19 @@ export default function NoteEditor() {
     } catch {
       setSaveStatus('Save Failed');
       clearTimerRef.current = setTimeout(() => setSaveStatus(''), 3000);
+    }
+  };
+
+  /** Clear the editor to prepare for a new note */
+  const clearEditor = () => {
+    setActiveNoteId(null);
+    setEditorTitle('');
+    setEditorContent('');
+    setEditorRawContent('');
+    setActiveNoteType('quick');
+    setEditorTags([]);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = '';
     }
   };
 
