@@ -19,6 +19,7 @@ model User {
   updatedAt    DateTime @updatedAt
   notes        Note[]
   folders      Folder[]
+  documents    Document[]
 }
 
 model Note {
@@ -47,4 +48,41 @@ model Folder {
   notes     Note[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Document {
+  id           String           @id @default(cuid())
+  title        String
+  fileName     String
+  filePath     String
+  fileSize     Int              @default(0)
+  mimeType     String           @default("")
+  pageCount    Int              @default(0)
+  totalChars   Int              @default(0)
+  chunkCount   Int              @default(0)
+  status       String           @default("processing") /// processing | ready | error
+  errorMessage String           @default("")
+  uploadedBy   String
+  user         User?            @relation(fields: [uploadedBy], references: [id])
+  chunks       DocumentChunk[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([uploadedBy])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  pageNumber Int      @default(1)
+  chunkIndex Int      @default(0)
+  content    String
+  charCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+  @@index([pageNumber])
 }

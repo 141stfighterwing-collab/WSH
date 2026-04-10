@@ -33,7 +33,7 @@ import {
 import { useWSHStore, type NoteType } from '@/store/wshStore';
 import CodeEditor from './editors/CodeEditor';
 import ProjectEditor from './editors/ProjectEditor';
-import DocumentEditor from './editors/DocumentEditor';
+import DocumentManager from './editors/DocumentManager';
 import PromptLibrary from './PromptLibrary';
 
 const NOTE_TYPES: { type: NoteType; label: string }[] = [
@@ -772,12 +772,7 @@ export default function NoteEditor() {
           setContent={(v) => { setEditorContent(v); setEditorRawContent(v); }}
         />
       ) : activeNoteType === 'document' ? (
-        <DocumentEditor
-          title={editorTitle}
-          setTitle={setEditorTitle}
-          content={editorContent}
-          setContent={(v) => { setEditorContent(v); setEditorRawContent(v); }}
-        />
+        <DocumentManager />
       ) : (
         <div className="px-3 py-2">
           <div

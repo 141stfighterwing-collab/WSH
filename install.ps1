@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # WeaveNote Self-Hosted (WSH) - Auto Nuke & Reinstall
-# v4.2.1: Multi-stage Docker build. Installs a pre-built image.
+# v4.3.0: Multi-stage Docker build. Installs a pre-built image.
 # Updates are non-destructive: just `.\update.ps1` to pull + rebuild.
 #
 # Usage:  .\install.ps1
@@ -29,7 +29,7 @@ $projectName = (Split-Path -Leaf $ScriptDir).ToLower()
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH - Auto Nuke & Reinstall v4.2.1" -ForegroundColor Cyan
+Write-Host "  WSH - Auto Nuke & Reinstall v4.3.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -53,7 +53,7 @@ function Write-Manifest {
 
     $manifestContent = @"
 {
-  "version": "4.2.1",
+  "version": "4.3.0",
   "app_name": "WeaveNote Self-Hosted (WSH)",
   "install_dir": "$installDir",
   "install_date": "$timestamp",
@@ -64,7 +64,7 @@ function Write-Manifest {
   },
   "resources": {
     "containers": ["wsh-postgres", "weavenote-app", "wsh-dbviewer", "wsh-pgadmin"],
-    "images": ["weavenote:4.2.1", "weavenote:latest"],
+    "images": ["weavenote:4.3.0", "weavenote:latest"],
     "volumes": ["postgres-data", "weavenote-data", "pgadmin-data"],
     "networks": ["wsh-net"]
   },
@@ -164,7 +164,7 @@ Write-Host "[2/6] Removing WSH Docker images..." -ForegroundColor Yellow
 
 # Only remove images that WSH explicitly builds or tags
 # We do NOT remove shared images like postgres:16-alpine, adminer:latest, etc.
-$wshImages = @("weavenote:4.2.1", "weavenote:latest", "weavenote-app")
+$wshImages = @("weavenote:4.3.0", "weavenote:latest", "weavenote-app")
 $foundImages = 0
 $allImages = docker images --format "{{.Repository}}:{{.Tag}}" 2>$null
 if ($allImages) {

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.0] - 2026-04-10
+
+### ✨ Added
+
+- **Document Upload & Processing Pipeline** — Complete PDF/document upload system with server-side file storage, per-page text extraction, and automatic chunking. Uploaded files are saved to disk (`upload/documents/`), metadata is stored in the `Document` table, and extracted text is split into page-based chunks in `DocumentChunk` for efficient search indexing. The processing pipeline runs inline during upload: extract text per page → split long pages into chunks (2000 chars with 200 char overlap, breaking at sentence/paragraph boundaries) → insert all chunks into the database → mark document as "ready". Supports PDF, TXT, MD, DOCX, CSV, JSON, XML, YAML, and more. Files up to 50MB accepted.
+
+- **Full-Text Document Search** — Powerful full-text search across all uploaded documents using PostgreSQL native full-text search. Four search modes supported:
+  - **Full Text**: Search individual words separated by spaces (e.g., `firewall incident compliance`). Uses PostgreSQL `to_tsvector`/`to_tsquery` with English configuration.
+  - **Phrase Search**: Search for exact phrases (e.g., `"firewall configuration"`). Matches the phrase directly in document text.
+  - **Boolean Search**: Use `AND`, `OR`, `NOT` operators (e.g., `firewall AND access`, `vpn OR policy`, `backup NOT cloud`).
+  - **Fuzzy Search**: Partial and typo-tolerant matching using PostgreSQL `pg_trgm` extension (e.g., `config*`, `securty*`).
+
+- **Document Library Management** — View all uploaded documents with expandable chunk previews. Each document shows status (processing/ready/error), file size, page count, chunk count, and upload date. Documents can be expanded to view individual chunks with page numbers and content. Cascade delete removes chunks and file from disk.
+
+- **PostgreSQL Full-Text Search Infrastructure** — Automatic setup of `pg_trgm` extension and two GIN indexes during Docker startup: one for full-text search (`to_tsvector`) and one for trigram/fuzzy search (`gin_trgm_ops`). Built via `docker-entrypoint.sh` for immediate search availability after deployment.
+
+- **New Prisma Models** — `Document` (file metadata, ownership, status tracking) and `DocumentChunk` (per-page/chunk text with `pageNumber`, `chunkIndex`, `content`, `charCount`). Cascade delete ensures chunks are removed when a document is deleted.
+
+- **DocumentManager UI Component** — Replaced the old `DocumentEditor` (in-memory text extraction only) with a full-featured component featuring three sub-tabs: **Upload** (drag-and-drop with processing pipeline visualization), **Library** (document list with expandable chunk previews and delete), **Search** (four-mode search with document source, page number, and highlighted snippets with search tips).
+
+### 🔧 Changed
+
+- **Document tab completely redesigned** — The "Document" note type now opens the DocumentManager instead of the old in-memory text extraction editor. Documents are persisted to the database with full-text search indexes.
+
+- **New API routes** — `POST /api/documents/upload` (FormData, JWT auth), `GET /api/documents` (list), `GET/DELETE /api/documents/[id]` (single document with chunks), `POST /api/documents/search` (full-text/phrase/boolean/fuzzy with snippet generation).
+
+### 🏗️ Architecture
+
+- `src/lib/pdfProcessor.ts` — PDF and text extraction utility with per-page extraction, chunk splitting, file I/O
+- `src/app/api/documents/upload/route.ts` — Upload endpoint with validation, processing pipeline
+- `src/app/api/documents/route.ts` — Document listing endpoint
+- `src/app/api/documents/[id]/route.ts` — Single document retrieval and deletion
+- `src/app/api/documents/search/route.ts` — Full-text search with four modes, snippet generation
+- `src/components/wsh/editors/DocumentManager.tsx` — New document management UI component
+- `prisma/schema.prisma` — Added `Document` and `DocumentChunk` models with indexes
+
+---
+
 ## [4.2.1] - 2026-04-10
 
 ### 🐛 Fixed

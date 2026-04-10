@@ -1,5 +1,5 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.2.1
+# WSH Docker Entrypoint v3.9.4
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 
@@ -24,7 +24,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.2.1}"
+echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-3.9.4}"
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 
@@ -108,31 +108,6 @@ if [ ! -f "$MARKER_FILE" ]; then
 else
   echo "[+] Database already initialized (skipping schema push)"
 fi
-
-# ── Enable PostgreSQL extensions for full-text search ──────────
-echo "[*] Setting up PostgreSQL full-text search extensions..."
-node -e "
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient({ log: [] });
-  prisma.\\\$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pg_trgm;')
-    .then(function() { console.log('[+] pg_trgm extension enabled'); })
-    .catch(function(e) { console.log('[!] pg_trgm: ' + e.message); })
-    .finally(function() { return prisma.\\\$disconnect(); });
-" 2>&1
-
-# Build GIN indexes for document search (idempotent — IF NOT EXISTS)
-echo "[*] Building document search indexes..."
-node -e "
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient({ log: [] });
-  prisma.\\\$executeRawUnsafe(\\\"CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('english', content));\\\")
-    .then(function() { console.log('[+] Full-text GIN index created'); })
-    .catch(function(e) { console.log('[!] FTS index: ' + e.message); })
-    .finally(function() { return prisma.\\\$executeRawUnsafe(\\\"CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);\\\"); })
-    .then(function() { console.log('[+] Trigram GIN index created'); })
-    .catch(function(e) { console.log('[!] Trigram index: ' + e.message); })
-    .finally(function() { return prisma.\\\$disconnect(); });
-" 2>&1
 
 # ── Seed default admin user (runs on EVERY startup — idempotent) ──
 # This runs outside the first-run guard so that if the seed failed on a
