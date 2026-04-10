@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
-import { Inter, Fira_Code } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const inter = Inter({
+const inter = localFont({
+  src: "../../public/fonts/Inter-Variable.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
 });
 
-const firaCode = Fira_Code({
+const firaCode = localFont({
+  src: "../../public/fonts/FiraCode-Variable.woff2",
   variable: "--font-fira-code",
-  subsets: ["latin"],
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -33,21 +39,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-        />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body
         className={`${inter.variable} ${firaCode.variable} antialiased bg-background text-foreground font-sans`}
       >
