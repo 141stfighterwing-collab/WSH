@@ -95,7 +95,7 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Create runtime directories
-RUN mkdir -p /app/tmp /app/db && chown -R nextjs:nodejs /app/tmp /app/db
+RUN mkdir -p /app/tmp /app/db /app/upload && chown -R nextjs:nodejs /app/tmp /app/db /app/upload
 
 # Build version stamp
 RUN echo "BUILD_VERSION=${BUILD_VERSION}" > /app/.build-version && \
