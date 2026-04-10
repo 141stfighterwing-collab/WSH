@@ -102,7 +102,7 @@ if [ ! -f "$MARKER_FILE" ]; then
       echo "[ERROR] The server will still start — check /api/health after boot."
     fi
   fi
-  mkdir -p /app/tmp
+  mkdir -p /app/tmp /app/upload
   touch "$MARKER_FILE"
   echo "[+] Database initialization complete (marker: $MARKER_FILE)"
 else
@@ -138,6 +138,7 @@ node -e "
 # This runs outside the first-run guard so that if the seed failed on a
 # previous start (e.g. DB wasn't ready yet), it will self-heal on restart.
 # It checks whether the admin user already exists before attempting creation.
+mkdir -p /app/upload
 if [ ! -f "$SEED_MARKER" ]; then
   echo "[*] Seeding default admin user (if not exists)..."
   SEED_OUTPUT=$(node -e "
@@ -212,7 +213,7 @@ if [ ! -f "$SEED_MARKER" ]; then
       echo "[+] Admin seed check complete (user already exists or no action needed)"
     fi
     # Mark as seeded so we don't re-run on every restart (only needed once)
-    mkdir -p /app/tmp
+    mkdir -p /app/tmp /app/upload
     touch "$SEED_MARKER"
   else
     echo "[!] Admin seed failed — will retry on next container restart"
