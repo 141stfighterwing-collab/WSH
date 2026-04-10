@@ -89,7 +89,7 @@ fi
 
 # ── Database schema sync (runs on EVERY startup) ──────────────
 # prisma db push is idempotent: instant no-op when schema matches,
-# and applies new tables/columns when the app is updated (e.g. v4.3.0
+# and applies new tables/columns when the app is updated (e.g. v4.3.1
 # added Document + DocumentChunk models). No data is lost.
 echo "[*] Syncing database schema..."
 if $PRISMA_CLI db push --accept-data-loss $SCHEMA_FLAG 2>&1; then

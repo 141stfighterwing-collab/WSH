@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.1] - 2026-04-11
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Quick References edit/delete buttons invisible and non-functional** — The Quick References panel in the left sidebar had multiple severe usability issues that made the edit, delete, and add features practically unusable:
+
+  - **Invisible action buttons** — The Edit and Delete buttons were rendered as tiny 13px icon-only elements colored `#555` (dark gray on a dark background), making them nearly impossible to see or tap, especially on touch devices. Replaced with clearly labeled text buttons ("Use", "Edit", "Delete") each with distinct icons (`Zap`, `Edit3`, `Trash2`) and proper padding (`px-2.5 py-1`) for adequate touch targets.
+
+  - **No delete functionality** — There was no way to remove a reference from the list. Added a full Delete button with a two-step confirmation flow: clicking Delete shows a red confirmation bar ("Delete 'title'?") with "Yes, Delete" and "Cancel" buttons, preventing accidental deletions. The confirmation bar uses `bg-red-500/10` with `border-red-500/30` styling for clear visual distinction.
+
+  - **No edit functionality** — The Edit button existed but did nothing when clicked. Implemented a complete inline edit mode: clicking Edit transforms the reference into an editable form with name, description, and content (markdown) fields, plus Save and Cancel buttons. Edits are persisted to `localStorage` immediately on save.
+
+  - **No add functionality** — Users could not create new custom references. Added a blue "+ Add" button in the section header that creates a new reference, expands it, and immediately enters edit mode with pre-filled default values.
+
+  - **Bookmark icons dim gray on dark background** — The `FileText` icon was colored `text-pri-400` which rendered as a dim gray on the dark sidebar background. Replaced with `BookmarkCheck` icon colored `text-blue-500` (#3b82f6) for high visibility and better semantic meaning.
+
+  - **No hover differentiation** — Edit and Delete buttons looked identical with no visual hint of their destructive vs. constructive nature. Added distinct hover states: Edit button highlights blue (`hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/30`), Delete button highlights red (`hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30`).
+
+  - **`crypto.randomUUID()` crash in non-secure contexts** — When running in environments without a secure context (HTTP instead of HTTPS, or certain embedded browsers), `crypto.randomUUID()` throws a `TypeError`. Added a try-catch fallback that generates IDs using `Date.now().toString(36) + '-' + Math.random().toString(36)` when `crypto.randomUUID()` is unavailable.
+
+  - **Click event bubbling** — Action button clicks bubbled up to the parent toggle button, causing the reference to collapse when clicking Edit, Delete, or Use. Added `event.stopPropagation()` on every action button handler to prevent accidental collapse.
+
+  - **Templates were hardcoded** — The four default templates (Daily Standup, Meeting Notes, Project Brief, Code Review) were hardcoded as a const array and could not be modified, added to, or removed. Converted to dynamic state managed via `useState` with `localStorage` persistence (`wsh-quick-references` key). References are loaded from localStorage on mount and saved automatically whenever changes occur. The four defaults are used as the initial seed only when no stored data exists.
+
+### ✨ Added
+
+- **localStorage persistence for Quick References** — All references are saved to `localStorage` under the `wsh-quick-references` key. Changes (add, edit, delete) persist across page reloads and browser restarts. The storage layer uses try-catch for resilience against quota errors and parse failures.
+
+- **Empty state display** — When all references have been deleted, the panel shows a centered message with a faded `FileText` icon and "No references yet. Click '+ Add' to create one." text, preventing a confusing blank space.
+
+- **Custom event dispatch on Use** — Clicking "Use" fires a `wsh:use-quick-ref` custom event on `window` with the full reference object as `detail`, allowing the NoteEditor or other components to receive and process the template content.
+
+### 🏗️ Architecture
+
+- **Complete rewrite of `QuickReferences.tsx`** — Expanded from 97 lines to ~300 lines. The component now manages its own state for references, expanded/collapsed state, editing state, delete confirmation state, and new-reference creation. All handlers use `useCallback` for memoization. The component is fully self-contained with helper functions (`generateId`, `loadRefs`, `saveRefs`) extracted outside the component for testability.
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.1** across all 13 files: `package.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `update.ps1`, `update.sh`, `install.ps1`, `install.sh`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, `README.md`, `DOCS.md`.
+
+### 📝 Documentation
+
+- **DOCS.md version references updated** — Stale `4.1.2` references in `DOCS.md` (container details table, manual recovery commands, Docker Safety section) updated to `4.3.1`.
+
+---
+
 ## [4.3.0] - 2026-04-10
 
 ### ✨ Added
