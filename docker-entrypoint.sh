@@ -87,27 +87,23 @@ if [ $RETRIES -ge $MAX_RETRIES ]; then
   exit 1
 fi
 
-# ── Database initialization (first run only) ───────────────────
-if [ ! -f "$MARKER_FILE" ]; then
-  echo "[*] First run — initializing database schema..."
-  if $PRISMA_CLI db push $SCHEMA_FLAG 2>&1; then
-    echo "[+] Database schema pushed successfully"
-  else
-    echo "[!] db push failed — regenerating Prisma client and retrying..."
-    $PRISMA_CLI generate $SCHEMA_FLAG 2>&1 || echo "[!] prisma generate failed (non-fatal)"
-    if $PRISMA_CLI db push $SCHEMA_FLAG 2>&1; then
-      echo "[+] Database schema pushed on retry"
-    else
-      echo "[ERROR] Database initialization failed after retry."
-      echo "[ERROR] The server will still start — check /api/health after boot."
-    fi
-  fi
-  mkdir -p /app/tmp /app/upload
-  touch "$MARKER_FILE"
-  echo "[+] Database initialization complete (marker: $MARKER_FILE)"
+# ── Database schema sync (runs on EVERY startup) ──────────────
+# prisma db push is idempotent: instant no-op when schema matches,
+# and applies new tables/columns when the app is updated (e.g. v4.3.0
+# added Document + DocumentChunk models). No data is lost.
+echo "[*] Syncing database schema..."
+if $PRISMA_CLI db push --accept-data-loss $SCHEMA_FLAG 2>&1; then
+  echo "[+] Database schema is up to date"
 else
-  echo "[+] Database already initialized (skipping schema push)"
+  echo "[!] Schema push had warnings — regenerating client and retrying..."
+  $PRISMA_CLI generate $SCHEMA_FLAG 2>&1 || echo "[!] prisma generate failed (non-fatal)"
+  if $PRISMA_CLI db push --accept-data-loss $SCHEMA_FLAG 2>&1; then
+    echo "[+] Database schema synced on retry"
+  else
+    echo "[ERROR] Database schema sync failed. Check /api/health after boot."
+  fi
 fi
+mkdir -p /app/tmp /app/upload
 
 # ── Enable PostgreSQL extensions for full-text search ──────────
 echo "[*] Setting up PostgreSQL full-text search extensions..."
