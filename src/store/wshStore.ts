@@ -434,7 +434,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
     user: { ...state.user, ...user },
   })),
   logoutUser: () => {
-    set({ user: { ...defaultUser }, notes: [], folders: [] });
+    set({ user: { ...defaultUser }, notes: [], folders: [], calendarDateFilter: null });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wsh-auth');
       // Clear note/folder cache from localStorage

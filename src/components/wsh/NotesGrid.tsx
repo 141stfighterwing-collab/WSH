@@ -303,10 +303,10 @@ export default function NotesGrid() {
         <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
           <Plus className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground/60">
-            {searchQuery ? 'No notes match your search' : 'No notes yet'}
+            {calendarDateFilter && !searchQuery ? 'No notes on this date' : searchQuery ? 'No notes match your search' : 'No notes yet'}
           </p>
           <p className="text-xs text-muted-foreground/40 mt-1">
-            {searchQuery ? 'Try different keywords' : 'Create your first note above'}
+            {calendarDateFilter && !searchQuery ? 'Select a different date or clear the filter' : searchQuery ? 'Try different keywords' : 'Create your first note above'}
           </p>
         </div>
       )}
