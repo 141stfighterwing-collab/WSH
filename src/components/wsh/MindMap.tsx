@@ -50,6 +50,7 @@ export default function MindMap() {
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
   const dragRef = useRef<{ nodeId: string | null; offsetX: number; offsetY: number }>({ nodeId: null, offsetX: 0, offsetY: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const panningRef = useRef<{ active: boolean; startX: number; startY: number; panStartX: number; panStartY: number }>({
     active: false, startX: 0, startY: 0, panStartX: 0, panStartY: 0,
   });
@@ -263,6 +264,7 @@ export default function MindMap() {
             offsetX: e.clientX / zoomRef.current - node.x,
             offsetY: e.clientY / zoomRef.current - node.y,
           };
+          setIsDragging(true);
         }
       }
     } else {
@@ -294,6 +296,7 @@ export default function MindMap() {
   const handleMouseUp = useCallback(() => {
     dragRef.current = { nodeId: null, offsetX: 0, offsetY: 0 };
     panningRef.current.active = false;
+    setIsDragging(false);
   }, []);
 
   const handleClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -411,7 +414,7 @@ export default function MindMap() {
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onClick={handleClick}
-          style={{ cursor: dragRef.current.nodeId ? 'grabbing' : 'grab' }}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
         >
           <defs>
             <radialGradient id="mindmap-glow">

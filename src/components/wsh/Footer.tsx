@@ -41,7 +41,7 @@ export default function Footer() {
         {/* Right */}
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground/60">
-            Daily AI Usage: {aiUsageCount}/800
+            AI Tokens: {aiUsageCount.toLocaleString()}
           </span>
         </div>
       </footer>

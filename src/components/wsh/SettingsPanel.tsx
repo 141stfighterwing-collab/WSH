@@ -206,7 +206,7 @@ export default function SettingsPanel() {
                 <span className="micro-label text-muted-foreground">Appearance</span>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => !darkMode && toggleDarkMode()}
+                    onClick={() => { if (!darkMode) { toggleDarkMode(); saveToLocalStorage(); } }}
                     className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all active:scale-95 ${
                       darkMode
                         ? 'bg-pri-600/15 border-pri-500/30 text-pri-400'
@@ -217,7 +217,7 @@ export default function SettingsPanel() {
                     <span className="text-xs font-semibold">Dark</span>
                   </button>
                   <button
-                    onClick={() => darkMode && toggleDarkMode()}
+                    onClick={() => { if (darkMode) { toggleDarkMode(); saveToLocalStorage(); } }}
                     className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all active:scale-95 ${
                       !darkMode
                         ? 'bg-pri-600/15 border-pri-500/30 text-pri-400'

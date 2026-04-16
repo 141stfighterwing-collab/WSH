@@ -5,7 +5,17 @@ import { Circle, ChevronRight } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 export default function FarRightSidebar() {
-  const { notes } = useWSHStore();
+  const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+
+  const openNote = (note: typeof notes[0]) => {
+    setActiveNoteId(note.id);
+    setEditorTitle(note.title);
+    setEditorContent(note.content);
+    setEditorRawContent(note.rawContent || '');
+    setActiveNoteType(note.type);
+    setEditorTags(note.tags);
+  };
+
   const todayTasks = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -50,6 +60,7 @@ export default function FarRightSidebar() {
             todayTasks.map((task) => (
               <div
                 key={task.id}
+                onClick={() => openNote(task)}
                 className="flex items-start gap-2 p-2 rounded-xl hover:bg-secondary/50 transition-colors group cursor-pointer"
               >
                 <Circle className="w-4 h-4 text-muted-foreground/40 mt-0.5 shrink-0 group-hover:text-cyan-400 transition-colors" />
@@ -87,6 +98,7 @@ export default function FarRightSidebar() {
             ongoingProjects.map((project) => (
               <div
                 key={project.id}
+                onClick={() => openNote(project)}
                 className="bg-secondary/30 rounded-xl p-3 border border-border/30 hover:border-fuchsia-500/20 transition-all duration-200 cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-2">

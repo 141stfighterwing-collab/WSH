@@ -413,7 +413,6 @@ export default function NoteEditor() {
           const tags = JSON.parse(data.result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
           if (Array.isArray(tags)) {
             tags.forEach((tag: string) => addEditorTag(tag.trim()));
-            setEditorTags(tags.map((tag: string) => tag.trim()));
           }
         } catch {
           const fallbackTags = data.result
@@ -511,7 +510,12 @@ export default function NoteEditor() {
       {activeNoteType !== 'ai-prompts' && (
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/50 overflow-x-auto">
         {/* Font selector */}
-        <select className="bg-transparent text-xs text-muted-foreground px-1.5 py-1 rounded-md hover:bg-secondary focus:outline-none cursor-pointer">
+        <select
+          value="inter"
+          className="bg-transparent text-xs text-muted-foreground px-1.5 py-1 rounded-md hover:bg-secondary focus:outline-none cursor-pointer"
+          disabled
+          title="Font selection coming soon"
+        >
           <option value="inter">Inter</option>
           <option value="mono">Fira Code</option>
           <option value="kalam">Kalam</option>
