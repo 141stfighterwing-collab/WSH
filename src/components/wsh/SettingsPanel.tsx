@@ -115,10 +115,17 @@ export default function SettingsPanel() {
     } catch { /* ignore */ }
 
     // Fetch server-side AI availability
-    fetch('/api/synthesis')
-      .then((r) => r.json())
+    const token = useWSHStore.getState().user.token;
+    fetch('/api/synthesis', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((data) => {
-        setServerAiStatus({ available: data.available, configured: data.configured, provider: data.provider });
+        if (!data || !data.available) return;
+        setServerAiStatus({ available: data.available, configured: data.configured || [], provider: data.provider || '' });
         // Auto-detect provider if not stored
         const stored2 = localStorage.getItem('wsh-ai-settings');
         if (stored2) {
@@ -146,7 +153,7 @@ export default function SettingsPanel() {
 
   const selectedProviderConfig = PROVIDERS.find((p) => p.id === aiProvider);
   const availableModels = selectedProviderConfig?.models || [];
-  const hasAnyProvider = serverAiStatus && serverAiStatus.configured.length > 0;
+  const hasAnyProvider = serverAiStatus && serverAiStatus.configured && serverAiStatus.configured.length > 0;
   const isProviderAvailable = aiProvider && serverAiStatus?.available[aiProvider];
 
   if (!settingsOpen) return null;

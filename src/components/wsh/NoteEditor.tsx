@@ -384,9 +384,13 @@ export default function NoteEditor() {
     } catch { /* ignore */ }
 
     try {
+      const token = useWSHStore.getState().user.token;
       const res = await fetch('/api/synthesis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           content: rawContent,
           action: synthesisMode,
