@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.6] - 2026-04-17
+
+### ✨ Added
+
+- **Automated ENV persistence test scripts** — Added `test-env.sh` (Linux/macOS) and `test-env.ps1` (Windows) that verify the full lifecycle of environment variable persistence. The scripts run 10 automated checks:
+  1. Health check (app running, version, database)
+  2. Login & JWT authentication with admin credentials
+  3. AI provider availability baseline
+  4. Save test API key via POST /api/admin/env
+  5. Verify key active in memory via GET /api/synthesis
+  6. Verify key exists on disk (runtime.env inside container)
+  7. Soft restart the app container
+  8. Verify key persists after restart (GET /api/synthesis)
+  9. Verify runtime.env still on disk after restart
+  10. Admin ENV GET endpoint confirms key is configured
+  The test script automatically cleans up the test key at the end. Usage: `chmod +x test-env.sh && ./test-env.sh` or `.\test-env.ps1`. Configurable via env vars: `ADMIN_USER`, `ADMIN_PASS`, `TEST_KEY`, `WSH_PORT`.
+
+- **Test ENV example file (`.env.test`)** — Added a comprehensive `.env.test` file containing example/test values for every environment variable. This file is for reference and testing purposes only — not for production use. Includes commented sections for all variable categories (application, database, auth, AI, storage, logging) with realistic format examples showing the expected key format for each AI provider.
+
+### 📝 Documentation
+
+- **DOCS.md: New "Soft Restart vs. Full Update" section** — Comprehensive comparison of soft restart (`restart.sh` / `restart.ps1`) vs full update (`update.sh` / `update.ps1`), including when to use each, what each preserves, and the key difference in behavior.
+
+- **DOCS.md: New "ENV Persistence Testing" section** — Complete documentation for running the test scripts, including what the 10 tests check, how to configure custom credentials, and troubleshooting steps for common test failures.
+
+- **DOCS.md: AI Synthesis ENV vars updated** — Added `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `OPENAI_BASE_URL` to the Environment Variables Reference table. Fixed stale `glm-4-flash` model reference.
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.6** across all 15 core files: `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, `README.md`, `DOCS.md`, `CHANGELOG.md`.
+
+---
+
 ## [4.3.5] - 2026-04-17
 
 ### 🐛 Fixed

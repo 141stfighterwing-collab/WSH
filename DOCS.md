@@ -1,6 +1,6 @@
 # WSH Documentation
 
-> WeaveNote Self-Hosted v4.3.5 — Complete reference documentation
+> WeaveNote Self-Hosted v4.3.6 — Complete reference documentation
 
 ---
 
@@ -18,16 +18,18 @@
    - [What Does NOT Get Touched](#what-does-not-get-touched)
    - [How It Works (Technical Details)](#how-it-works-technical-details)
    - [Old vs. New Behavior Comparison](#old-vs-new-behavior-comparison)
-4. [Updating WSH](#updating-wsh)
-5. [Uninstalling / Clean Removal](#uninstalling-clean-removal)
-6. [Troubleshooting](#troubleshooting)
-7. [Architecture Overview](#architecture-overview)
-8. [API Reference](#api-reference)
+4. [Soft Restart vs. Full Update](#soft-restart-vs-full-update)
+5. [ENV Persistence Testing](#env-persistence-testing)
+6. [Updating WSH](#updating-wsh)
+7. [Uninstalling / Clean Removal](#uninstalling-clean-removal)
+8. [Troubleshooting](#troubleshooting)
+9. [Architecture Overview](#architecture-overview)
+10. [API Reference](#api-reference)
    - [Public Authentication API](#public-authentication-api)
    - [Registration Flow](#registration-flow)
    - [Default Admin Account](#default-admin-account)
-9. [Environment Variables Reference](#environment-variables-reference)
-10. [Security Considerations](#security-considerations)
+11. [Environment Variables Reference](#environment-variables-reference)
+12. [Security Considerations](#security-considerations)
 
 ---
 
@@ -186,7 +188,7 @@ The install and cleanup scripts (`install.sh`, `install.ps1`) only remove the fo
 | Resource Type | Exact Names/Tags Removed | Method |
 |---------------|--------------------------|--------|
 | **Containers** | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match via `docker compose down` + explicit `docker rm -f` for orphans |
-| **Images** | `weavenote:4.3.5`, `weavenote:latest`, `weavenote-app` | Exact tag match |
+| **Images** | `weavenote:4.3.6`, `weavenote:latest`, `weavenote-app` | Exact tag match |
 | **Volumes** | `postgres-data`, `weavenote-data`, `pgadmin-data` (with Docker Compose project prefix like `WSH_`) | Exact name match |
 | **Networks** | `wsh-net` (with Docker Compose project prefix) | Exact name match |
 | **Build Cache** | Only cache entries labeled with WSH's project name | `--filter "label=com.docker.compose.project=<name>"` |
@@ -259,6 +261,136 @@ This uses Docker's label-based filtering to only remove build cache entries that
 | Remove networks | `grep -iE "wsh\|weavenote"` | `docker compose down` + exact name match |
 | Build cache | `docker builder prune -af` (system-wide) | `docker builder prune -f --filter "label=..."` (project-scoped) |
 | System prune | `docker system prune -af` (destroys ALL unused Docker resources on host) | **REMOVED entirely** |
+
+---
+
+## Soft Restart vs. Full Update
+
+WSH provides two ways to restart the application, each serving a different purpose:
+
+### Soft Restart (Recommended for Testing)
+
+A soft restart restarts only the `weavenote-app` container **without rebuilding the Docker image**. It takes ~2 seconds and preserves all runtime state, including API keys saved via the Settings panel.
+
+```bash
+# Linux / macOS
+./restart.sh              # Restart and verify health
+./restart.sh --logs       # Restart and show live logs
+```
+
+```powershell
+# Windows
+.\restart.ps1             # Restart and verify health
+.\restart.ps1 -Logs        # Restart and show live logs
+```
+
+**When to use soft restart:**
+- After saving an AI API key in Settings > AI Engine (to verify it persists)
+- After changing any environment variable via the Admin ENV Settings panel
+- Quick recovery from a transient application error
+- Testing configuration changes without a full rebuild
+
+**What soft restart preserves:**
+- All Docker volumes (database, uploads, env file)
+- All runtime environment variables (API keys saved via `/api/admin/env`)
+- The built Docker image (no rebuild)
+- Container networking and volume mounts
+
+### Full Update
+
+A full update pulls the latest code from GitHub, rebuilds the Docker image, and recreates containers. It takes ~3-5 minutes but ensures you have the latest code and fixes.
+
+```bash
+# Linux / macOS
+./update.sh              # Standard update (layer-cached rebuild)
+./update.sh --no-cache   # Force full rebuild (slower but thorough)
+```
+
+```powershell
+# Windows
+.\update.ps1              # Standard update
+.\update.ps1 -NoCache     # Force full rebuild
+```
+
+**When to use full update:**
+- After a new release is pushed to GitHub
+- When you need the latest bug fixes or features
+- When the application is behaving unexpectedly and a restart doesn't help
+
+**Key difference:** The full update runs `docker compose down && docker compose build && docker compose up -d`, which recreates containers from scratch. However, because API keys are now persisted to the `wsh-env` Docker volume (at `/app/tmp/env/runtime.env`), they **survive full updates** too.
+
+---
+
+## ENV Persistence Testing
+
+WSH includes automated test scripts that verify the full lifecycle of environment variable persistence. These scripts test that API keys saved through the UI survive container restarts.
+
+### Running the Tests
+
+```bash
+# Linux / macOS (with defaults: admin/admin123 on port 8883)
+chmod +x test-env.sh && ./test-env.sh
+
+# Custom credentials
+ADMIN_USER=admin ADMIN_PASS=admin123 ./test-env.sh
+
+# Custom test key
+TEST_KEY=sk-my-test-key-12345 ./test-env.sh
+
+# Custom port
+WSH_PORT=9999 ADMIN_USER=admin ADMIN_PASS=admin123 ./test-env.sh
+```
+
+```powershell
+# Windows (PowerShell)
+.\test-env.ps1
+
+# Custom credentials
+$env:ADMIN_USER="admin"; $env:ADMIN_PASS="admin123"; .\test-env.ps1
+
+# Custom port
+$env:WSH_PORT="9999"; .\test-env.ps1
+```
+
+### What the Tests Check
+
+The test script runs 10 automated checks in sequence:
+
+| # | Test | What It Verifies |
+|---|------|-----------------|
+| 1 | Health Check | App is running, version matches, database connected |
+| 2 | Login & JWT | Can authenticate with admin credentials |
+| 3 | AI Status (before) | Current AI provider availability baseline |
+| 4 | Save Test Key | POST /api/admin/env successfully saves a test key |
+| 5 | Key in Memory | GET /api/synthesis detects the key immediately |
+| 6 | Key on Disk | runtime.env file inside container contains the key |
+| 7 | Soft Restart | Container restarts and becomes healthy again |
+| 8 | Key After Restart | Key is still detected after container restart |
+| 9 | File After Restart | runtime.env still exists on disk after restart |
+| 10 | Admin ENV GET | Admin endpoint confirms key is configured |
+
+The script automatically cleans up the test key at the end.
+
+### Test ENV File
+
+A `.env.test` file is included with example values for every environment variable. This file is for reference only — do not use it as your actual `.env` file. Use `.env.example` for real deployments.
+
+```bash
+# View test values
+cat .env.test
+
+# Use as reference (not as your .env)
+cp .env.test .env.test-reference
+```
+
+### Troubleshooting Test Failures
+
+If the test script reports failures:
+
+1. **"runtime.env not found inside container"** — The `wsh-env` Docker volume may not be mounted. Run `docker compose down && docker compose up -d` to recreate volumes.
+2. **"Key lost after restart"** — Check if the volume driver is correct: `docker volume inspect wsh_wsh-env`. If the volume is empty, the entrypoint may not be loading it. Check logs: `docker compose logs weavenote | grep runtime.env`
+3. **"Login failed"** — Verify admin credentials match your `.env` file. Check: `docker compose exec weavenote env | grep ADMIN_DEFAULT`
+4. **"Container not running"** — Start with: `docker compose up -d && sleep 15`
 
 ---
 
@@ -425,7 +557,7 @@ If the install scripts are not working and you need to manually clean up:
 docker rm -f wsh-postgres weavenote-app wsh-dbviewer wsh-pgadmin 2>/dev/null
 
 # Remove WSH image
-docker rmi -f weavenote:4.3.5 2>/dev/null
+docker rmi -f weavenote:4.3.6 2>/dev/null
 
 # Remove WSH volumes
 docker volume rm WSH_postgres-data WSH_weavenote-data WSH_pgadmin-data 2>/dev/null
@@ -477,7 +609,7 @@ docker compose up -d
 
 | Container | Image | Purpose | Ports |
 |-----------|-------|---------|-------|
-| `weavenote-app` | `weavenote:4.3.5` (built locally) | Main Next.js application | 8883 |
+| `weavenote-app` | `weavenote:4.3.6` (built locally) | Main Next.js application | 8883 |
 | `wsh-postgres` | `postgres:16-alpine` | PostgreSQL 16 database | 5432 (internal) |
 | `wsh-dbviewer` | `adminer:latest` | Web database browser | 5682 |
 | `wsh-pgadmin` | `dpage/pgadmin4:latest` | Full PostgreSQL admin UI | 5050 (optional) |
@@ -512,8 +644,8 @@ Returns application health status.
 ```json
 {
   "status": "healthy",
-  "version": "4.3.5",
-  "timestamp": "2026-04-09T12:00:00.000Z"
+  "version": "4.3.6",
+  "timestamp": "2026-04-17T12:00:00.000Z"
 }
 ```
 
@@ -736,7 +868,12 @@ bun run db:seed
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AI_SYNTHESIS_MODEL` | `glm-4-flash` | AI model for synthesis |
+| `AI_PROVIDER` | (auto-detect) | AI provider: `claude`, `openai`, or `gemini` |
+| `ANTHROPIC_API_KEY` | (none) | Anthropic Claude API key |
+| `OPENAI_API_KEY` | (none) | OpenAI API key |
+| `GEMINI_API_KEY` | (none) | Google Gemini API key |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | Custom OpenAI-compatible base URL |
+| `AI_SYNTHESIS_MODEL` | (provider default) | AI model for synthesis |
 | `AI_SYNTHESIS_TEMPERATURE` | `0.7` | Creativity level (0.0–1.0) |
 | `AI_SYNTHESIS_MAX_TOKENS` | `4096` | Max tokens per response |
 | `AI_DAILY_LIMIT` | `800` | Max synthesis requests per day |
