@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
           role: true,
           status: true,
           password: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
 

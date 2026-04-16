@@ -1,6 +1,19 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+
+/** Strip dangerous HTML from AI synthesis output to prevent XSS */
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[\s\S]*?>/gi, '')
+    .replace(/ on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/ on\w+\s*=\s*\S+/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/<form[\s\S]*?<\/form>/gi, '');
+}
 import {
   Bold,
   Italic,
@@ -422,8 +435,9 @@ export default function NoteEditor() {
           })
           .join('');
         if (editorRef.current) {
-          editorRef.current.innerHTML = outlineHtml;
-          setEditorContent(outlineHtml);
+          const safeOutline = sanitizeHtml(outlineHtml);
+          editorRef.current.innerHTML = safeOutline;
+          setEditorContent(safeOutline);
           setEditorRawContent(data.result);
         }
         setEngineStatus('Outline Created');
@@ -436,8 +450,9 @@ export default function NoteEditor() {
           .map((line: string) => `<p>${line}</p>`)
           .join('');
         if (editorRef.current) {
-          editorRef.current.innerHTML = resultHtml;
-          setEditorContent(resultHtml);
+          const safeResult = sanitizeHtml(resultHtml);
+          editorRef.current.innerHTML = safeResult;
+          setEditorContent(safeResult);
           setEditorRawContent(data.result);
         }
         setEngineStatus(`${synthesisMode.charAt(0).toUpperCase() + synthesisMode.slice(1)} Complete`);
@@ -853,9 +868,9 @@ export default function NoteEditor() {
             onClick={handleSave}
             className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-secondary transition-all active:scale-95"
           >
-            <Save className={`w-3 h-3 ${saveStatus === 'Saved' ? 'text-green-400' : ''}`} />
+            <Save className={`w-3 h-3 ${saveStatus === 'Saved ✓' ? 'text-green-400' : ''}`} />
             {saveStatus === 'Saving...' && <span className="text-pri-400">Saving...</span>}
-            {saveStatus === 'Saved' && <span className="text-green-400">Saved ✓</span>}
+            {saveStatus === 'Saved ✓' && <span className="text-green-400">Saved ✓</span>}
             {!saveStatus && 'Save'}
           </button>
 

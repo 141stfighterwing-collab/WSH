@@ -4,17 +4,16 @@ import { verifyToken } from '@/lib/auth';
 /**
  * BUG-004 fix: Server-side authentication middleware.
  *
- * Protected routes (all /api/admin/* except login/register):
+ * Protected routes (all /api/* except login/register):
  *   - Require a valid JWT in the Authorization: Bearer <token> header
  *   - Return 401 if missing or invalid
+ *   - /api/graph, /api/synthesis, /api/admin/* are all protected
  *
  * Public routes (no auth required):
  *   - /api/health
  *   - /api/db-test
  *   - /api/admin/users/login
  *   - /api/admin/users/register
- *   - /api/graph (public read)
- *   - /api/synthesis (has its own auth check)
  */
 
 const PUBLIC_PATHS = [
@@ -23,7 +22,6 @@ const PUBLIC_PATHS = [
   '/api/admin/users/login',
   '/api/admin/users/register',
   '/api/admin/users/verify',
-  '/api/graph',
 ];
 
 export async function middleware(request: NextRequest) {

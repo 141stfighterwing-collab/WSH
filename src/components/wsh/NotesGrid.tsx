@@ -175,11 +175,16 @@ export default function NotesGrid() {
   const filteredNotes = useMemo(() => {
     let filtered = notes.filter((n) => !n.isDeleted);
 
-    // Calendar date filter — only show notes from that specific day
+    // Calendar date filter — only show notes from that specific day (local timezone)
     if (calendarDateFilter) {
-      filtered = filtered.filter(
-        (n) => n.createdAt && n.createdAt.startsWith(calendarDateFilter)
-      );
+      filtered = filtered.filter((n) => {
+        if (!n.createdAt) return false;
+        const localDate = new Date(n.createdAt);
+        const y = localDate.getFullYear();
+        const m = String(localDate.getMonth() + 1).padStart(2, '0');
+        const d = String(localDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}` === calendarDateFilter;
+      });
     }
 
     if (activeFolderId) {
@@ -303,10 +308,22 @@ export default function NotesGrid() {
         <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
           <Plus className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground/60">
-            {calendarDateFilter && !searchQuery ? 'No notes on this date' : searchQuery ? 'No notes match your search' : 'No notes yet'}
+            {calendarDateFilter && searchQuery
+              ? 'No notes match both the date and search'
+              : calendarDateFilter
+                ? 'No notes on this date'
+                : searchQuery
+                  ? 'No notes match your search'
+                  : 'No notes yet'}
           </p>
           <p className="text-xs text-muted-foreground/40 mt-1">
-            {calendarDateFilter && !searchQuery ? 'Select a different date or clear the filter' : searchQuery ? 'Try different keywords' : 'Create your first note above'}
+            {calendarDateFilter && searchQuery
+              ? 'Try clearing the search or selecting a different date'
+              : calendarDateFilter
+                ? 'Select a different date or clear the filter'
+                : searchQuery
+                  ? 'Try different keywords'
+                  : 'Create your first note above'}
           </p>
         </div>
       )}

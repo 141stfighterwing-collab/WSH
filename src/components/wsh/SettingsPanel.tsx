@@ -88,7 +88,7 @@ const PROVIDERS: ProviderConfig[] = [
 ];
 
 export default function SettingsPanel() {
-  const { settingsOpen, setSettingsOpen, theme, setTheme, darkMode, toggleDarkMode, saveToLocalStorage } = useWSHStore();
+  const { settingsOpen, setSettingsOpen, theme, setTheme, darkMode, toggleDarkMode, saveToLocalStorage, notes, folders, tags } = useWSHStore();
   const [activeTab, setActiveTab] = useState<SettingsTab>('visuals');
 
   // ── AI State (localStorage-backed) ────────────────────────────────────
@@ -396,11 +396,11 @@ export default function SettingsPanel() {
               <span className="micro-label text-muted-foreground">System Diagnostics</span>
               <div className="space-y-2">
                 {[
-                  { label: 'Storage Used', value: '2.4 MB', status: 'good' },
-                  { label: 'Notes Count', value: '47', status: 'good' },
-                  { label: 'Sync Status', value: 'Local Only', status: 'warn' },
-                  { label: 'Last Backup', value: 'Never', status: 'warn' },
-                  { label: 'Uptime', value: '3h 42m', status: 'good' },
+                  { label: 'Active Notes', value: String(notes.filter((n) => !n.isDeleted).length), status: 'good' as const },
+                  { label: 'Folders', value: String(folders.length), status: 'good' as const },
+                  { label: 'Tags', value: String(tags.length), status: 'good' as const },
+                  { label: 'Theme', value: theme || 'default', status: 'good' as const },
+                  { label: 'Mode', value: darkMode ? 'Dark' : 'Light', status: 'good' as const },
                 ].map((item) => (
                   <div
                     key={item.label}

@@ -43,7 +43,6 @@ async function callClaude(systemPrompt: string, content: string, model: string, 
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
       model: CLAUDE_MODELS[model] || model,

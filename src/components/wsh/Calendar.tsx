@@ -18,7 +18,12 @@ export default function Calendar() {
     notes
       .filter((n) => !n.isDeleted && n.createdAt)
       .forEach((n) => {
-        const dateStr = n.createdAt.slice(0, 10); // YYYY-MM-DD
+        // Convert UTC ISO string to local date to match calendar display
+        const localDate = new Date(n.createdAt);
+        const y = localDate.getFullYear();
+        const m = String(localDate.getMonth() + 1).padStart(2, '0');
+        const d = String(localDate.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
         map[dateStr] = (map[dateStr] || 0) + 1;
       });
     return map;
@@ -76,7 +81,14 @@ export default function Calendar() {
   // Count notes for the active filter date
   const filteredCount = useMemo(() => {
     if (!calendarDateFilter) return 0;
-    return notes.filter((n) => !n.isDeleted && n.createdAt && n.createdAt.startsWith(calendarDateFilter)).length;
+    return notes.filter((n) => {
+      if (n.isDeleted || !n.createdAt) return false;
+      const localDate = new Date(n.createdAt);
+      const y = localDate.getFullYear();
+      const m = String(localDate.getMonth() + 1).padStart(2, '0');
+      const d = String(localDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}` === calendarDateFilter;
+    }).length;
   }, [notes, calendarDateFilter]);
 
   const isSelected = (day: number) => calendarDateFilter === toDateStr(day);
