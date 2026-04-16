@@ -358,6 +358,18 @@ export default function NoteEditor() {
     setSynthesisLoading(true);
     setEngineStatus(`Processing ${synthesisMode}...`);
 
+    // Read AI provider/model from localStorage
+    let aiProvider = '';
+    let aiModel = '';
+    try {
+      const stored = localStorage.getItem('wsh-ai-settings');
+      if (stored) {
+        const data = JSON.parse(stored);
+        aiProvider = data.provider || '';
+        aiModel = data.model || '';
+      }
+    } catch { /* ignore */ }
+
     try {
       const res = await fetch('/api/synthesis', {
         method: 'POST',
@@ -365,6 +377,8 @@ export default function NoteEditor() {
         body: JSON.stringify({
           content: rawContent,
           action: synthesisMode,
+          provider: aiProvider,
+          model: aiModel,
         }),
       });
 
@@ -372,7 +386,7 @@ export default function NoteEditor() {
 
       if (data.error) {
         setEngineStatus(`Error: ${data.error}`);
-        setTimeout(() => setEngineStatus('Intelligence Idle'), 3000);
+        setTimeout(() => setEngineStatus('Intelligence Idle'), 5000);
         setSynthesisLoading(false);
         return;
       }

@@ -24,7 +24,8 @@ const QUICK_ADD_KEYS = [
 ];
 
 const DEFAULT_ENV_VARS: EnvVar[] = [
-  { key: 'AI_SYNTHESIS_MODEL', value: 'glm-4-flash', category: 'AI', updated: new Date().toISOString() },
+  { key: 'AI_PROVIDER', value: '(auto-detect)', category: 'AI', updated: new Date().toISOString() },
+  { key: 'AI_SYNTHESIS_MODEL', value: '(provider default)', category: 'AI', updated: new Date().toISOString() },
   { key: 'AI_SYNTHESIS_TEMPERATURE', value: '0.7', category: 'AI', updated: new Date().toISOString() },
   { key: 'AI_SYNTHESIS_MAX_TOKENS', value: '4096', category: 'AI', updated: new Date().toISOString() },
   { key: 'AI_DAILY_LIMIT', value: '800', category: 'AI', updated: new Date().toISOString() },
