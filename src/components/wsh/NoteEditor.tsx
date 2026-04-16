@@ -2,18 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-/** Strip dangerous HTML from AI synthesis output to prevent XSS */
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/<object[\s\S]*?<\/object>/gi, '')
-    .replace(/<embed[\s\S]*?>/gi, '')
-    .replace(/ on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/ on\w+\s*=\s*\S+/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/<form[\s\S]*?<\/form>/gi, '');
-}
 import {
   Bold,
   Italic,
@@ -44,6 +32,7 @@ import {
   Outdent,
 } from 'lucide-react';
 import { useWSHStore, type NoteType } from '@/store/wshStore';
+import { sanitizeHTML } from '@/lib/sanitize';
 import CodeEditor from './editors/CodeEditor';
 import ProjectEditor from './editors/ProjectEditor';
 import DocumentManager from './editors/DocumentManager';
@@ -109,11 +98,12 @@ export default function NoteEditor() {
   const [imageUrl, setImageUrl] = useState('');
   const attachFileRef = useRef<HTMLInputElement>(null);
 
-  // Sync content from active note
+  // Sync content from active note (sanitized)
   useEffect(() => {
     if (editorRef.current) {
-      if (editorRef.current.innerHTML !== editorContent) {
-        editorRef.current.innerHTML = editorContent;
+      const sanitized = sanitizeHTML(editorContent);
+      if (editorRef.current.innerHTML !== sanitized) {
+        editorRef.current.innerHTML = sanitized;
       }
     }
   }, [activeNoteId]);
@@ -399,6 +389,18 @@ export default function NoteEditor() {
         }),
       });
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: `Request failed (${res.status})` }));
+        let msg = errData.error || `HTTP ${res.status}`;
+        if (res.status === 401) msg = 'Session expired — please log out and log back in';
+        else if (res.status === 400) msg = 'No AI provider configured — set an API key in Settings > AI Engine';
+        else if (res.status === 429) msg = 'Daily AI usage limit reached';
+        setEngineStatus(`Error: ${msg}`);
+        setTimeout(() => setEngineStatus('Intelligence Idle'), 5000);
+        setSynthesisLoading(false);
+        return;
+      }
+
       const data = await res.json();
 
       if (data.error) {
@@ -438,7 +440,7 @@ export default function NoteEditor() {
           })
           .join('');
         if (editorRef.current) {
-          const safeOutline = sanitizeHtml(outlineHtml);
+          const safeOutline = sanitizeHTML(outlineHtml);
           editorRef.current.innerHTML = safeOutline;
           setEditorContent(safeOutline);
           setEditorRawContent(data.result);
@@ -453,7 +455,7 @@ export default function NoteEditor() {
           .map((line: string) => `<p>${line}</p>`)
           .join('');
         if (editorRef.current) {
-          const safeResult = sanitizeHtml(resultHtml);
+          const safeResult = sanitizeHTML(resultHtml);
           editorRef.current.innerHTML = safeResult;
           setEditorContent(safeResult);
           setEditorRawContent(data.result);

@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const MAX_LOGS = 500;
 
+/** Guard: only admin/super-admin can access admin routes */
+function requireAdmin(request: NextRequest): NextResponse | null {
+  const role = request.headers.get('x-user-role');
+  if (role !== 'admin' && role !== 'super-admin') {
+    return NextResponse.json({ error: 'Forbidden: admin access required' }, { status: 403 });
+  }
+  return null;
+}
+
+
 interface LogEntry {
   timestamp: string;
   level: 'info' | 'warn' | 'error';
@@ -62,6 +72,8 @@ export function addLog(level: 'info' | 'warn' | 'error', message: string, source
 }
 
 export async function GET(request: NextRequest) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
   const { searchParams } = new URL(request.url);
   const level = searchParams.get('level');
   const limit = parseInt(searchParams.get('limit') || '100', 10);
@@ -86,7 +98,9 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
   systemLogs = [];
   return NextResponse.json({ message: 'All logs cleared', count: 0 });
 }

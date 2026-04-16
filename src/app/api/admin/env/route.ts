@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+/** Guard: only admin/super-admin can access admin routes */
+function requireAdmin(request: NextRequest): NextResponse | null {
+  const role = request.headers.get('x-user-role');
+  if (role !== 'admin' && role !== 'super-admin') {
+    return NextResponse.json({ error: 'Forbidden: admin access required' }, { status: 403 });
+  }
+  return null;
+}
+
+export async function GET(request: NextRequest) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
   const envVars = {
     AI_PROVIDER: process.env.AI_PROVIDER || '(auto-detect)',
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? 'configured' : 'not set',
@@ -31,6 +42,8 @@ export async function GET() {
  *          are blocked from runtime modification.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     const { key, value } = body as { key?: string; value?: string };

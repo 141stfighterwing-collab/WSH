@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       tokensUsed = r.tokensUsed;
     } else {
       return NextResponse.json(
-        { error: 'No AI provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY environment variable.' },
+        { error: 'No AI provider configured. Set an API key in Settings > AI Engine, or configure ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY in your .env file.' },
         { status: 400 },
       );
     }

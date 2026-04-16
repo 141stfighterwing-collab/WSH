@@ -97,6 +97,9 @@ export default function SettingsPanel() {
   // ── AI State (localStorage-backed) ────────────────────────────────────
   const [aiProvider, setAiProvider] = useState<AIProvider | ''>('');
   const [aiModel, setAiModel] = useState('');
+  const [aiKeyInput, setAiKeyInput] = useState('');
+  const [aiKeySaving, setAiKeySaving] = useState(false);
+  const [aiKeyMessage, setAiKeyMessage] = useState('');
   const [serverAiStatus, setServerAiStatus] = useState<{
     available: Record<string, boolean>;
     configured: string[];
@@ -155,6 +158,45 @@ export default function SettingsPanel() {
   const availableModels = selectedProviderConfig?.models || [];
   const hasAnyProvider = serverAiStatus && serverAiStatus.configured && serverAiStatus.configured.length > 0;
   const isProviderAvailable = aiProvider && serverAiStatus?.available[aiProvider];
+
+  /** Map provider ID to the corresponding env var key */
+  const providerEnvKey = aiProvider === 'claude' ? 'ANTHROPIC_API_KEY' : aiProvider === 'openai' ? 'OPENAI_API_KEY' : aiProvider === 'gemini' ? 'GEMINI_API_KEY' : '';
+
+  const handleSaveApiKey = async () => {
+    if (!providerEnvKey || !aiKeyInput.trim()) return;
+    setAiKeySaving(true);
+    setAiKeyMessage('');
+    try {
+      const token = useWSHStore.getState().user.token;
+      const res = await fetch('/api/admin/env', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ key: providerEnvKey, value: aiKeyInput.trim() }),
+      });
+      if (res.ok) {
+        setAiKeyMessage(`API key saved (runtime only — add to .env for persistence)`);
+        setAiKeyInput('');
+        // Refresh server AI status
+        const statusRes = await fetch('/api/synthesis', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (statusRes.ok) {
+          const data = await statusRes.json();
+          setServerAiStatus({ available: data.available, configured: data.configured || [], provider: data.provider || '' });
+        }
+      } else {
+        const err = await res.json().catch(() => ({ error: 'Save failed' }));
+        setAiKeyMessage(`Error: ${err.error}`);
+      }
+    } catch {
+      setAiKeyMessage('Save failed — check server connection');
+    }
+    setAiKeySaving(false);
+    setTimeout(() => setAiKeyMessage(''), 8000);
+  };
 
   if (!settingsOpen) return null;
 
@@ -381,6 +423,39 @@ export default function SettingsPanel() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* API Key Input */}
+              {aiProvider && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-foreground">
+                    API Key — <span className="font-mono text-muted-foreground">{providerEnvKey}</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={aiKeyInput}
+                      onChange={(e) => setAiKeyInput(e.target.value)}
+                      placeholder={isProviderAvailable ? '•••••• (key configured)' : 'Enter your API key...'}
+                      className="flex-1 px-3 py-2 rounded-lg text-xs font-mono bg-secondary border border-border/50 focus:border-pri-500/50 focus:outline-none text-foreground"
+                    />
+                    <button
+                      onClick={handleSaveApiKey}
+                      disabled={aiKeySaving || !aiKeyInput.trim()}
+                      className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      Save Key
+                    </button>
+                  </div>
+                  {aiKeyMessage && (
+                    <p className={`text-[9px] ${aiKeyMessage.startsWith('Error') ? 'text-red-400' : 'text-green-400'} animate-fadeIn`}>
+                      {aiKeyMessage}
+                    </p>
+                  )}
+                  <p className="text-[9px] text-muted-foreground/60">
+                    Saved keys apply immediately but do not persist across server restarts. Add keys to your <span className="font-mono">.env</span> file for permanent configuration.
+                  </p>
                 </div>
               )}
 

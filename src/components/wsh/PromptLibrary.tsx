@@ -12,11 +12,9 @@ import {
   ChevronUp,
   Edit3,
   Check,
-  X,
   BookOpen,
   Star,
   StarOff,
-  MoreHorizontal,
 } from 'lucide-react';
 
 export interface AiPrompt {

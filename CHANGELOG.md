@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.4] - 2026-04-17
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Admin > System Logs still returns empty after v4.3.3 patch** — The v4.3.3 commit fixed the missing auth headers on the frontend but did not add a `requireAdmin` role guard to the server-side route. Any authenticated user (not just admins) could access logs. Additionally, the uncommitted working changes that added the `requireAdmin` guard accidentally deleted the `MAX_LOGS = 500` constant, causing a `ReferenceError` crash at runtime whenever `addLog()` was called. This made the logs route return 500 on every request. The fix restores the `MAX_LOGS` constant and adds the `requireAdmin` guard to both GET and DELETE handlers in `/api/admin/logs`.
+
+- **CRITICAL FIX — AI API Key cannot be saved from Settings** — The Settings > AI Engine tab allowed selecting a provider and model but had no input field for entering the actual API key. Users had no way to configure their Claude/OpenAI/Gemini key through the UI. The fix adds:
+  - A password-masked API key input field in the Settings > AI Engine tab, dynamically labeled with the correct env var name (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`) based on the selected provider
+  - A "Save Key" button that POSTs the key to `/api/admin/env` for immediate runtime activation
+  - Automatic refresh of provider availability status after saving a key
+  - Clear error messaging for save failures (e.g., non-admin users get a 403 explanation)
+  - Persistence reminder: keys are runtime-only and must be added to `.env` for survival across restarts
+
+- **CRITICAL FIX — Admin > ENV Settings missing AI API key entries** — The default env vars list in `EnvSettingsSection.tsx` did not include `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`. Admins could not see or edit these values through the ENV management UI. All three keys are now included in the default list under the "AI" category.
+
+- **Admin ENV and Logs routes now enforce admin role** — Both `/api/admin/env` (GET and POST) and `/api/admin/logs` (GET and DELETE) now check the `x-user-role` header (set by middleware) and return 403 if the user is not `admin` or `super-admin`. Previously these routes were accessible to any authenticated user.
+
+- **Synthesis error messages now actionable** — The NoteEditor synthesis error handler previously showed raw server error text (e.g., "No AI provider configured. Set ANTHROPIC_API_KEY..."). Now it maps HTTP status codes to user-friendly guidance: 401 → "Session expired — please log out and log back in", 400 → "No AI provider configured — set an API key in Settings > AI Engine", 429 → "Daily AI usage limit reached". The synthesis route's no-provider error message also now references the Settings UI path.
+
+### 🏗️ Architecture
+
+- **New `src/lib/sanitize.ts`** — Centralized HTML sanitization module using DOM-based approach (browser only) with fallback regex stripping for SSR. Removes `script`, `iframe`, `object`, `embed`, `form`, `svg`, `base` elements and strips `on*` event handlers, `javascript:` URIs, and `data:` URIs. Replaces the inline `sanitizeHtml()` function that was previously duplicated in `NoteEditor.tsx`.
+
+- **Zustand store logout now clears all panel states** — `logoutUser()` now resets `aiUsageCount`, `settingsOpen`, `analyticsOpen`, `loginOpen`, `adminPanelOpen`, `trashOpen`, `mindMapOpen`, `notebookOpen`, and `dbViewerOpen` in addition to the existing note/folder/editor state cleanup. This prevents stale UI state from leaking between user sessions on shared devices.
+
+- **Unused imports removed** — `PromptLibrary.tsx` no longer imports unused icons (`X`, `MoreHorizontal`) from lucide-react.
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.4** across all 15 core files: `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, `README.md`, `DOCS.md`, `CHANGELOG.md`.
+
+---
+
 ## [4.3.3] - 2026-04-17
 
 ### 🐛 Fixed

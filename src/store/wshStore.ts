@@ -448,6 +448,15 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       searchQuery: '',
       activeFolderId: null,
       noteDetailId: null,
+      aiUsageCount: 0,
+      settingsOpen: false,
+      analyticsOpen: false,
+      loginOpen: false,
+      adminPanelOpen: false,
+      trashOpen: false,
+      mindMapOpen: false,
+      notebookOpen: false,
+      dbViewerOpen: false,
     });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wsh-auth');

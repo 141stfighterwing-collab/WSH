@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ScrollText, Download, Trash2, Loader2 } from 'lucide-react';
+import { Download, Trash2, Loader2 } from 'lucide-react';
 import type { LogEntry } from './types';
 
 export default function LogsSection() {
@@ -43,11 +43,11 @@ export default function LogsSection() {
     setClearLoading(true);
     try {
       const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
-      await fetch('/api/admin/logs', {
+      const res = await fetch('/api/admin/logs', {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      setLogs([]);
+      if (res.ok) setLogs([]);
     } catch {
       setLogs([]);
     }
