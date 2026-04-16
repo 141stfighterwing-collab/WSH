@@ -86,6 +86,10 @@ export default function NoteDetailModal() {
       tmp.querySelectorAll('*').forEach((el) => {
         [...el.attributes].forEach((attr) => {
           if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+          // Strip javascript: URIs from href/src attributes
+          if ((attr.value || '').trim().toLowerCase().startsWith('javascript:')) {
+            el.removeAttribute(attr.name);
+          }
         });
       });
       // Ensure images have max-width for proper display
