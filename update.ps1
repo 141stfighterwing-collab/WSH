@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# WSH -- Non-destructive Update Script v4.3.1
+# WSH -- Non-destructive Update Script v4.3.2
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
@@ -27,7 +27,7 @@ $ErrorActionPreference = "SilentlyContinue"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH -- Update v4.3.1" -ForegroundColor Cyan
+Write-Host "  WSH -- Update v4.3.2" -ForegroundColor Cyan
 Write-Host "  (data-preserving update)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""

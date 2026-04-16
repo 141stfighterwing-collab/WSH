@@ -10,7 +10,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: 'healthy',
-    version: '4.3.1',
+    version: '4.3.2',
     uptime: uptimeFormatted,
     uptimeMs: uptime,
     memory: {

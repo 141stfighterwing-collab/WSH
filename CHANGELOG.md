@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.2] - 2026-04-17
+
+### ✨ Added
+
+- **Component Testing Checklist (`CHECKLIST.md`)** — A comprehensive 16-section testing checklist covering all key WSH components. Use it as a reference before and after modifying code to catch regressions early. Sections include: Zustand Store (8 checks), Calendar (7), NotesGrid (5), NoteEditor (9), SettingsPanel (7), Middleware (4), Synthesis API (7), Authentication (5), XSS/Sanitization (6), Timezone/Date (5), CSS/Themes (4), API Routes (5), Admin Panel (3), Docker (4), Pre-commit Quick Scans (6 commands), and Post-deploy Smoke Test (17 browser checks). Total: ~80 individual check items.
+
+### 📝 Documentation
+
+- **README: Complete AI provider documentation** — Removed all `z-ai-web-dev-sdk` references (SDK was removed in a prior release). Replaced with comprehensive documentation covering:
+  - New "Configuring AI (Optional)" Quick Start subsection with step-by-step setup for Claude (Anthropic), OpenAI, and Gemini
+  - Auto-detection priority explanation: checks `ANTHROPIC_API_KEY` → `OPENAI_API_KEY` → `GEMINI_API_KEY` in order
+  - Custom LLM setup guide for self-hosted models (Ollama, LM Studio, vLLM, Azure OpenAI) via `OPENAI_BASE_URL`
+  - Available models per provider table (Claude: 4 models, OpenAI: 4 models, Gemini: 3 models)
+  - Updated Environment Variables table with 6 new AI-related variables: `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENAI_BASE_URL`, `AI_SYNTHESIS_MODEL`
+  - Added `GET /api/synthesis` endpoint documentation showing provider availability response format
+  - Updated `POST /api/synthesis` request body docs with optional `provider` and `model` fields
+  - Updated AI Synthesis Engine feature description: multi-provider, auto-detect, per-user model selection, custom endpoints, no external SDK
+  - Updated Tech Stack table: `Anthropic / OpenAI / Gemini (native fetch)` replaces `z-ai-web-dev-sdk`
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.2** across all 13 core files: `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, `README.md`, `DOCS.md`.
+
+---
+
 ## [4.3.1] - 2026-04-11
 
 ### 🐛 Fixed
