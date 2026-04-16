@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X,
   Palette,
@@ -88,7 +88,10 @@ const PROVIDERS: ProviderConfig[] = [
 ];
 
 export default function SettingsPanel() {
-  const { settingsOpen, setSettingsOpen, theme, setTheme, darkMode, toggleDarkMode, saveToLocalStorage, notes, folders, tags } = useWSHStore();
+  const { settingsOpen, setSettingsOpen, theme, setTheme, darkMode, toggleDarkMode, saveToLocalStorage, notes, folders } = useWSHStore();
+
+  // Derive unique tags from all notes (tags is not a top-level store field)
+  const uniqueTagCount = useMemo(() => new Set(notes.flatMap((n) => n.tags)).size, [notes]);
   const [activeTab, setActiveTab] = useState<SettingsTab>('visuals');
 
   // ── AI State (localStorage-backed) ────────────────────────────────────
@@ -398,7 +401,7 @@ export default function SettingsPanel() {
                 {[
                   { label: 'Active Notes', value: String(notes.filter((n) => !n.isDeleted).length), status: 'good' as const },
                   { label: 'Folders', value: String(folders.length), status: 'good' as const },
-                  { label: 'Tags', value: String(tags.length), status: 'good' as const },
+                  { label: 'Tags', value: String(uniqueTagCount), status: 'good' as const },
                   { label: 'Theme', value: theme || 'default', status: 'good' as const },
                   { label: 'Mode', value: darkMode ? 'Dark' : 'Light', status: 'good' as const },
                 ].map((item) => (

@@ -43,13 +43,25 @@ const achievements: Achievement[] = [
   { id: '12', title: '30-Day Streak', description: 'Create notes 30 days in a row', icon: <Calendar className="w-5 h-5" />, condition: (d) => d.streak >= 30 },
 ];
 
+/** Convert a Date object to YYYY-MM-DD in local timezone */
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Convert an ISO string to YYYY-MM-DD in local timezone */
+function noteToLocalDate(n: { createdAt: string }): string {
+  return toLocalDateStr(new Date(n.createdAt));
+}
+
 function calculateStreak(notes: { createdAt: string }[]): number {
   if (notes.length === 0) return 0;
 
   const daySet = new Set<string>();
   notes.forEach((n) => {
-    const day = new Date(n.createdAt).toISOString().split('T')[0];
-    daySet.add(day);
+    daySet.add(toLocalDateStr(new Date(n.createdAt)));
   });
 
   let streak = 0;
@@ -58,7 +70,7 @@ function calculateStreak(notes: { createdAt: string }[]): number {
   for (let i = 0; i < 365; i++) {
     const checkDate = new Date(today);
     checkDate.setDate(checkDate.getDate() - i);
-    const dateStr = checkDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(checkDate);
 
     if (daySet.has(dateStr)) {
       streak++;
@@ -78,9 +90,9 @@ function getLast7DaysActivity(notes: { createdAt: string }[]): { day: string; co
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(d);
     const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
-    const count = notes.filter((n) => n.createdAt.startsWith(dateStr)).length;
+    const count = notes.filter((n) => noteToLocalDate(n) === dateStr).length;
     result.push({ day: dayLabel, count });
   }
 

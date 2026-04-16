@@ -121,14 +121,22 @@ function ProjectsSection() {
 function TodaySection() {
   const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
 
   const todayNotes = useMemo(() => {
     return notes
       .filter((n) => {
         if (n.isDeleted) return false;
-        // Notes created today
-        if (n.createdAt && n.createdAt.startsWith(todayStr)) return true;
+        // Notes created today (local timezone)
+        if (n.createdAt) {
+          const ld = new Date(n.createdAt);
+          const noteDate = `${ld.getFullYear()}-${String(ld.getMonth() + 1).padStart(2, '0')}-${String(ld.getDate()).padStart(2, '0')}`;
+          if (noteDate === todayStr) return true;
+        }
         // Notes with today's date in content (dated items like "## 2026-04-04" or "April 4")
         if (n.rawContent && n.rawContent.includes(todayStr)) return true;
         // Notes with today's date in title

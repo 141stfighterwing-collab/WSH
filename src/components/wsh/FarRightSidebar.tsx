@@ -7,9 +7,17 @@ import { useWSHStore } from '@/store/wshStore';
 export default function FarRightSidebar() {
   const { notes } = useWSHStore();
   const todayTasks = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
     return notes
-      .filter((n) => !n.isDeleted && n.createdAt && n.createdAt.startsWith(todayStr))
+      .filter((n) => {
+        if (n.isDeleted || !n.createdAt) return false;
+        const ld = new Date(n.createdAt);
+        return `${ld.getFullYear()}-${String(ld.getMonth() + 1).padStart(2, '0')}-${String(ld.getDate()).padStart(2, '0')}` === todayStr;
+      })
       .slice(0, 5);
   }, [notes]);
 
@@ -20,7 +28,8 @@ export default function FarRightSidebar() {
       .slice(0, 5);
   }, [notes]);
 
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return (
     <aside className="w-full lg:w-72 flex-shrink-0 space-y-6 hidden xl:block order-3 lg:order-3 overflow-y-auto max-h-[calc(100vh-4rem-3rem)] p-2">
