@@ -24,6 +24,7 @@ Inspired by [WeaveNote](https://weavenote.com), WSH gives you full control over 
 - [Overview](#overview)
 - [Features](#features)
 - [Quick Start](#quick-start)
+  - [Configuring AI (Optional)](#configuring-ai-optional)
 - [Docker Deployment](#docker-deployment)
   - [Quick Install (Recommended)](#quick-install-recommended)
   - [Updating WSH (Non-Destructive)](#updating-wsh-non-destructive)
@@ -47,7 +48,7 @@ Inspired by [WeaveNote](https://weavenote.com), WSH gives you full control over 
 
 **WSH (WeaveNote Self-Hosted)** is a feature-rich, self-hosted note-taking application designed for developers, researchers, and teams who value data sovereignty. Built on a modern stack of **Next.js 16**, **TypeScript**, and **Tailwind CSS 4**, WSH provides a sleek, dark-mode-first interface that runs entirely on your own hardware.
 
-At its core, WSH combines powerful note management with an **AI Synthesis Engine** powered by the `z-ai-web-dev-sdk`. The engine supports five intelligent modes — Summarize, Expand, Improve, Generate Tags, and Create Outline — turning raw notes into polished, connected knowledge.
+At its core, WSH combines powerful note management with an **AI Synthesis Engine** powered by Claude, OpenAI, or Gemini. The engine supports five intelligent modes — Summarize, Expand, Improve, Generate Tags, and Create Outline — turning raw notes into polished, connected knowledge. AI features are gated behind environment variables and are completely optional — the app works fully without any AI keys configured.
 
 Key design principles:
 
@@ -164,7 +165,7 @@ One-click **preset buttons** that instantly add the most commonly used environme
 
 ### 🤖 AI Synthesis Engine
 
-An intelligent **text processing engine** powered by the `z-ai-web-dev-sdk` that transforms your notes using five distinct AI modes.
+An intelligent **text processing engine** powered by Claude (Anthropic), OpenAI, or Google Gemini that transforms your notes using five distinct AI modes. AI is fully optional — WSH works perfectly without any API keys.
 
 | Mode | Description |
 |------|-------------|
@@ -174,11 +175,15 @@ An intelligent **text processing engine** powered by the `z-ai-web-dev-sdk` that
 | **Generate Tags** | Analyzes content and suggests relevant tags as a JSON array |
 | **Create Outline** | Generates a structured hierarchical outline from the note's content |
 
-- **z-ai-web-dev-sdk integration** — Uses the GLM-4-Flash model (configurable) via the z-ai-web-dev-sdk package
+- **Multi-provider support** — Choose between Claude, OpenAI, or Gemini by setting the corresponding API key in your environment
+- **Auto-detection** — If no `AI_PROVIDER` is set, the system auto-detects which provider is available by checking API keys in order: Anthropic → OpenAI → Gemini
+- **Per-user model selection** — Users can select their preferred provider and model from the Settings > AI Engine panel (only providers with configured API keys are shown)
+- **Custom OpenAI-compatible endpoints** — Set `OPENAI_BASE_URL` to use Azure OpenAI, local LLMs (Ollama, LM Studio), or any OpenAI-compatible API
 - **Daily usage limit** — Enforces a configurable daily limit (default: 800 requests/day) with automatic counter reset at midnight
 - **Configurable parameters** — Model name, temperature, and max tokens are all configurable via environment variables
 - **Rate limiting** — Returns HTTP 429 when the daily limit is exceeded
 - **Usage tracking** — Each response includes `tokensUsed` and `usageCount` for monitoring
+- **No external SDK required** — Uses native `fetch` calls directly to provider APIs — no vendor lock-in
 
 ### 🛡️ Admin Panel
 
@@ -357,6 +362,57 @@ bun run build
 # Start the production server
 bun run start
 ```
+
+### Configuring AI (Optional)
+
+WSH's AI Synthesis features are **completely optional** — the app works fully without any API keys. To enable AI, set one or more provider API keys in your `.env` file:
+
+```bash
+# Option 1: Claude (Anthropic) — Recommended for strong reasoning
+ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Option 2: OpenAI — Versatile and widely used
+OPENAI_API_KEY=sk-...
+
+# Option 3: Gemini (Google) — Fast and multimodal
+GEMINI_API_KEY=AIzaSy...
+
+# Optional: Force a specific provider (auto-detects if not set)
+# AI_PROVIDER=claude
+
+# Optional: Override the default model
+# AI_SYNTHESIS_MODEL=claude-sonnet-4-20250514
+
+# Optional: Use a custom OpenAI-compatible endpoint (Ollama, LM Studio, Azure, etc.)
+# OPENAI_BASE_URL=http://localhost:11434/v1
+```
+
+**How auto-detection works:**
+1. If `AI_PROVIDER` is set → use that provider
+2. If `AI_PROVIDER` is not set → check which API keys are configured, in this order:
+   - `ANTHROPIC_API_KEY` → Claude
+   - `OPENAI_API_KEY` → OpenAI
+   - `GEMINI_API_KEY` → Gemini
+3. If no keys are set → AI synthesis is disabled (Settings panel shows "No AI provider configured")
+
+**Using your own LLM (Ollama, LM Studio, vLLM, etc.):**
+Set `OPENAI_API_KEY` to any non-empty value and `OPENAI_BASE_URL` to your local endpoint:
+```bash
+OPENAI_API_KEY=not-needed
+OPENAI_BASE_URL=http://localhost:11434/v1
+AI_PROVIDER=openai
+AI_SYNTHESIS_MODEL=llama3
+```
+
+**Available models per provider:**
+
+| Provider | Available Models |
+|----------|-----------------|
+| **Claude** | claude-sonnet-4, claude-haiku-4, claude-3.5-sonnet, claude-3.5-haiku |
+| **OpenAI** | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo |
+| **Gemini** | gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash |
+
+Users can select their preferred provider and model from **Settings > AI Engine** in the app. Only providers with configured API keys are shown as available.
 
 ---
 
@@ -705,17 +761,33 @@ AI synthesis endpoint for processing note content through five modes.
 
 **Request body:**
 ```json
-{ "content": "Your note content here...", "action": "summarize" }
+{ "content": "Your note content here...", "action": "summarize", "provider": "claude", "model": "claude-sonnet-4-20250514" }
 ```
+
+- `provider` and `model` are optional — if omitted, the server uses `AI_PROVIDER` env var or auto-detects from available API keys
 
 **Valid actions:** `summarize`, `expand`, `improve`, `tags`, `outline`
 
 **Response:**
 ```json
-{ "result": "AI-generated content...", "tokensUsed": 245, "usageCount": 1 }
+{ "result": "AI-generated content...", "tokensUsed": 245, "usageCount": 1, "provider": "claude" }
 ```
 
 **Rate limit:** Returns HTTP 429 when the daily limit (default: 800) is exceeded.
+
+### `GET /api/synthesis`
+
+Returns which AI providers are configured and available.
+
+**Response:**
+```json
+{
+  "provider": "claude",
+  "available": { "claude": true, "openai": false, "gemini": false },
+  "configured": ["claude"],
+  "model": "claude-sonnet-4-20250514"
+}
+```
 
 ### `GET /api/graph?notes=[...]`
 
@@ -802,7 +874,12 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | `ADMIN_DEFAULT_USERNAME` | `admin` | Default admin username on first run |
 | `ADMIN_DEFAULT_EMAIL` | `admin@example.com` | Default admin email on first run |
 | `ADMIN_DEFAULT_PASSWORD` | `admin123` | Default admin password on first run (**change immediately!**) |
-| `AI_SYNTHESIS_MODEL` | `glm-4-flash` | AI model used for synthesis operations |
+| `AI_PROVIDER` | *(auto-detect)* | Force a specific AI provider: `claude`, `openai`, or `gemini`. If not set, auto-detects from API keys below. |
+| `ANTHROPIC_API_KEY` | *(none)* | Anthropic API key for Claude models. Get one at [console.anthropic.com](https://console.anthropic.com/) |
+| `OPENAI_API_KEY` | *(none)* | OpenAI API key for GPT models. Get one at [platform.openai.com](https://platform.openai.com/api-keys) |
+| `GEMINI_API_KEY` | *(none)* | Google AI API key for Gemini models. Get one at [aistudio.google.com](https://aistudio.google.com/apikey) |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | Custom OpenAI-compatible base URL (for Azure OpenAI, Ollama, LM Studio, etc.) |
+| `AI_SYNTHESIS_MODEL` | *(provider default)* | Default AI model. If not set, each provider uses its own default model. |
 | `AI_SYNTHESIS_TEMPERATURE` | `0.7` | AI response creativity (0.0–1.0) |
 | `AI_SYNTHESIS_MAX_TOKENS` | `4096` | Maximum tokens per AI response |
 | `AI_DAILY_LIMIT` | `800` | Maximum AI synthesis requests per day |
@@ -824,7 +901,7 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | UI Components | shadcn/ui + Radix UI |
 | State Management | Zustand 5 |
 | Database | PostgreSQL 16 via Prisma ORM |
-| AI Integration | z-ai-web-dev-sdk |
+| AI Integration | Anthropic / OpenAI / Gemini (native fetch) |
 | Charts | Recharts |
 | Animations | Framer Motion |
 | Icons | Lucide React |
