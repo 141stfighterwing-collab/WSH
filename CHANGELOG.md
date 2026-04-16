@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.5] - 2026-04-17
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — AI API keys lost on container restart** — The `POST /api/admin/env` handler only set `process.env` in-memory. When the update script ran `docker compose down && docker compose up -d`, the container restarted fresh and all runtime env changes (including API keys) were wiped. The fix completely rewrites the env persistence system:
+  - `POST /api/admin/env` now writes key-value pairs to a `runtime.env` file on disk (at `/app/tmp/env/runtime.env`)
+  - `docker-entrypoint.sh` loads this file on every container boot, exporting all saved variables before the Node.js server starts
+  - A new `wsh-env` Docker volume is mounted at `/app/tmp/env` so the file persists across `docker compose down`, `docker compose restart`, and `update.sh`
+  - Save confirmation message updated: "persisted to disk" instead of "runtime only"
+
+- **New soft restart scripts** — Added `restart.sh` (Linux/macOS) and `restart.ps1` (Windows) that restart only the `weavenote` application container WITHOUT rebuilding the Docker image. This is the correct way to test if API keys are persisting:
+  - Usage: `./restart.sh` or `.\restart.ps1`
+  - Restarts container in ~2 seconds (vs ~3-5 minutes for full update)
+  - Waits for health check to pass
+  - Shows version confirmation from `/api/health`
+  - Optional `--logs` flag to stream container logs after restart
+  - Preserves all volume data including the persistent env file
+
+### 🏗️ Architecture
+
+- **`/app/tmp/env/runtime.env`** — New persistent environment file written by the env POST handler and read by docker-entrypoint.sh. Mounted via the `wsh-env` Docker named volume.
+
+- **Env key allowlisting** — The POST handler now uses a positive allowlist system (`ALLOWED_PREFIXES`) instead of just blocking sensitive keys. Only keys starting with `AI_`, `ANTHROPIC_`, `OPENAI_`, `GEMINI_`, `LOG_LEVEL`, `MAX_UPLOAD_SIZE`, `NEXT_PUBLIC_`, `STORAGE_TYPE`, or `BACKUP_INTERVAL` can be written. A `BLOCKED_KEYS` list still prevents overriding critical keys like `JWT_SECRET`, `DATABASE_URL`, etc.
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.5** across all 15 core files: `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, `README.md`, `DOCS.md`, `CHANGELOG.md`.
+
+---
+
 ## [4.3.4] - 2026-04-17
 
 ### 🐛 Fixed

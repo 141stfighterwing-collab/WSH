@@ -10,6 +10,26 @@ SCHEMA_FLAG="--schema=./prisma/schema.prisma"
 MARKER_FILE="/app/tmp/.db-initialized"
 SEED_MARKER="/app/tmp/.admin-seeded"
 
+# ── Load persistent runtime env overrides ──────────────────────────
+# These are set via Admin > ENV Settings or Settings > AI Engine and
+# persist across container restarts via the wsh-env Docker volume.
+PERSISTENT_ENV="/app/tmp/env/runtime.env"
+if [ -f "$PERSISTENT_ENV" ]; then
+  echo "[*] Loading persistent environment from $PERSISTENT_ENV..."
+  KEY_COUNT=0
+  while IFS='=' read -r line; do
+    LINE=$(echo "$line" | sed 's/^#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//')
+    [ -z "$LINE" ] && continue
+    KEY=$(echo "$LINE" | cut -d'=' -f1)
+    VAL=$(echo "$LINE" | cut -d'=' -f2-)
+    # Strip surrounding quotes
+    VAL=$(echo "$VAL" | sed 's/^"//;s/"$//;s/^'\''//;s/'\''$//')
+    export "$KEY=$VAL"
+    KEY_COUNT=$((KEY_COUNT + 1))
+  done < "$PERSISTENT_ENV"
+  echo "[+] Loaded $KEY_COUNT persistent environment variables"
+fi
+
 # ── Pre-flight checks ──────────────────────────────────────────
 if [ ! -f "/app/node_modules/prisma/build/index.js" ]; then
   echo "[ERROR] Prisma CLI not found at /app/node_modules/prisma/build/index.js"
@@ -89,7 +109,7 @@ fi
 
 # ── Database schema sync (runs on EVERY startup) ──────────────
 # prisma db push is idempotent: instant no-op when schema matches,
-# and applies new tables/columns when the app is updated (e.g. v4.3.4
+# and applies new tables/columns when the app is updated (e.g. v4.3.5
 # added Document + DocumentChunk models). No data is lost.
 echo "[*] Syncing database schema..."
 if $PRISMA_CLI db push --accept-data-loss $SCHEMA_FLAG 2>&1; then

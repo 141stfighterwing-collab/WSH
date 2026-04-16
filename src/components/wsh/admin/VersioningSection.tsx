@@ -17,7 +17,7 @@ export default function VersioningSection() {
     } catch {
       setSystemData({
         status: 'healthy',
-        version: '4.3.4',
+        version: '4.3.5',
         uptime: '0s',
         memory: { rss: '0 B', heapTotal: '0 B', heapUsed: '0 B', external: '0 B' },
         nodeVersion: 'v20.x',

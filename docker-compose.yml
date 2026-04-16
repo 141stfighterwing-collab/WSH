@@ -25,9 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_VERSION: "4.3.4"
+        BUILD_VERSION: "4.3.5"
     container_name: weavenote-app
-    image: weavenote:4.3.4
+    image: weavenote:4.3.5
     ports:
       - "${WSH_PORT:-8883}:3000"
     environment:
@@ -52,6 +52,7 @@ services:
     volumes:
       - weavenote-data:/app/tmp
       - upload-data:/app/upload
+      - wsh-env:/app/tmp/env
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
@@ -118,6 +119,8 @@ volumes:
   weavenote-data:
     driver: local
   pgadmin-data:
+    driver: local
+  wsh-env:
     driver: local
 
 networks:

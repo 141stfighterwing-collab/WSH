@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 /** Guard: only admin/super-admin can access admin routes */
 function requireAdmin(request: NextRequest): NextResponse | null {
@@ -7,6 +9,81 @@ function requireAdmin(request: NextRequest): NextResponse | null {
     return NextResponse.json({ error: 'Forbidden: admin access required' }, { status: 403 });
   }
   return null;
+}
+
+/** Path to the persistent .env file (shared via Docker volume at /app/tmp/env) */
+const ENV_FILE = process.env.WSH_ENV_PATH || '/app/tmp/env/runtime.env';
+
+/** Allowed keys that can be written at runtime */
+const ALLOWED_PREFIXES = [
+  'AI_', 'ANTHROPIC_', 'OPENAI_', 'GEMINI_', 'LOG_LEVEL', 'MAX_UPLOAD_SIZE',
+  'NEXT_PUBLIC_', 'STORAGE_TYPE', 'BACKUP_INTERVAL',
+];
+
+/** Blocked keys — never writable even if prefix matches */
+const BLOCKED_KEYS = [
+  'JWT_SECRET',
+  'ADMIN_DEFAULT_PASSWORD',
+  'ADMIN_DEFAULT_USERNAME',
+  'ADMIN_DEFAULT_EMAIL',
+  'DATABASE_URL',
+  'POSTGRES_PASSWORD',
+  'POSTGRES_USER',
+  'POSTGRES_DB',
+  'DOCKER_ENABLED',
+  'NODE_ENV',
+  'PORT',
+  'HOSTNAME',
+];
+
+function isKeyAllowed(key: string): boolean {
+  const upper = key.toUpperCase();
+  if (BLOCKED_KEYS.includes(upper)) return false;
+  return ALLOWED_PREFIXES.some((p) => upper.startsWith(p));
+}
+
+/**
+ * Read the .env file from disk and return it as a Record<string, string>.
+ * Returns empty object if file doesn't exist.
+ */
+function readEnvFile(): Record<string, string> {
+  try {
+    if (!existsSync(ENV_FILE)) return {};
+    const content = readFileSync(ENV_FILE, 'utf-8');
+    const env: Record<string, string> = {};
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx === -1) continue;
+      env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+    }
+    return env;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Write a key-value pair to the .env file on disk.
+ * Updates existing key or appends a new line.
+ */
+function writeEnvFile(env: Record<string, string>): void {
+  try {
+    const dir = ENV_FILE.substring(0, ENV_FILE.lastIndexOf('/'));
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+    const lines: string[] = ['# WSH Runtime Environment Variables', '# Modified via Admin > ENV Settings or Settings > AI Engine', ''];
+    for (const [k, v] of Object.entries(env)) {
+      // Quote values that contain spaces or special chars
+      const needsQuoting = /[\s"'`#$]/.test(v);
+      lines.push(`${k}=${needsQuoting ? `"${v.replace(/"/g, '\\"')}"` : v}`);
+    }
+    lines.push('');
+    writeFileSync(ENV_FILE, lines.join('\n'), 'utf-8');
+  } catch (err) {
+    console.error(`[env] Failed to write ${ENV_FILE}:`, err);
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -33,13 +110,12 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/admin/env
  *
- * Updates process.env at runtime for the current server process.
- * Values are set in-memory only — they do NOT persist across server restarts.
- * For persistent changes, update the .env file or docker-compose.yml.
+ * Updates process.env at runtime AND persists to a .env file on disk.
+ * The .env file is mounted as a Docker volume so it survives container restarts.
  *
- * Security: Only certain AI-related keys can be written at runtime.
+ * Security: Only AI-related and non-sensitive keys can be written.
  *          Sensitive keys (JWT_SECRET, ADMIN_DEFAULT_PASSWORD, DATABASE_URL)
- *          are blocked from runtime modification.
+ *          are blocked from modification entirely.
  */
 export async function POST(request: NextRequest) {
   const denied = requireAdmin(request);
@@ -56,29 +132,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing "value" field' }, { status: 400 });
     }
 
-    // Block sensitive keys from runtime modification
-    const BLOCKED_KEYS = [
-      'JWT_SECRET',
-      'ADMIN_DEFAULT_PASSWORD',
-      'DATABASE_URL',
-      'POSTGRES_PASSWORD',
-      'POSTGRES_USER',
-    ];
-
-    if (BLOCKED_KEYS.includes(key.toUpperCase())) {
+    if (!isKeyAllowed(key)) {
       return NextResponse.json(
-        { error: `"${key}" cannot be changed at runtime. Update your .env file or docker-compose.yml and restart the server.` },
+        { error: `"${key}" is not allowed to be changed at runtime. Update your .env file or docker-compose.yml and restart.` },
         { status: 403 },
       );
     }
 
-    // Set the value in process.env for the current process
+    // 1. Set in process.env for immediate use
     process.env[key] = value;
+
+    // 2. Persist to .env file on disk
+    const fileEnv = readEnvFile();
+    fileEnv[key] = value;
+    writeEnvFile(fileEnv);
 
     return NextResponse.json({
       success: true,
       key,
-      message: `${key} updated (runtime only — does not persist across restarts)`,
+      persisted: true,
+      message: `${key} saved — active immediately and persisted to disk`,
     });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

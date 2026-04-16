@@ -177,7 +177,7 @@ export default function SettingsPanel() {
         body: JSON.stringify({ key: providerEnvKey, value: aiKeyInput.trim() }),
       });
       if (res.ok) {
-        setAiKeyMessage(`API key saved (runtime only — add to .env for persistence)`);
+        setAiKeyMessage(`API key saved — active now and persists across restarts`);
         setAiKeyInput('');
         // Refresh server AI status
         const statusRes = await fetch('/api/synthesis', {
@@ -454,7 +454,7 @@ export default function SettingsPanel() {
                     </p>
                   )}
                   <p className="text-[9px] text-muted-foreground/60">
-                    Saved keys apply immediately but do not persist across server restarts. Add keys to your <span className="font-mono">.env</span> file for permanent configuration.
+                    Saved keys persist across container restarts via a Docker volume. After saving, use the restart script (<span className="font-mono">./restart.sh</span>) to verify the key is loaded on boot.
                   </p>
                 </div>
               )}

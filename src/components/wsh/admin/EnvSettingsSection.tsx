@@ -119,7 +119,7 @@ export default function EnvSettingsSection() {
         else failed++;
       }
       if (failed === 0) {
-        setSaveMessage(`Saved ${saved} variables (runtime)`);
+        setSaveMessage(`Saved ${saved} variables (persisted to disk)`);
       } else {
         setSaveMessage(`Saved ${saved}, ${failed} blocked (restart required)`);
       }
