@@ -122,6 +122,10 @@ interface WSHState {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 
+  // Calendar Date Filter
+  calendarDateFilter: string | null;
+  setCalendarDateFilter: (date: string | null) => void;
+
   // Persistence — only UI prefs, NEVER notes/folders data
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
@@ -451,6 +455,10 @@ export const useWSHStore = create<WSHState>((set, get) => ({
   // Search
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
+
+  // Calendar Date Filter
+  calendarDateFilter: null,
+  setCalendarDateFilter: (date) => set({ calendarDateFilter: date }),
 
   // Persistence — ONLY UI preferences, NEVER notes/folders data
   // Notes and folders live EXCLUSIVELY in the database

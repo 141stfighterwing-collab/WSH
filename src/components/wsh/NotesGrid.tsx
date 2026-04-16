@@ -168,10 +168,19 @@ export default function NotesGrid() {
     viewMode,
     deleteNote,
     setNoteDetailId,
+    calendarDateFilter,
+    setCalendarDateFilter,
   } = useWSHStore();
 
   const filteredNotes = useMemo(() => {
     let filtered = notes.filter((n) => !n.isDeleted);
+
+    // Calendar date filter — only show notes from that specific day
+    if (calendarDateFilter) {
+      filtered = filtered.filter(
+        (n) => n.createdAt && n.createdAt.startsWith(calendarDateFilter)
+      );
+    }
 
     if (activeFolderId) {
       filtered = filtered.filter((n) => n.folderId === activeFolderId);
@@ -188,7 +197,7 @@ export default function NotesGrid() {
     }
 
     return filtered;
-  }, [notes, activeFolderId, searchQuery]);
+  }, [notes, activeFolderId, searchQuery, calendarDateFilter]);
 
   const handleNoteClick = (note: Note) => {
     // Click on a note opens the detail view (read mode)
@@ -210,10 +219,39 @@ export default function NotesGrid() {
 
   return (
     <div className="space-y-4 mt-6">
+      {/* Calendar date filter indicator */}
+      {calendarDateFilter && (
+        <div className="flex items-center gap-2 bg-pri-500/10 border border-pri-500/20 rounded-xl px-3 py-2 animate-fadeIn">
+          <div className="w-1.5 h-1.5 rounded-full bg-pri-400" />
+          <span className="text-[10px] font-bold text-pri-400">
+            Showing notes from{' '}
+            {(() => {
+              try {
+                return new Date(calendarDateFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              } catch { return calendarDateFilter; }
+            })()}
+          </span>
+          <button
+            onClick={() => setCalendarDateFilter(null)}
+            className="ml-auto text-[9px] font-bold text-pri-400 hover:text-pri-300 bg-pri-500/15 hover:bg-pri-500/25 px-2 py-0.5 rounded-full transition-colors active:scale-95"
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
+
       {/* Section header */}
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">
-          {activeFolderId ? `📁 ${folders.find((f) => f.id === activeFolderId)?.name || 'Folder'}` : 'All Notes'}
+          {calendarDateFilter
+            ? `📅 ${(() => {
+                try {
+                  return new Date(calendarDateFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                } catch { return calendarDateFilter; }
+              })()}`
+            : activeFolderId
+            ? `📁 ${folders.find((f) => f.id === activeFolderId)?.name || 'Folder'}`
+            : 'All Notes'}
         </span>
         <span className="text-[10px] text-muted-foreground">
           {filteredNotes.length} note{filteredNotes.length !== 1 ? 's' : ''}
