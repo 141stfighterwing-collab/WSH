@@ -15,8 +15,12 @@ export default function LogsSection() {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
+      const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
       const url = `/api/admin/logs?level=${logFilter}&limit=100`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) { setLogs([]); setLoading(false); return; }
       const data = await res.json();
       setLogs(data.logs || []);
     } catch {
@@ -38,7 +42,11 @@ export default function LogsSection() {
   const handleClearLogs = async () => {
     setClearLoading(true);
     try {
-      await fetch('/api/admin/logs', { method: 'DELETE' });
+      const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
+      await fetch('/api/admin/logs', {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       setLogs([]);
     } catch {
       setLogs([]);

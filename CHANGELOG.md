@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.3] - 2026-04-17
+
+### 🐛 Fixed
+
+- **CRITICAL FIX — Admin > System Logs shows empty, all filter buttons return nothing** — The `LogsSection` component called `fetch('/api/admin/logs')` without an `Authorization` header. The middleware protects all `/api/*` routes (except the public paths list), so it returned 401. The response was parsed as JSON but was actually an error object, resulting in `data.logs` being `undefined`, falling back to `[]`. Both the GET (fetch logs) and DELETE (clear logs) calls now include the JWT Bearer token from `localStorage`.
+
+- **CRITICAL FIX — Admin > ENV Settings "Save Changes" button does nothing** — The `handleSaveEnv` function was a no-op: it called `await new Promise((r) => setTimeout(r, 800))` — a fake 800ms delay with no actual server communication. Editing values and clicking Save appeared to work but changes were never persisted anywhere. The fix:
+  - Added `useEffect` on mount to fetch real env values from `GET /api/admin/env` and populate the table
+  - Replaced the fake `handleSaveEnv` with a real implementation that POSTs each env var to `POST /api/admin/env`
+  - Added a save confirmation message showing "Saved N variables (runtime)" or "Saved N, M blocked (restart required)"
+  - Added auth headers to all fetch calls in the component
+
+- **Added POST handler to `/api/admin/env`** — The route only had a GET handler. Added a POST handler that updates `process.env` at runtime for the current server process. Sensitive keys (`JWT_SECRET`, `ADMIN_DEFAULT_PASSWORD`, `DATABASE_URL`, `POSTGRES_PASSWORD`, `POSTGRES_USER`) are blocked from runtime modification and return 403. All other keys (including `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `AI_PROVIDER`, `AI_SYNTHESIS_MODEL`) can be updated at runtime and take effect immediately for AI synthesis requests.
+
+- **Synthesis GET/POST 401 errors** — Related to the auth header issue above. The Settings panel's AI Engine tab fetches `GET /api/synthesis` to check provider availability. This call includes auth headers (fixed in a prior patch), but the 401 on synthesis GET was caused by the same missing-token issue when the token was not yet loaded. The env save fix resolves this because AI keys can now be configured through the admin panel.
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.3** across all 15 files: `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `/api/health`, `/api/admin/system`, `VersioningSection.tsx`, `README.md`, `DOCS.md`.
+
+---
+
 ## [4.3.2] - 2026-04-17
 
 ### ✨ Added

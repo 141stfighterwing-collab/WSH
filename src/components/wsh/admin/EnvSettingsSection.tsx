@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Lock,
   Save,
@@ -50,6 +50,29 @@ export default function EnvSettingsSection() {
   const [newEnvValue, setNewEnvValue] = useState('');
   const [newEnvCategory, setNewEnvCategory] = useState('System');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Load real env values from server on mount
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
+    fetch('/api/admin/env', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => { if (!r.ok) return null; return r.json(); })
+      .then((data) => {
+        if (!data?.env) return;
+        const serverEnv = data.env as Record<string, string>;
+        setEnvVars((prev) =>
+          prev.map((v) => {
+            if (serverEnv[v.key] !== undefined) {
+              return { ...v, value: serverEnv[v.key], updated: new Date().toISOString() };
+            }
+            return v;
+          })
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredEnvVars = useMemo(() => {
     let filtered = envVars;
@@ -70,8 +93,39 @@ export default function EnvSettingsSection() {
 
   const handleSaveEnv = async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    setSaveMessage('');
+    const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
+    let saved = 0;
+    let failed = 0;
+    try {
+      // POST each env var to the server
+      const results = await Promise.allSettled(
+        envVars.map((v) =>
+          fetch('/api/admin/env', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ key: v.key, value: v.value }),
+          })
+        )
+      );
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value.ok) saved++;
+        else failed++;
+      }
+      if (failed === 0) {
+        setSaveMessage(`Saved ${saved} variables (runtime)`);
+      } else {
+        setSaveMessage(`Saved ${saved}, ${failed} blocked (restart required)`);
+      }
+    } catch {
+      setSaveMessage('Save failed — check server connection');
+    }
     setLoading(false);
+    // Clear message after 5s
+    setTimeout(() => setSaveMessage(''), 5000);
   };
 
   const handleImportEnv = () => {
@@ -339,14 +393,19 @@ export default function EnvSettingsSection() {
       </div>
 
       {/* Save */}
-      <button
-        onClick={handleSaveEnv}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-all active:scale-95 disabled:opacity-50"
-      >
-        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-        Save Changes
-      </button>
+      <div className="space-y-2">
+        <button
+          onClick={handleSaveEnv}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-all active:scale-95 disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+          Save Changes
+        </button>
+        {saveMessage && (
+          <p className="text-[9px] text-center text-pri-400 font-semibold animate-fadeIn">{saveMessage}</p>
+        )}
+      </div>
 
       {/* Warning */}
       <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">

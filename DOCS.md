@@ -1,6 +1,6 @@
 # WSH Documentation
 
-> WeaveNote Self-Hosted v4.3.2 — Complete reference documentation
+> WeaveNote Self-Hosted v4.3.3 — Complete reference documentation
 
 ---
 
@@ -186,7 +186,7 @@ The install and cleanup scripts (`install.sh`, `install.ps1`) only remove the fo
 | Resource Type | Exact Names/Tags Removed | Method |
 |---------------|--------------------------|--------|
 | **Containers** | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match via `docker compose down` + explicit `docker rm -f` for orphans |
-| **Images** | `weavenote:4.3.2`, `weavenote:latest`, `weavenote-app` | Exact tag match |
+| **Images** | `weavenote:4.3.3`, `weavenote:latest`, `weavenote-app` | Exact tag match |
 | **Volumes** | `postgres-data`, `weavenote-data`, `pgadmin-data` (with Docker Compose project prefix like `WSH_`) | Exact name match |
 | **Networks** | `wsh-net` (with Docker Compose project prefix) | Exact name match |
 | **Build Cache** | Only cache entries labeled with WSH's project name | `--filter "label=com.docker.compose.project=<name>"` |
@@ -425,7 +425,7 @@ If the install scripts are not working and you need to manually clean up:
 docker rm -f wsh-postgres weavenote-app wsh-dbviewer wsh-pgadmin 2>/dev/null
 
 # Remove WSH image
-docker rmi -f weavenote:4.3.2 2>/dev/null
+docker rmi -f weavenote:4.3.3 2>/dev/null
 
 # Remove WSH volumes
 docker volume rm WSH_postgres-data WSH_weavenote-data WSH_pgadmin-data 2>/dev/null
@@ -477,7 +477,7 @@ docker compose up -d
 
 | Container | Image | Purpose | Ports |
 |-----------|-------|---------|-------|
-| `weavenote-app` | `weavenote:4.3.2` (built locally) | Main Next.js application | 8883 |
+| `weavenote-app` | `weavenote:4.3.3` (built locally) | Main Next.js application | 8883 |
 | `wsh-postgres` | `postgres:16-alpine` | PostgreSQL 16 database | 5432 (internal) |
 | `wsh-dbviewer` | `adminer:latest` | Web database browser | 5682 |
 | `wsh-pgadmin` | `dpage/pgadmin4:latest` | Full PostgreSQL admin UI | 5050 (optional) |
@@ -512,7 +512,7 @@ Returns application health status.
 ```json
 {
   "status": "healthy",
-  "version": "4.3.2",
+  "version": "4.3.3",
   "timestamp": "2026-04-09T12:00:00.000Z"
 }
 ```
