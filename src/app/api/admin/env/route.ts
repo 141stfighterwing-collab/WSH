@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { addLog } from '../logs/route';
+import { addLog } from '@/lib/logger';
 
 /** Guard: only admin/super-admin can access admin routes */
 function requireAdmin(request: NextRequest): NextResponse | null {

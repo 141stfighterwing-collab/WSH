@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 
 // Version from BUILD_VERSION env (set by Dockerfile at build time),
@@ -42,10 +43,12 @@ export async function GET() {
       } catch {
         dbStatus = 'error';
         dbDetail = message.slice(0, 100);
+        addLog('error', `Health check: DB fallback ping failed: ${message.slice(0, 100)}`, 'database');
       }
     } else {
       dbStatus = 'error';
       dbDetail = message.slice(0, 100);
+      addLog('error', `Health check: DB error: ${message.slice(0, 200)}`, 'database');
     }
   }
   // NOTE: No db.$disconnect() — the singleton persists for the app lifetime

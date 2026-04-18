@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 import {
   comparePassword,
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
         },
       );
     } catch {
+      addLog('error', 'Login failed — database unavailable', 'auth');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 503 },
@@ -131,6 +133,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Login failed';
+    addLog('error', `Login error: ${message}`, 'auth');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

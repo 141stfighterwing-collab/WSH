@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { verifyToken } from '@/lib/auth';
 import { db } from '@/lib/db';
 
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
         valid: true,
       });
     } catch {
+      addLog('warn', 'Token verify: DB unavailable, trusting JWT payload', 'auth');
       // If DB is unavailable, trust the JWT payload (it's still signed)
       return NextResponse.json({
         user: {
@@ -76,6 +78,7 @@ export async function POST(request: Request) {
       });
     }
   } catch {
+    addLog('warn', 'Token verify: invalid request', 'auth');
     return NextResponse.json(
       { error: 'Invalid request' },
       { status: 400 },

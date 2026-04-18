@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 import { deleteUploadedFile } from '@/lib/pdfProcessor';
 
@@ -28,6 +29,7 @@ export async function GET(
     return NextResponse.json({ document });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to get document';
+    addLog('error', `GET /documents/[id] failed: ${message}`, 'documents');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -56,6 +58,7 @@ export async function DELETE(
     return NextResponse.json({ success: true, message: 'Document deleted' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete document';
+    addLog('error', `DELETE /documents/[id] failed: ${message}`, 'documents');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to extract text';
+    addLog('error', `Text extraction failed: ${message}`, 'documents');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

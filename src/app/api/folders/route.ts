@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 
 // GET /api/folders — Fetch all folders for the authenticated user
@@ -24,7 +25,9 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ folders: serialized });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `GET /folders failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to fetch folders' }, { status: 500 });
   }
 }
@@ -55,7 +58,9 @@ export async function POST(request: NextRequest) {
         updatedAt: folder.updatedAt.toISOString(),
       },
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `POST /folders failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to create folder' }, { status: 500 });
   }
 }
@@ -96,7 +101,9 @@ export async function PUT(request: NextRequest) {
         updatedAt: folder.updatedAt.toISOString(),
       },
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `PUT /folders failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to update folder' }, { status: 500 });
   }
 }
@@ -130,7 +137,9 @@ export async function DELETE(request: NextRequest) {
     await db.folder.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `DELETE /folders failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to delete folder' }, { status: 500 });
   }
 }

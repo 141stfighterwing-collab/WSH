@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addLog } from '../admin/logs/route';
+import { addLog } from '@/lib/logger';
 
 // ── Provider Model Maps ──────────────────────────────────────────────────
 const CLAUDE_MODELS: Record<string, string> = {

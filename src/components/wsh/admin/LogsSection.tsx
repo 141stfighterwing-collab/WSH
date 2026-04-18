@@ -1,19 +1,22 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Download, Trash2, Loader2, AlertTriangle, Filter, Activity } from 'lucide-react';
+import { Download, Trash2, Loader2, AlertTriangle, Filter, Activity, RefreshCw } from 'lucide-react';
 import type { LogEntry } from './types';
 
-const LOG_SOURCES = ['all', 'env', 'ai-engine', 'system', 'database', 'sync', 'auth', 'rate-limiter'];
+const LOG_SOURCES = ['all', 'system', 'auth', 'notes', 'documents', 'database', 'ai-engine', 'env', 'rate-limiter', 'sync'];
+const POLL_INTERVAL_MS = 3000;
 
 export default function LogsSection() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [logFilter, setLogFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [autoScroll, setAutoScroll] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [loading, setLoading] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
+  const [lastPoll, setLastPoll] = useState<string>('');
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const fetchLogs = useCallback(async () => {
@@ -30,15 +33,24 @@ export default function LogsSection() {
       if (!res.ok) { setLogs([]); setLoading(false); return; }
       const data = await res.json();
       setLogs(data.logs || []);
+      setLastPoll(new Date().toLocaleTimeString());
     } catch {
       setLogs([]);
     }
     setLoading(false);
   }, [logFilter, sourceFilter]);
 
+  // Initial fetch
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  // Auto-poll every 3 seconds when autoRefresh is on
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchLogs, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchLogs]);
 
   useEffect(() => {
     if (autoScroll && logsEndRef.current) {
@@ -85,32 +97,27 @@ export default function LogsSection() {
     return { byLevel, sources: Array.from(sources).sort() };
   }, [logs]);
 
+  // Dynamic source options — show only sources that have actual logs
+  const availableSources = useMemo(() => {
+    const defaultSources = LOG_SOURCES.filter((s) => s !== 'all');
+    const dynamicSources = new Set(logCounts.sources);
+    // Always show defaults that have logs, plus any dynamic source
+    return [...new Set([...defaultSources.filter((s) => dynamicSources.has(s)), ...logCounts.sources])].sort();
+  }, [logCounts.sources]);
+
   return (
     <div className="space-y-3 animate-fadeIn">
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">System Logs</span>
         <div className="flex items-center gap-1.5">
+          {/* Live indicator */}
+          <div className="flex items-center gap-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-green-400 animate-pulse' : 'bg-muted-foreground/40'}`} />
+            <span className="text-[8px] text-muted-foreground font-mono">
+              {autoRefresh ? `LIVE ${lastPoll}` : lastPoll}
+            </span>
+          </div>
           <span className="text-[9px] text-muted-foreground font-mono">{logs.length} entries</span>
-          <button
-            onClick={() => setShowTroubleshoot(!showTroubleshoot)}
-            className={`px-2 py-0.5 rounded-full text-[9px] font-bold transition-all ${
-              showTroubleshoot
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'bg-secondary text-muted-foreground border border-border/50'
-            }`}
-          >
-            Troubleshoot
-          </button>
-          <button
-            onClick={() => setAutoScroll(!autoScroll)}
-            className={`px-2 py-0.5 rounded-full text-[9px] font-bold transition-all ${
-              autoScroll
-                ? 'bg-pri-600/20 text-pri-400 border border-pri-500/30'
-                : 'bg-secondary text-muted-foreground border border-border/50'
-            }`}
-          >
-            Auto-scroll
-          </button>
         </div>
       </div>
 
@@ -171,15 +178,15 @@ export default function LogsSection() {
           className="flex-1 px-2 py-1.5 rounded-lg text-[9px] bg-secondary/50 border border-border/50 text-foreground focus:outline-none focus:border-pri-500/50"
         >
           <option value="all">All Sources</option>
-          {LOG_SOURCES.filter((s) => s !== 'all').map((s) => (
+          {availableSources.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
       </div>
 
       {/* ── Log Viewer ────────────────────────────────────────── */}
-      <div className="rounded-xl bg-slate-950/80 border border-border/30 p-3 font-mono text-[10px] leading-relaxed max-h-64 overflow-y-auto">
-        {loading ? (
+      <div className="rounded-xl bg-slate-950/80 border border-border/30 p-3 font-mono text-[10px] leading-relaxed max-h-72 overflow-y-auto">
+        {loading && logs.length === 0 ? (
           <div className="flex items-center justify-center py-6">
             <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
           </div>
@@ -216,6 +223,17 @@ export default function LogsSection() {
       {/* ── Actions ───────────────────────────────────────────── */}
       <div className="flex gap-2">
         <button
+          onClick={() => setAutoRefresh(!autoRefresh)}
+          className={`flex items-center justify-center gap-1 py-2 px-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+            autoRefresh
+              ? 'bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25'
+              : 'bg-secondary text-muted-foreground border border-border/50 hover:bg-secondary/80'
+          }`}
+        >
+          <RefreshCw className={`w-3 h-3 ${autoRefresh ? 'animate-spin' : ''}`} style={autoRefresh ? { animationDuration: '3s' } : {}} />
+          {autoRefresh ? 'Live' : 'Paused'}
+        </button>
+        <button
           onClick={handleClearLogs}
           disabled={clearLoading}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-all active:scale-95 disabled:opacity-50"
@@ -231,6 +249,18 @@ export default function LogsSection() {
           Export
         </button>
       </div>
+
+      {/* ── Auto-scroll toggle ────────────────────────────────── */}
+      <button
+        onClick={() => setAutoScroll(!autoScroll)}
+        className={`w-full py-1 rounded-full text-[9px] font-bold transition-all ${
+          autoScroll
+            ? 'bg-pri-600/20 text-pri-400 border border-pri-500/30'
+            : 'bg-secondary text-muted-foreground border border-border/50'
+        }`}
+      >
+        Auto-scroll {autoScroll ? 'ON' : 'OFF'}
+      </button>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 import { processDocument, saveUploadedFile } from '@/lib/pdfProcessor';
 import path from 'path';
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (processError) {
       const errorMsg = processError instanceof Error ? processError.message : 'Processing failed';
+      addLog('error', `Document processing failed for ${file.name}: ${errorMsg}`, 'documents');
       await db.document.update({
         where: { id: document.id },
         data: { status: 'error', errorMessage: errorMsg },
@@ -80,6 +82,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Upload failed';
+    addLog('error', `POST /documents/upload failed: ${message}`, 'documents');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

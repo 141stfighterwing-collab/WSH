@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 
 interface GraphNode {
   id: string;
@@ -89,7 +90,9 @@ export async function GET(request: Request) {
     const data: GraphData = { nodes, edges };
 
     return NextResponse.json(data);
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `GET /graph failed: ${message}`, 'notes');
     return NextResponse.json({ nodes: [], edges: [] });
   }
 }

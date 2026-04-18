@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 import { verifyToken, hashPassword } from '@/lib/auth';
 
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch users';
+    addLog('error', `GET /admin/users failed: ${message}`, 'auth');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ user, message: 'User created successfully' }, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create user';
+    addLog('error', `POST /admin/users failed: ${message}`, 'auth');
     // Distinguish unique constraint violations
     if (message.includes('Unique constraint')) {
       return NextResponse.json(
@@ -219,6 +222,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update user';
+    addLog('error', `PATCH /admin/users failed: ${message}`, 'auth');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -259,6 +263,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete user';
+    addLog('error', `DELETE /admin/users failed: ${message}`, 'auth');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

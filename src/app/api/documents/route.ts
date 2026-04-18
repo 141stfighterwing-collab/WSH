@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 
 // GET /api/documents — List all documents for the current user
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ documents });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to list documents';
+    addLog('error', `GET /documents failed: ${message}`, 'documents');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

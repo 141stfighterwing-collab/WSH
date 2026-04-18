@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 
 // GET /api/notes — Fetch all notes for the authenticated user
@@ -32,7 +33,9 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ notes: serialized });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `GET /notes failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
   }
 }
@@ -69,7 +72,9 @@ export async function POST(request: NextRequest) {
         updatedAt: note.updatedAt.toISOString(),
       },
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `POST /notes failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
   }
 }
@@ -118,7 +123,9 @@ export async function PUT(request: NextRequest) {
         updatedAt: note.updatedAt.toISOString(),
       },
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `PUT /notes failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to update note' }, { status: 500 });
   }
 }
@@ -147,7 +154,9 @@ export async function DELETE(request: NextRequest) {
     await db.note.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addLog('error', `DELETE /notes failed: ${message}`, 'notes');
     return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 });
   }
 }

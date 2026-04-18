@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execSync, existsSync, statSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { addLog } from '../logs/route';
+import { addLog } from '@/lib/logger';
 
 const startTime = Date.now();
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 
 interface SearchParams {
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Search failed';
+    addLog('error', `POST /documents/search failed: ${message}`, 'documents');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
