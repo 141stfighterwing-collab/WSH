@@ -1,28 +1,21 @@
 /**
- * WSH Global Logger v1.0
+ * WSH Global Logger v1.1
  *
- * Intercepts console.log, console.warn, console.error at the server level
- * and pipes everything into the admin logs system. This ensures ALL errors
- * (including unhandled ones from API providers like Gemini quota errors)
- * appear in the Admin > Logs panel.
+ * Self-initializing: intercepts console.log/warn/error the first time
+ * this module is imported on the server side. No instrumentation.ts needed.
+ *
+ * Safe for Edge Runtime: the interceptor only activates when
+ * typeof window === 'undefined' (server-side Node.js context).
  *
  * Usage:
  *   import { addLog } from '@/lib/logger';
  *   addLog('error', 'something broke', 'database');
- *
- * The console intercept is activated by instrumentation.ts at server boot.
  */
 
 /* eslint-disable no-console */
 
-// Store original console methods before we override them
-const originalConsole = {
-  log: console.log.bind(console),
-  warn: console.warn.bind(console),
-  error: console.error.bind(console),
-};
+// ── Log Store ────────────────────────────────────────────────────────────
 
-// Log entry interface
 interface LogEntry {
   timestamp: string;
   level: 'info' | 'warn' | 'error';
@@ -30,7 +23,6 @@ interface LogEntry {
   source: string;
 }
 
-// In-memory log store (ring buffer)
 const MAX_LOGS = 500;
 let systemLogs: LogEntry[] = [];
 
@@ -57,6 +49,15 @@ export function getLogs(): LogEntry[] {
 export function clearLogs(): void {
   systemLogs = [];
 }
+
+// ── Console Interceptor ─────────────────────────────────────────────────
+
+// Store original console methods before any override
+const originalConsole = {
+  log: console.log.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+};
 
 /**
  * Smart source detection from call stack.
@@ -85,7 +86,7 @@ function detectSource(): string {
       if (line.includes('/node_modules/')) continue;
     }
   } catch {
-    // stack parsing failed
+    // stack parsing not available (Edge Runtime)
   }
   return 'system';
 }
@@ -102,7 +103,6 @@ function shouldLog(message: string): boolean {
   if (lastSeen && now - lastSeen < DEDUP_WINDOW_MS) {
     const count = seenMessages.get(key + ':count') || 1;
     if (count >= DEDUP_MAX_REPEATS) {
-      // After 3 repeats, start showing "repeated N times" every 10th occurrence
       const total = seenMessages.get(key + ':total') || DEDUP_MAX_REPEATS;
       if ((total - DEDUP_MAX_REPEATS) % 10 !== 0) {
         seenMessages.set(key + ':total', total + 1);
@@ -121,9 +121,20 @@ function shouldLog(message: string): boolean {
   return true;
 }
 
-/** Activate console interceptors — call once at server startup */
-export function interceptConsole(): void {
-  // Intercept console.error → 'error' log
+// ── Self-initialize on first import (server-side only) ───────────────────
+
+let _initialized = false;
+
+function initInterceptor(): void {
+  if (_initialized) return;
+  _initialized = true;
+
+  // Only intercept in Node.js server context (not Edge Runtime, not browser)
+  if (typeof window !== 'undefined') return;
+  // Guard: if process or process.on doesn't exist (Edge Runtime), skip
+  if (typeof process === 'undefined' || typeof process.on !== 'function') return;
+
+  // Override console.error
   console.error = (...args: unknown[]) => {
     originalConsole.error(...args);
     const message = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
@@ -132,7 +143,7 @@ export function interceptConsole(): void {
     }
   };
 
-  // Intercept console.warn → 'warn' log
+  // Override console.warn
   console.warn = (...args: unknown[]) => {
     originalConsole.warn(...args);
     const message = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
@@ -141,7 +152,7 @@ export function interceptConsole(): void {
     }
   };
 
-  // Intercept console.log → 'info' log (only for server-side)
+  // Override console.log
   console.log = (...args: unknown[]) => {
     originalConsole.log(...args);
     const message = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
@@ -150,5 +161,14 @@ export function interceptConsole(): void {
     }
   };
 
-  addLog('info', 'Console interceptor active — all console.log/warn/error now piped to admin logs', 'system');
+  // Catch unhandled promise rejections
+  process.on('unhandledRejection', (reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    addLog('error', `Unhandled rejection: ${message}`, 'system');
+  });
+
+  addLog('info', 'Console interceptor active — all console.log/warn/error piped to admin logs', 'system');
 }
+
+// Auto-init immediately when this module is imported
+initInterceptor();
