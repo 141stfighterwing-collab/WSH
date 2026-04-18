@@ -1,23 +1,30 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, Trash2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Download, Trash2, Loader2, AlertTriangle, Filter, Activity } from 'lucide-react';
 import type { LogEntry } from './types';
+
+const LOG_SOURCES = ['all', 'env', 'ai-engine', 'system', 'database', 'sync', 'auth', 'rate-limiter'];
 
 export default function LogsSection() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [logFilter, setLogFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [autoScroll, setAutoScroll] = useState(true);
   const [loading, setLoading] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
-      const url = `/api/admin/logs?level=${logFilter}&limit=100`;
-      const res = await fetch(url, {
+      const params = new URLSearchParams();
+      params.set('limit', '200');
+      if (logFilter !== 'all') params.set('level', logFilter);
+      if (sourceFilter !== 'all') params.set('source', sourceFilter);
+      const res = await fetch(`/api/admin/logs?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) { setLogs([]); setLoading(false); return; }
@@ -27,7 +34,7 @@ export default function LogsSection() {
       setLogs([]);
     }
     setLoading(false);
-  }, [logFilter]);
+  }, [logFilter, sourceFilter]);
 
   useEffect(() => {
     fetchLogs();
@@ -67,11 +74,33 @@ export default function LogsSection() {
     URL.revokeObjectURL(url);
   };
 
+  // Compute log counts by level and source
+  const logCounts = useMemo(() => {
+    const byLevel = { info: 0, warn: 0, error: 0 };
+    const sources = new Set<string>();
+    for (const l of logs) {
+      if (l.level in byLevel) byLevel[l.level as keyof typeof byLevel]++;
+      if (l.source) sources.add(l.source);
+    }
+    return { byLevel, sources: Array.from(sources).sort() };
+  }, [logs]);
+
   return (
     <div className="space-y-3 animate-fadeIn">
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">System Logs</span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] text-muted-foreground font-mono">{logs.length} entries</span>
+          <button
+            onClick={() => setShowTroubleshoot(!showTroubleshoot)}
+            className={`px-2 py-0.5 rounded-full text-[9px] font-bold transition-all ${
+              showTroubleshoot
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                : 'bg-secondary text-muted-foreground border border-border/50'
+            }`}
+          >
+            Troubleshoot
+          </button>
           <button
             onClick={() => setAutoScroll(!autoScroll)}
             className={`px-2 py-0.5 rounded-full text-[9px] font-bold transition-all ${
@@ -85,7 +114,38 @@ export default function LogsSection() {
         </div>
       </div>
 
-      {/* Filter */}
+      {/* ── Persistence Troubleshooting Panel ──────────────────── */}
+      {showTroubleshoot && (
+        <div className="p-3 bg-amber-500/5 rounded-xl border border-amber-500/20 space-y-2 animate-fadeIn">
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Persistence Troubleshooting</span>
+          </div>
+          <p className="text-[9px] text-muted-foreground leading-relaxed">
+            If ENV keys are not persisting after restart, follow these steps:
+          </p>
+          <ol className="text-[9px] text-muted-foreground leading-relaxed space-y-1 pl-3 list-decimal">
+            <li>Check <span className="font-mono text-foreground">Admin &gt; Versioning &gt; ENV Persistence</span> — the volume must show &quot;Healthy&quot; and &quot;Writable: Yes&quot;</li>
+            <li>If &quot;Writable: No&quot; — run: <span className="font-mono text-amber-400">docker compose down -v &amp;&amp; docker compose up -d</span></li>
+            <li>After saving a key, look for a log entry here from source <span className="font-mono text-foreground">[env]</span> saying &quot;persisted to disk&quot; or &quot;disk write FAILED&quot;</li>
+            <li>Filter logs by source <span className="font-mono text-foreground">env</span> to see all ENV activity</li>
+            <li>After restart, check <span className="font-mono text-foreground">docker compose logs weavenote | grep persistent</span> to see if keys were loaded from runtime.env</li>
+          </ol>
+          <div className="flex gap-1 mt-1">
+            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400">
+              {logCounts.byLevel.info} info
+            </span>
+            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400">
+              {logCounts.byLevel.warn} warn
+            </span>
+            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400">
+              {logCounts.byLevel.error} error
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Level Filter ──────────────────────────────────────── */}
       <div className="flex gap-1">
         {['all', 'info', 'warn', 'error'].map((f) => (
           <button
@@ -102,14 +162,32 @@ export default function LogsSection() {
         ))}
       </div>
 
-      {/* Log Viewer */}
+      {/* ── Source Filter ─────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        <Filter className="w-3 h-3 text-muted-foreground shrink-0" />
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          className="flex-1 px-2 py-1.5 rounded-lg text-[9px] bg-secondary/50 border border-border/50 text-foreground focus:outline-none focus:border-pri-500/50"
+        >
+          <option value="all">All Sources</option>
+          {LOG_SOURCES.filter((s) => s !== 'all').map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── Log Viewer ────────────────────────────────────────── */}
       <div className="rounded-xl bg-slate-950/80 border border-border/30 p-3 font-mono text-[10px] leading-relaxed max-h-64 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-6">
             <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
           </div>
         ) : logs.length === 0 ? (
-          <div className="text-muted-foreground text-center py-4">No logs to display</div>
+          <div className="text-muted-foreground text-center py-4">
+            <Activity className="w-5 h-5 mx-auto mb-2 opacity-30" />
+            No logs to display
+          </div>
         ) : (
           logs.map((log, i) => (
             <div key={i} className="mb-1">
@@ -135,7 +213,7 @@ export default function LogsSection() {
         <div ref={logsEndRef} />
       </div>
 
-      {/* Actions */}
+      {/* ── Actions ───────────────────────────────────────────── */}
       <div className="flex gap-2">
         <button
           onClick={handleClearLogs}

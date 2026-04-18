@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { addLog } from '../logs/route';
 
 /** Guard: only admin/super-admin can access admin routes */
 function requireAdmin(request: NextRequest): NextResponse | null {
@@ -67,8 +68,9 @@ function readEnvFile(): Record<string, string> {
 /**
  * Write a key-value pair to the .env file on disk.
  * Updates existing key or appends a new line.
+ * Returns true on success, false on failure.
  */
-function writeEnvFile(env: Record<string, string>): void {
+function writeEnvFile(env: Record<string, string>): boolean {
   try {
     const dir = ENV_FILE.substring(0, ENV_FILE.lastIndexOf('/'));
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -81,8 +83,12 @@ function writeEnvFile(env: Record<string, string>): void {
     }
     lines.push('');
     writeFileSync(ENV_FILE, lines.join('\n'), 'utf-8');
+    return true;
   } catch (err) {
-    console.error(`[env] Failed to write ${ENV_FILE}:`, err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[env] Failed to write ${ENV_FILE}:`, errMsg);
+    addLog('error', `Failed to write ENV file ${ENV_FILE}: ${errMsg}`, 'env');
+    return false;
   }
 }
 
@@ -145,13 +151,26 @@ export async function POST(request: NextRequest) {
     // 2. Persist to .env file on disk
     const fileEnv = readEnvFile();
     fileEnv[key] = value;
-    writeEnvFile(fileEnv);
+    const diskOk = writeEnvFile(fileEnv);
+
+    // 3. Log the action
+    const isApiKey = key.includes('API_KEY') || key.includes('SECRET');
+    const displayKey = isApiKey ? `${key}=****${value.slice(-4)}` : `${key}=${value}`;
+    const username = request.headers.get('x-user-username') || 'admin';
+
+    if (diskOk) {
+      addLog('info', `ENV saved by ${username}: ${displayKey} (persisted to disk)`, 'env');
+    } else {
+      addLog('warn', `ENV saved by ${username}: ${displayKey} (IN MEMORY ONLY — disk write FAILED)`, 'env');
+    }
 
     return NextResponse.json({
       success: true,
       key,
-      persisted: true,
-      message: `${key} saved — active immediately and persisted to disk`,
+      persisted: diskOk,
+      message: diskOk
+        ? `${key} saved — active immediately and persisted to disk`
+        : `${key} saved in memory but FAILED to persist to disk. Check Docker volume permissions.`,
     });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

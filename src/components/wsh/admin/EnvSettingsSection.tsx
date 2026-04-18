@@ -11,8 +11,11 @@ import {
   Upload,
   AlertTriangle,
   Edit3,
+  CheckCircle2,
+  XCircle,
+  HardDrive,
 } from 'lucide-react';
-import type { EnvVar } from './types';
+import type { EnvVar, EnvVolumeStatus } from './types';
 
 const QUICK_ADD_KEYS = [
   { key: 'PORT', value: '8883', category: 'System' },
@@ -54,13 +57,14 @@ export default function EnvSettingsSection() {
   const [newEnvCategory, setNewEnvCategory] = useState('System');
   const [showAddForm, setShowAddForm] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [envVolume, setEnvVolume] = useState<EnvVolumeStatus | null>(null);
 
   // Load real env values from server on mount
   useEffect(() => {
     const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
-    fetch('/api/admin/env', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    fetch('/api/admin/env', { headers })
       .then((r) => { if (!r.ok) return null; return r.json(); })
       .then((data) => {
         if (!data?.env) return;
@@ -73,6 +77,16 @@ export default function EnvSettingsSection() {
             return v;
           })
         );
+      })
+      .catch(() => {});
+
+    // Also fetch system data for ENV volume diagnostics
+    fetch('/api/admin/system', { headers })
+      .then((r) => { if (!r.ok) return null; return r.json(); })
+      .then((data) => {
+        if (data?.envVolume) {
+          setEnvVolume(data.envVolume);
+        }
       })
       .catch(() => {});
   }, []);
@@ -211,6 +225,41 @@ export default function EnvSettingsSection() {
       <p className="text-[10px] text-muted-foreground/60 -mt-2">
         Manage application configuration. Changes are applied on save.
       </p>
+
+      {/* ── Persistence Status Banner ────────────────────────────── */}
+      {envVolume && (
+        <div className={`p-2.5 rounded-xl border ${
+          envVolume.exists && envVolume.writable
+            ? 'bg-green-500/5 border-green-500/20'
+            : 'bg-red-500/5 border-red-500/20'
+        }`}>
+          <div className="flex items-center gap-2 mb-1">
+            <HardDrive className={`w-3.5 h-3.5 ${envVolume.writable ? 'text-green-400' : 'text-red-400'}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+              ENV Persistence
+            </span>
+            {envVolume.exists && envVolume.writable ? (
+              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 ml-auto">
+                Healthy
+              </span>
+            ) : (
+              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 ml-auto">
+                {envVolume.exists ? 'Read-Only' : 'Missing'}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-3 text-[9px] text-muted-foreground">
+            <span>Keys: <span className="font-mono text-foreground">{envVolume.keyCount}</span></span>
+            <span>Readable: <span className={envVolume.readable ? 'text-green-400' : 'text-red-400'}>{envVolume.readable ? 'Yes' : 'No'}</span></span>
+            <span>Writable: <span className={envVolume.writable ? 'text-green-400' : 'text-red-400'}>{envVolume.writable ? 'Yes' : 'No'}</span></span>
+          </div>
+          {!envVolume.writable && envVolume.error && (
+            <p className="text-[8px] text-red-400/70 mt-1">
+              {envVolume.error}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex gap-2">

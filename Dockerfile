@@ -54,13 +54,13 @@ ARG BUILD_VERSION=4.3.6
 ENV BUILD_VERSION=${BUILD_VERSION}
 
 RUN echo "[6/6] Creating production image (v${BUILD_VERSION})..." && \
-    apk add --no-cache openssl wget bind-tools
+    apk add --no-cache openssl wget bind-tools su-exec
 
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user
+# Create non-root user (app runs as this user via su-exec in entrypoint)
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
@@ -94,14 +94,17 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 # Copy public assets
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Create runtime directories
-RUN mkdir -p /app/tmp /app/db /app/upload && chown -R nextjs:nodejs /app/tmp /app/db /app/upload
+# Create runtime directories (ownership fixed at runtime by entrypoint)
+RUN mkdir -p /app/tmp/env /app/tmp /app/db /app/upload && chown -R nextjs:nodejs /app/tmp /app/db /app/upload
 
 # Build version stamp
 RUN echo "BUILD_VERSION=${BUILD_VERSION}" > /app/.build-version && \
     echo "✓ Production image ready (v${BUILD_VERSION})"
 
-USER nextjs
+# NOTE: Container starts as root so the entrypoint can fix Docker volume
+# permissions (volumes are created with root:root ownership by default).
+# The entrypoint chowns volumes and then drops to 'nextjs' via su-exec.
+# Do NOT set USER nextjs here — it must remain root for the entrypoint.
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '../admin/logs/route';
 
 // ── Provider Model Maps ──────────────────────────────────────────────────
 const CLAUDE_MODELS: Record<string, string> = {
@@ -203,6 +204,8 @@ export async function POST(request: NextRequest) {
 
     aiUsageCount++;
 
+    addLog('info', `AI synthesis OK: provider=${usedProvider}, model=${clientModel || process.env.AI_SYNTHESIS_MODEL || 'default'}, tokens=${tokensUsed}, action=${action}`, 'ai-engine');
+
     return NextResponse.json({
       result,
       tokensUsed,
@@ -212,6 +215,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('Synthesis API error:', message);
+    addLog('error', `AI synthesis FAILED: ${message} (action=${action || 'unknown'}, provider=${provider || 'unknown'})`, 'ai-engine');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

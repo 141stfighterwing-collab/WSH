@@ -1,14 +1,30 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.2.1
+# WSH Docker Entrypoint v4.3.7
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
+#
+# v4.3.7 FIX: Runs as root to fix Docker volume permissions (wsh-env owned by root),
+# then drops to 'nextjs' user before starting the server.
 
 #set -e  # Disabled: individual errors are handled below to prevent crash loops
 
+WSH_UID="${WSH_UID:-1001}"
+WSH_GID="${WSH_GID:-1001}"
 PRISMA_CLI="node /app/node_modules/prisma/build/index.js"
 SCHEMA_FLAG="--schema=./prisma/schema.prisma"
 MARKER_FILE="/app/tmp/.db-initialized"
 SEED_MARKER="/app/tmp/.admin-seeded"
+
+# ── Fix Docker volume permissions (must run as root) ────────────
+# BUG FIX: Docker named volumes (wsh-env, weavenote-data, upload-data) are
+# created with root:root ownership by default. Since the app runs as 'nextjs'
+# (uid 1001), it cannot write to these volumes. This causes:
+#   - ENV API keys to fail silently when saving to disk (process.env works,
+#     but runtime.env write fails → keys lost on restart)
+#   - Upload failures if the upload volume has the same issue
+mkdir -p /app/tmp/env /app/tmp /app/upload /app/db
+chown -R ${WSH_UID}:${WSH_GID} /app/tmp /app/upload /app/db 2>/dev/null
+echo "[+] Volume permissions set (uid=${WSH_UID}, gid=${WSH_GID})"
 
 # ── Load persistent runtime env overrides ──────────────────────────
 # These are set via Admin > ENV Settings or Settings > AI Engine and
@@ -258,7 +274,9 @@ fi
 echo "[*] Verifying Prisma client..."
 $PRISMA_CLI generate $SCHEMA_FLAG 2>&1 | tail -1 || echo "[!] prisma generate warning (non-fatal)"
 
-# ── Start server ───────────────────────────────────────────────
-echo "[*] Starting WSH server on port ${PORT:-8883}..."
+# ── Drop privileges and start server ───────────────────────────
+# The entrypoint runs as root to fix volume permissions above.
+# Now switch to the 'nextjs' user for the actual application server.
+echo "[*] Starting WSH server on port ${PORT:-3000} as nextjs (uid=${WSH_UID})..."
 echo "======================================================="
-exec "$@"
+exec su-exec ${WSH_UID} "$@"

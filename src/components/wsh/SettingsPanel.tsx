@@ -177,7 +177,12 @@ export default function SettingsPanel() {
         body: JSON.stringify({ key: providerEnvKey, value: aiKeyInput.trim() }),
       });
       if (res.ok) {
-        setAiKeyMessage(`API key saved — active now and persists across restarts`);
+        const data = await res.json().catch(() => ({}));
+        if (data.persisted === false) {
+          setAiKeyMessage(`Key active now but DISK SAVE FAILED — key will be lost on restart. Run: docker compose down -v && docker compose up -d`);
+        } else {
+          setAiKeyMessage(`API key saved — active now and persists across restarts`);
+        }
         setAiKeyInput('');
         // Refresh server AI status
         const statusRes = await fetch('/api/synthesis', {

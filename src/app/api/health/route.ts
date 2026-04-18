@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Version from BUILD_VERSION env (set by Dockerfile at build time),
+// fallback to package.json, fallback to hardcoded.
+function getVersion(): string {
+  if (process.env.BUILD_VERSION) return process.env.BUILD_VERSION;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pkg = require('../../../package.json');
+    if (pkg.version) return pkg.version;
+  } catch { /* ignore */ }
+  return '4.3.6';
+}
+
 // GET /api/health — Database connectivity health check
 // Uses the singleton db client from @/lib/db to avoid creating
 // new PrismaClient instances per poll (which exhausts connection pools).
@@ -40,7 +52,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: 'healthy',
-    version: '4.3.6',
+    version: getVersion(),
     timestamp: new Date().toISOString(),
     database: {
       status: dbStatus,

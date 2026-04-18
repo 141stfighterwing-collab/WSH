@@ -5,22 +5,44 @@ export interface EnvVar {
   updated: string;
 }
 
+export interface EnvVolumeStatus {
+  exists: boolean;
+  readable: boolean;
+  writable: boolean;
+  keyCount: number;
+  error?: string;
+}
+
 export interface SystemData {
   status: string;
   version: string;
   uptime: string;
+  uptimeMs: number;
   memory: {
     rss: string;
     heapTotal: string;
     heapUsed: string;
     external: string;
+    rssBytes?: number;
   };
+  disk: {
+    appSize: string;
+    appSizeBytes: number;
+    uploadSize: string;
+    uploadSizeBytes: number;
+    tmpSize: string;
+    envSize: string;
+    dbDataSize: string;
+  };
+  envVolume: EnvVolumeStatus;
   nodeVersion: string;
   platform: string;
   nextjs: string;
   buildDate: string;
   gitCommit: string;
   environment: string;
+  dockerVersion?: string;
+  hostname?: string;
 }
 
 export interface UserData {
