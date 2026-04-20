@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.2] - 2026-04-21
+
+### Fixed
+- **CRITICAL FIX — Docker build failure (Prisma v7.x incompatibility)** — The Dockerfile used `npx prisma generate` which downloads the latest Prisma CLI from npm. Since Prisma 7.x was released, `npx` downloads v7.7.0 which has breaking changes: the `datasource.url` property is no longer supported in schema files. This caused the Docker build to fail with error P1012 during `prisma generate`. Fixed by replacing `npx prisma generate` with `node node_modules/prisma/build/index.js generate` (direct node invocation) in both the builder and runner stages of the Dockerfile. This ensures the locally-installed Prisma v6.x CLI is always used, never a downloaded v7.x.
+
+### Changed
+- **Version bumped to 4.4.2** across all core files.
+
+---
+
 ## [4.4.1] - 2026-04-21
 
 ### Fixed

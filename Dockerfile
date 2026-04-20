@@ -7,7 +7,7 @@
 
 FROM node:20-alpine AS deps
 
-ARG BUILD_VERSION=4.4.1
+ARG BUILD_VERSION=4.4.2
 
 # System deps for building
 RUN echo "[1/6] Installing system dependencies..." && \
@@ -37,9 +37,9 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Generate Prisma client
+# Generate Prisma client (direct node invocation — never npx to prevent v7.x download)
 RUN echo "[4/6] Generating Prisma client..." && \
-    npx prisma generate 2>&1 && \
+    node node_modules/prisma/build/index.js generate 2>&1 && \
     echo "[4/6] ✓ Prisma client generated"
 
 # Build Next.js (standalone output)
@@ -50,7 +50,7 @@ RUN echo "[5/6] Building Next.js application..." && \
 # ── Stage 3: Production Runner ─────────────────────────────────
 FROM node:20-alpine AS runner
 
-ARG BUILD_VERSION=4.4.1
+ARG BUILD_VERSION=4.4.2
 ENV BUILD_VERSION=${BUILD_VERSION}
 
 RUN echo "[6/6] Creating production image (v${BUILD_VERSION})..." && \
@@ -78,7 +78,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Regenerate Prisma client into production node_modules (ensures .prisma/client
 # matches the schema version, not a stale copy from the build stage)
-RUN npx prisma generate 2>&1 | tail -1 && \
+RUN node node_modules/prisma/build/index.js generate 2>&1 | tail -1 && \
     chown -R nextjs:nodejs node_modules/.prisma && \
     echo "[prisma] ✓ Client regenerated for production"
 

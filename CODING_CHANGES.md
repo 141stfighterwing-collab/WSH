@@ -1,3 +1,36 @@
+# WSH v4.4.2 — Coding Changes
+
+## Overview
+v4.4.2 is a critical hotfix for a Docker build failure. The Dockerfile used `npx prisma generate` in two places (builder stage and runner stage). Since Prisma 7.x was released to npm, `npx` downloads v7.7.0 instead of using the locally-installed v6.x. Prisma 7 removed the `datasource.url` property from schema files, causing error P1012 and a failed Docker build.
+
+## 1. Dockerfile — Replace npx with direct node invocation
+
+**File:** `Dockerfile`
+
+### Root Cause
+`npx prisma generate` does NOT use the local `node_modules/prisma`. Instead, it checks npm and downloads the latest version. With Prisma 7.7.0 released, this downloads a breaking version that rejects `url = env("DATABASE_URL")` in `datasource db`.
+
+### Fix
+Both `npx prisma generate` calls replaced with `node node_modules/prisma/build/index.js generate`:
+- **Line 42 (builder stage):** `npx prisma generate` → `node node_modules/prisma/build/index.js generate`
+- **Line 81 (runner stage):** `npx prisma generate` → `node node_modules/prisma/build/index.js generate`
+
+### Why This Works
+The entrypoint (`docker-entrypoint.sh`) already used this exact pattern: `PRISMA_CLI="node /app/node_modules/prisma/build/index.js"`. This ensures the locally-installed Prisma CLI (v6.19.2 per package.json `^6.11.1`) is always used.
+
+### No Other Changes
+- No schema changes
+- No API changes
+- No UI changes
+- The `prisma` npm package version range (`^6.11.1`) still resolves to v6.x — the issue was specifically with `npx` downloading independently
+
+## Files Changed
+| # | File | Lines | Description |
+|---|------|-------|-------------|
+| 1 | `Dockerfile` | 2 | Replace `npx prisma generate` with direct node invocation |
+
+---
+
 # WSH v4.4.1 — Coding Changes
 
 ## Overview

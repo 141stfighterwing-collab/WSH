@@ -107,7 +107,7 @@ export async function GET() {
       const pkg = require('../../../package.json');
       version = pkg.version || 'unknown';
     } catch {
-      version = '4.4.1';
+      version = '4.4.2';
     }
   }
 
