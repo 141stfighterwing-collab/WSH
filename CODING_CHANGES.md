@@ -1,3 +1,77 @@
+# WSH v4.4.0 — Coding Changes
+
+## Overview
+v4.4.0 adds full folder organization to the Documents tab. Documents can be assigned to folders (shared with the Notes folder system), filtered by folder in the Library tab, and organized via drag-and-drop or a dropdown menu. The feature reuses the existing Folder model from the Notes system.
+
+## 1. Prisma Schema Changes
+**File:** `prisma/schema.prisma`
+
+### Document model — added folder relation
+```
+folderId     String?
+folder       Folder?          @relation(fields: [folderId], references: [id])
+@@index([folderId])
+```
+
+### Folder model — added documents relation
+```
+documents Document[]
+```
+
+### Migration required
+Run `npx prisma db push` or create a migration to add the `folderId` column to the `Document` table.
+
+## 2. API Changes
+
+### GET /api/documents — Folder filtering
+Added `?folderId=` query parameter:
+- No param: return all documents
+- `?folderId=<id>`: return documents in that folder
+- `?folderId=none`: return documents with no folder (unfiled)
+- Response now includes `folderId` and `folder` fields
+
+### PUT /api/documents/[id] — New endpoint
+Accepts JSON body with `folderId` and/or `title` to update document metadata.
+
+### DELETE /api/folders — Document cleanup
+Now also unlinks documents (`folderId → null`) before deleting a folder.
+
+## 3. DocumentManager UI Overhaul
+**File:** `src/components/wsh/editors/DocumentManager.tsx`
+
+### New Folder Filter Bar
+- "All" pill shows all documents
+- "Unfiled" pill shows documents without a folder
+- Folder pills for each existing folder (loaded from /api/folders)
+- Active folder highlighted with primary color
+- New folder creation with inline input
+
+### Drag-and-Drop
+- Documents are draggable (HTML5 drag API)
+- Folder pills are drop targets
+- Visual feedback: dashed border + "Drop here" hint when dragging over a folder
+- Dropping a document on a folder pill assigns it via PUT API
+
+### Folder Assignment Dropdown
+- Click the folder icon on any document to open a dropdown
+- Choose any folder or "Unfiled" to assign/unassign
+- Click-outside dismissal
+
+### Folder Badges
+- Documents with a folder show a small folder name badge in the title row
+- Folder pill color in the DocumentViewer overlay header
+
+### Files Changed
+| # | File | Type | Description |
+|---|------|------|-------------|
+| 1 | `prisma/schema.prisma` | Schema | Added folderId relation to Document, documents to Folder |
+| 2 | `src/app/api/documents/route.ts` | API | Folder filtering, folder relation in response |
+| 3 | `src/app/api/documents/[id]/route.ts` | API | New PUT endpoint for folder/title updates |
+| 4 | `src/app/api/folders/route.ts` | API | Document unlink on folder delete |
+| 5 | `src/components/wsh/editors/DocumentManager.tsx` | UI | Folder filter bar, drag-drop, assignment dropdown, badges |
+
+---
+
 # WSH v4.3.9 — Coding Changes
 
 ## Overview

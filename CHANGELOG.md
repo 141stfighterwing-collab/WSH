@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.0] - 2026-04-21
+
+### Added
+- **Document folder organization** — Documents can now be organized into folders, just like Notes
+- **Folder filter bar** in Library tab — Filter documents by folder with clickable pills (All, Unfiled, or any folder)
+- **Folder assignment dropdown** — Move any document to a folder or unfile it via the folder button on each document row
+- **Drag-and-drop to folders** — Drag documents from the list and drop them onto folder pills to organize quickly
+- **Inline folder creation** — Create new folders directly from the Library tab with the + button
+- **PUT /api/documents/[id]** endpoint — Update document metadata (folder assignment, title) via API
+- **Folder ID index** on Document model for fast folder-based queries
+
+### Changed
+- **Prisma schema** — Added `folderId` relation to Document model, added `documents` to Folder model
+- **GET /api/documents** — Now supports `?folderId=` query param for folder filtering, returns `folder` relation
+- **DELETE /api/folders** — Now also unlinks documents when a folder is deleted
+- **Document records** now include `folderId` and `folder` fields in API responses
+- **Version bumped to 4.4.0** across all 14 core files
+
+### Technical
+- Database migration required: `npx prisma db push` to apply new `folderId` column on `Document` table
+
+---
+
 ## [4.3.9] - 2026-04-21
 
 ### Fixed

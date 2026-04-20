@@ -5,10 +5,18 @@ import {
   Upload, FileText, File, Loader2, Trash2, AlertCircle, CheckCircle,
   Search, ChevronDown, ChevronRight, Database, Filter, BookOpen,
   Hash, Type, RefreshCw, Eye, X, Download, FileCode,
+  FolderPlus, FolderOpen, Folder, GripVertical, Plus,
 } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 // ── Types ──────────────────────────────────────────────────────
+
+interface FolderRecord {
+  id: string;
+  name: string;
+  order: number;
+  createdAt: string;
+}
 
 interface DocumentRecord {
   id: string;
@@ -21,6 +29,8 @@ interface DocumentRecord {
   chunkCount: number;
   status: 'processing' | 'ready' | 'error';
   errorMessage: string;
+  folderId: string | null;
+  folder: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -157,6 +167,11 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentRecord; onClose: () => 
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {fileIcon(doc.fileName, doc.mimeType)}
           <span className="text-sm font-semibold text-foreground truncate">{doc.title}</span>
+          {doc.folder && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-pri-500/10 text-pri-400 border border-pri-500/20">
+              <Folder className="w-2.5 h-2.5" />{doc.folder.name}
+            </span>
+          )}
         </div>
         <span className="text-[10px] text-muted-foreground hidden sm:inline">
           {formatFileSize(doc.fileSize)}
@@ -230,6 +245,57 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentRecord; onClose: () => 
   );
 }
 
+// ── Folder Assignment Dropdown ─────────────────────────────────
+
+function FolderDropdown({
+  folders,
+  currentFolderId,
+  onAssign,
+  onDismiss,
+}: {
+  folders: FolderRecord[];
+  currentFolderId: string | null;
+  onAssign: (folderId: string | null) => void;
+  onDismiss: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onDismiss();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onDismiss]);
+
+  return (
+    <div ref={ref} className="absolute right-8 top-8 z-50 w-52 rounded-xl bg-card border border-border shadow-xl animate-fadeIn overflow-hidden">
+      <div className="px-3 py-2 border-b border-border/50">
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Move to Folder</span>
+      </div>
+      <div className="py-1 max-h-48 overflow-y-auto">
+        <button
+          onClick={() => onAssign(null)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 text-[10px] hover:bg-secondary transition-colors ${!currentFolderId ? 'bg-secondary/50 text-foreground' : 'text-muted-foreground'}`}
+        >
+          <FolderOpen className="w-3 h-3" />
+          <span>Unfiled</span>
+        </button>
+        {folders.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => onAssign(f.id)}
+            className={`w-full flex items-center gap-2 px-3 py-1.5 text-[10px] hover:bg-secondary transition-colors ${currentFolderId === f.id ? 'bg-secondary/50 text-foreground' : 'text-muted-foreground'}`}
+          >
+            <Folder className="w-3 h-3" />
+            <span className="truncate">{f.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────
 
 export default function DocumentManager() {
@@ -250,6 +316,14 @@ export default function DocumentManager() {
   const [loadingChunks, setLoadingChunks] = useState(false);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
+  // Folders
+  const [folders, setFolders] = useState<FolderRecord[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null); // null = all
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [folderDropdownDocId, setFolderDropdownDocId] = useState<string | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+
   // Viewer
   const [viewingDoc, setViewingDoc] = useState<DocumentRecord | null>(null);
 
@@ -261,6 +335,53 @@ export default function DocumentManager() {
   const [searchError, setSearchError] = useState('');
 
   const token = user.token;
+
+  // ── Folders ──────────────────────────────────────────────────
+
+  const loadFolders = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/folders', { headers: getAuth() });
+      if (res.ok) { const data = await res.json(); setFolders(data.folders || []); }
+    } catch { /* silent */ }
+  }, [token]);
+
+  const handleCreateFolder = useCallback(async () => {
+    if (!token || !newFolderName.trim()) return;
+    try {
+      const res = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { ...getAuth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newFolderName.trim() }),
+      });
+      if (res.ok) {
+        setNewFolderName('');
+        setShowNewFolderInput(false);
+        await loadFolders();
+      }
+    } catch { /* silent */ }
+  }, [token, newFolderName, loadFolders]);
+
+  const handleAssignFolder = useCallback(async (docId: string, folderId: string | null) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/documents/${docId}`, {
+        method: 'PUT',
+        headers: { ...getAuth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId }),
+      });
+      if (res.ok) {
+        setDocuments((prev) =>
+          prev.map((d) => {
+            if (d.id !== docId) return d;
+            const folder = folderId ? folders.find((f) => f.id === folderId) : null;
+            return { ...d, folderId, folder: folder ? { id: folder.id, name: folder.name } : null };
+          })
+        );
+        setFolderDropdownDocId(null);
+      }
+    } catch { /* silent */ }
+  }, [token, folders]);
 
   // ── Upload ──────────────────────────────────────────────────
 
@@ -303,11 +424,23 @@ export default function DocumentManager() {
     if (!token) return;
     setLoadingDocs(true);
     try {
-      const res = await fetch('/api/documents', { headers: getAuth() });
+      const url = activeFolderId
+        ? `/api/documents?folderId=${activeFolderId}`
+        : '/api/documents';
+      const res = await fetch(url, { headers: getAuth() });
       if (res.ok) { const data = await res.json(); setDocuments(data.documents || []); }
     } catch { /* silent */ }
     setLoadingDocs(false);
-  }, [token]);
+  }, [token, activeFolderId]);
+
+  // Load folders on mount, reload docs when folder changes
+  useEffect(() => {
+    loadFolders();
+  }, [loadFolders]);
+
+  useEffect(() => {
+    if (activeTab === 'library') loadDocuments();
+  }, [activeTab, activeFolderId, loadDocuments]);
 
   const loadDocChunks = useCallback(async (docId: string) => {
     if (!token) return;
@@ -355,6 +488,30 @@ export default function DocumentManager() {
     } catch { /* silent */ }
   };
 
+  // ── Drag & Drop onto folders ───────────────────────────────
+
+  const handleDocDragStart = (e: React.DragEvent, docId: string) => {
+    e.dataTransfer.setData('text/plain', docId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleFolderDragOver = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverFolderId(folderId);
+  };
+
+  const handleFolderDragLeave = () => {
+    setDragOverFolderId(null);
+  };
+
+  const handleFolderDrop = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    setDragOverFolderId(null);
+    const docId = e.dataTransfer.getData('text/plain');
+    if (docId) handleAssignFolder(docId, folderId);
+  };
+
   // ── Search ──────────────────────────────────────────────────
 
   const handleSearch = useCallback(async () => {
@@ -375,7 +532,7 @@ export default function DocumentManager() {
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSearch(); } };
 
-  const handleTabChange = (tab: TabState) => { setActiveTab(tab); if (tab === 'library' && documents.length === 0) loadDocuments(); };
+  const handleTabChange = (tab: TabState) => { setActiveTab(tab); };
 
   // ── Render ──────────────────────────────────────────────────
 
@@ -385,6 +542,10 @@ export default function DocumentManager() {
     { mode: 'boolean', label: 'Boolean', icon: <Hash className="w-3 h-3" /> },
     { mode: 'fuzzy', label: 'Fuzzy', icon: <Filter className="w-3 h-3" /> },
   ];
+
+  // Count documents per folder (using all docs, not just filtered)
+  const unfiledCount = documents.filter((d) => !d.folderId).length;
+  // We derive counts from the current data; for accuracy, the counts in pills reflect the visible set
 
   // If viewing a document, show the fullscreen viewer
   if (viewingDoc) {
@@ -425,7 +586,7 @@ export default function DocumentManager() {
                 <div className="flex items-center gap-3 mt-2">
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/50 border border-border/30"><File className="w-3 h-3 text-muted-foreground" /><span className="text-[9px] text-muted-foreground">Save to Disk</span></div>
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/50 border border-border/30"><Eye className="w-3 h-3 text-muted-foreground" /><span className="text-[9px] text-muted-foreground">View & Scroll</span></div>
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/50 border border-border/30"><Search className="w-3 h-3 text-muted-foreground" /><span className="text-[9px] text-muted-foreground">Full-Text Index</span></div>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/50 border border-border/30"><Folder className="w-3 h-3 text-muted-foreground" /><span className="text-[9px] text-muted-foreground">Organize</span></div>
                 </div>
               </div>
             </div>
@@ -457,9 +618,108 @@ export default function DocumentManager() {
       {/* ═══ LIBRARY TAB ═══ */}
       {activeTab === 'library' && (
         <div className="space-y-3">
+          {/* ── Folder Filter Bar ── */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-1 flex-wrap">
+                {/* All documents pill */}
+                <button
+                  onClick={() => setActiveFolderId(null)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all active:scale-95 ${
+                    activeFolderId === null
+                      ? 'bg-pri-600 text-white shadow-lg'
+                      : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  <Database className="w-3 h-3" />
+                  All
+                </button>
+                {/* Unfiled pill */}
+                <button
+                  onClick={() => setActiveFolderId('none')}
+                  onDragOver={(e) => handleFolderDragOver(e, 'none')}
+                  onDragLeave={handleFolderDragLeave}
+                  onDrop={(e) => handleFolderDrop(e, null)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all active:scale-95 ${
+                    activeFolderId === 'none'
+                      ? 'bg-pri-600 text-white shadow-lg'
+                      : dragOverFolderId === 'none'
+                        ? 'bg-pri-500/20 text-pri-400 border-2 border-dashed border-pri-500/40'
+                        : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  <FolderOpen className="w-3 h-3" />
+                  Unfiled
+                </button>
+                {/* Folder pills */}
+                {folders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    onClick={() => setActiveFolderId(folder.id)}
+                    onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                    onDragLeave={handleFolderDragLeave}
+                    onDrop={(e) => handleFolderDrop(e, folder.id)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all active:scale-95 ${
+                      activeFolderId === folder.id
+                        ? 'bg-pri-600 text-white shadow-lg'
+                        : dragOverFolderId === folder.id
+                          ? 'bg-pri-500/20 text-pri-400 border-2 border-dashed border-pri-500/40'
+                          : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    <Folder className="w-3 h-3" />
+                    <span className="truncate max-w-20">{folder.name}</span>
+                  </button>
+                ))}
+              </div>
+              {/* New folder button */}
+              {showNewFolderInput ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') { setShowNewFolderInput(false); setNewFolderName(''); } }}
+                    placeholder="Folder name..."
+                    autoFocus
+                    className="w-28 px-2 py-1 rounded-lg text-[10px] bg-secondary border border-border focus:border-pri-500/40 focus:outline-none text-foreground placeholder:text-muted-foreground/50"
+                  />
+                  <button onClick={handleCreateFolder} className="p-1 rounded-lg bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95">
+                    <CheckCircle className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => { setShowNewFolderInput(false); setNewFolderName(''); }} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowNewFolderInput(true)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+                  title="Create new folder"
+                >
+                  <FolderPlus className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            {dragOverFolderId !== null && (
+              <span className="text-[9px] text-pri-400 animate-pulse">Drop document here to move it into this folder</span>
+            )}
+          </div>
+
+          {/* Header row */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Document Library ({documents.length})</span>
-            <button onClick={loadDocuments} disabled={loadingDocs} className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Document Library ({documents.length})
+              {activeFolderId && activeFolderId !== 'none' && (
+                <span className="ml-1.5 text-pri-400 normal-case tracking-normal">
+                  in {folders.find((f) => f.id === activeFolderId)?.name || 'folder'}
+                </span>
+              )}
+              {activeFolderId === 'none' && (
+                <span className="ml-1.5 text-pri-400 normal-case tracking-normal">unfiled</span>
+              )}
+            </span>
+            <button onClick={() => { loadDocuments(); loadFolders(); }} disabled={loadingDocs} className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95">
               <RefreshCw className={`w-3 h-3 ${loadingDocs ? 'animate-spin' : ''}`} />Refresh
             </button>
           </div>
@@ -467,7 +727,9 @@ export default function DocumentManager() {
           {!loadingDocs && documents.length === 0 && (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <Database className="w-10 h-10 text-muted-foreground/30" />
-              <span className="text-sm text-muted-foreground">No documents uploaded yet</span>
+              <span className="text-sm text-muted-foreground">
+                {activeFolderId ? 'No documents in this folder' : 'No documents uploaded yet'}
+              </span>
               <button onClick={() => handleTabChange('upload')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95"><Upload className="w-3 h-3" />Upload First Document</button>
             </div>
           )}
@@ -476,21 +738,35 @@ export default function DocumentManager() {
 
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {documents.map((doc) => (
-              <div key={doc.id} className="rounded-xl bg-secondary/30 border border-border/30 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-2">
+              <div
+                key={doc.id}
+                className="rounded-xl bg-secondary/30 border border-border/30 overflow-hidden relative"
+                draggable
+                onDragStart={(e) => handleDocDragStart(e, doc.id)}
+              >
+                {/* Drag indicator */}
+                <GripVertical className="absolute left-1 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/20 cursor-grab" />
+                <div className="flex items-center gap-2 px-3 py-2 pl-5">
                   <button onClick={() => handleExpandDoc(doc.id)} className="p-0.5 text-muted-foreground hover:text-foreground transition-colors">
                     {expandedDocId === doc.id ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                   </button>
                   {fileIcon(doc.fileName, doc.mimeType)}
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-foreground truncate block">{doc.title}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-foreground truncate">{doc.title}</span>
+                      {doc.folder && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[8px] font-bold bg-pri-500/10 text-pri-400 border border-pri-500/20 whitespace-nowrap">
+                          <Folder className="w-2 h-2" />{doc.folder.name}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[9px] text-muted-foreground">{formatFileSize(doc.fileSize)} • {doc.pageCount > 0 ? `${doc.pageCount} pg • ` : ''}{doc.chunkCount} chunks • {formatDate(doc.createdAt)}</span>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border ${statusColor(doc.status)}`}>
                     {doc.status === 'ready' ? 'Ready' : doc.status === 'processing' ? 'Processing' : 'Error'}
                   </span>
 
-                  {/* View button — always show for viewable files (PDF, images, text) regardless of processing status */}
+                  {/* View button — always show for viewable files regardless of processing status */}
                   {isViewableFile(doc.mimeType, doc.fileName) && (
                     <button
                       onClick={() => handleViewDoc(doc)}
@@ -513,10 +789,28 @@ export default function DocumentManager() {
                     </button>
                   )}
 
+                  {/* Folder assignment button */}
+                  <button
+                    onClick={() => setFolderDropdownDocId(folderDropdownDocId === doc.id ? null : doc.id)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-pri-400 hover:bg-pri-500/10 transition-all"
+                    title="Move to folder"
+                  >
+                    {doc.folderId ? <Folder className="w-3.5 h-3.5 text-pri-400" /> : <FolderPlus className="w-3.5 h-3.5" />}
+                  </button>
+
                   <button onClick={() => handleDeleteDoc(doc.id)} disabled={deletingDocId === doc.id} className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete">
                     {deletingDocId === doc.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
+                {/* Folder dropdown */}
+                {folderDropdownDocId === doc.id && (
+                  <FolderDropdown
+                    folders={folders}
+                    currentFolderId={doc.folderId}
+                    onAssign={(folderId) => handleAssignFolder(doc.id, folderId)}
+                    onDismiss={() => setFolderDropdownDocId(null)}
+                  />
+                )}
                 {expandedDocId === doc.id && (
                   <div className="border-t border-border/30 px-3 py-2 max-h-[300px] overflow-y-auto">
                     {loadingChunks ? <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 text-pri-400 animate-spin" /></div> :

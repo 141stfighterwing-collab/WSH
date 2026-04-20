@@ -40,14 +40,15 @@ model Note {
 }
 
 model Folder {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   name      String
-  order     Int      @default(0)
+  order     Int        @default(0)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
   notes     Note[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  documents Document[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Document {
@@ -63,12 +64,15 @@ model Document {
   status       String           @default("processing") /// processing | ready | error
   errorMessage String           @default("")
   uploadedBy   String
+  folderId     String?
+  folder       Folder?          @relation(fields: [folderId], references: [id])
   user         User?            @relation(fields: [uploadedBy], references: [id])
   chunks       DocumentChunk[]
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   @@index([uploadedBy])
+  @@index([folderId])
   @@index([status])
   @@index([createdAt])
 }

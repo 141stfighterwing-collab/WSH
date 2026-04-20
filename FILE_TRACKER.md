@@ -1,6 +1,6 @@
-# WSH v4.3.9 — File Tracker
+# WSH v4.4.0 — File Tracker
 
-> Complete inventory of files modified, created, and verified in this patch release.
+> Complete inventory of files modified, created, and verified in this release.
 
 ---
 
@@ -8,10 +8,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.3.9 |
+| **Version** | 4.4.0 |
 | **Release Date** | 2026-04-21 |
-| **Previous Version** | 4.3.8 |
-| **Release Type** | Patch (bug fixes + version bump) |
+| **Previous Version** | 4.3.9 |
+| **Release Type** | Minor feature (document folder organization + version bump) |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
 | **Branch** | `main` |
 
@@ -23,36 +23,38 @@
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 1 | `src/components/wsh/editors/DocumentManager.tsx` | ~20 | **Fix** | Blob URL ref tracking, loading states, View button condition |
-| 2 | `src/app/api/documents/upload/route.ts` | ~5 | **Fix** | Image file type whitelist, error resilience |
-| 3 | `src/lib/pdfProcessor.ts` | ~10 | **Fix** | Binary skip for image/binary file types |
-| 4 | `src/app/api/documents/[id]/file/route.ts` | ~5 | **Fix** | Image MIME type mappings |
+| 1 | `prisma/schema.prisma` | ~5 | **Feature** | Added folderId relation to Document, documents to Folder |
+| 2 | `src/app/api/documents/route.ts` | ~15 | **Feature** | Folder filtering, folder relation in response |
+| 3 | `src/app/api/documents/[id]/route.ts` | ~20 | **Feature** | New PUT endpoint for folder/title updates |
+| 4 | `src/app/api/folders/route.ts` | ~5 | **Feature** | Document unlink on folder delete |
+| 5 | `src/components/wsh/editors/DocumentManager.tsx` | ~200 | **Feature** | Folder filter bar, drag-drop, assignment dropdown, badges |
 
 ### Version Bump (14 files)
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 5 | `package.json` | 1 | **Version** | `"version": "4.3.8"` → `"4.3.9"` |
-| 6 | `Dockerfile` | 2 | **Version** | `ARG BUILD_VERSION=4.3.8` → `4.3.9` (both stages) |
-| 7 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag `4.3.8` → `4.3.9` |
-| 8 | `docker-entrypoint.sh` | 2 | **Version** | Header version references |
-| 9 | `install.sh` | ~5 | **Version** | Script header, banner, image tags |
-| 10 | `install.ps1` | ~5 | **Version** | Script header, banner, image tags |
-| 11 | `update.sh` | 2 | **Version** | Script header + banner |
-| 12 | `update.ps1` | 2 | **Version** | Script header + banner |
-| 13 | `test-env.sh` | 2 | **Version** | Script header + banner |
-| 14 | `test-env.ps1` | 2 | **Version** | Script header + banner |
-| 15 | `src/app/api/health/route.ts` | 1 | **Version** | `version: '4.3.8'` → `version: '4.3.9'` |
-| 16 | `src/app/api/admin/system/route.ts` | 1 | **Version** | `version: '4.3.8'` → `version: '4.3.9'` |
-| 17 | `README.md` | ~5 | **Version** | Title, image tags, API example version references |
-| 18 | `CHANGELOG.md` | +20 | **Append** | Added v4.3.9 release entry |
+| 6 | `package.json` | 1 | **Version** | `"version": "4.3.9"` → `"4.4.0"` |
+| 7 | `package-lock.json` | 2 | **Version** | Root package version + lockfile entry |
+| 8 | `Dockerfile` | 2 | **Version** | `ARG BUILD_VERSION=4.3.9` → `4.4.0` (both stages) |
+| 9 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag `4.3.9` → `4.4.0` |
+| 10 | `docker-entrypoint.sh` | 2 | **Version** | Header version references |
+| 11 | `install.sh` | ~5 | **Version** | Script header, banner, image tags |
+| 12 | `install.ps1` | ~5 | **Version** | Script header, banner, image tags |
+| 13 | `update.sh` | 2 | **Version** | Script header + banner |
+| 14 | `update.ps1` | 2 | **Version** | Script header + banner |
+| 15 | `test-env.sh` | 2 | **Version** | Script header + banner |
+| 16 | `test-env.ps1` | 2 | **Version** | Script header + banner |
+| 17 | `src/app/api/health/route.ts` | 1 | **Version** | `version: '4.3.9'` → `version: '4.4.0'` |
+| 18 | `src/app/api/admin/system/route.ts` | 1 | **Version** | `version: '4.3.9'` → `version: '4.4.0'` |
+| 19 | `README.md` | ~5 | **Version** | Title, image tags, API example version references |
 
 ### Documentation
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 19 | `CODING_CHANGES.md` | +50 | **Prepend** | New v4.3.9 section with blob URL fix, View button, server-side changes |
-| 20 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated to v4.3.9 with new file inventory |
+| 20 | `CHANGELOG.md` | +20 | **Prepend** | Added v4.4.0 release entry |
+| 21 | `CODING_CHANGES.md` | +72 | **Prepend** | New v4.4.0 section with schema, API, UI changes |
+| 22 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated to v4.4.0 with new file inventory |
 
 ---
 
@@ -71,10 +73,9 @@ These files were reviewed and confirmed to require no modifications:
 | File | Reason |
 |------|--------|
 | `src/store/wshStore.ts` | No global store changes needed |
-| `src/components/wsh/LeftSidebar.tsx` | No changes needed — document changes are in editor component |
-| `src/components/wsh/RightSidebar.tsx` | No sidebar changes in this patch |
+| `src/components/wsh/LeftSidebar.tsx` | No sidebar changes in this release |
+| `src/components/wsh/RightSidebar.tsx` | No sidebar changes in this release |
 | `src/components/wsh/QuickReferences.tsx` | No changes to this component |
-| `prisma/schema.prisma` | No database schema changes |
 | `src/app/page.tsx` | No page-level changes |
 | `src/app/layout.tsx` | No layout changes |
 | `src/app/globals.css` | No style changes needed |
@@ -90,16 +91,19 @@ These files were reviewed and confirmed to require no modifications:
 
 ## Verification Checklist
 
-- [x] `DocumentManager.tsx` blob URL memory leak fixed with `useRef` pattern
-- [x] View button visible for all viewable file types regardless of status
-- [x] Image upload whitelist includes PNG, JPG, JPEG, GIF, WEBP
-- [x] Processing failures mark documents as 'ready' (not 'error')
-- [x] Image/binary files skip text extraction in pdfProcessor
-- [x] Image MIME type mappings added to file serving route
-- [x] No references to `4.3.8` remain outside CHANGELOG.md (historical)
+- [x] Prisma schema updated with folderId relation on Document model
+- [x] GET /api/documents supports ?folderId= query parameter
+- [x] PUT /api/documents/[id] endpoint created for metadata updates
+- [x] DELETE /api/folders unlinks documents before deletion
+- [x] Folder filter bar renders in DocumentManager Library tab
+- [x] Drag-and-drop document-to-folder assignment works
+- [x] Folder assignment dropdown on document rows works
+- [x] Folder badges display on documents with folders
+- [x] No references to `4.3.9` remain outside CHANGELOG.md and CODING_CHANGES.md (historical)
 - [x] Version string consistent across all 14 core files
 - [x] CHANGELOG.md follows Keep a Changelog format
-- [x] Git status clean (all changes staged for commit)
+- [x] CODING_CHANGES.md documents all schema, API, and UI changes
+- [x] Database migration ready: `npx prisma db push`
 
 ---
 
@@ -110,15 +114,16 @@ commit (pending)
 Author: WSH Contributor
 Date: 2026-04-21
 
-fix: PDF embedding, View button visibility, image upload support (v4.3.9)
+feat: document folder organization (v4.4.0)
 
-- Fixed blob URL memory leak in DocumentViewer (useRef pattern)
-- View button now shows for all viewable files regardless of status
-- Documents with failed extraction marked as 'ready' (not 'error')
-- Server upload whitelist: added PNG, JPG, JPEG, GIF, WEBP
-- Image/binary files skip text extraction entirely
-- Added image MIME type mappings to file serving route
-- Enhanced loading states in document viewer
-- Version bumped 4.3.8 → 4.3.9 across all 16 files
+- Added folderId relation to Document model (Prisma schema)
+- GET /api/documents now supports ?folderId= filtering
+- New PUT /api/documents/[id] endpoint for metadata updates
+- DELETE /api/folders now unlinks documents before deletion
+- Folder filter bar in DocumentManager Library tab
+- Drag-and-drop documents to folder pills
+- Folder assignment dropdown on document rows
+- Folder badges on documents
+- Version bumped 4.3.9 → 4.4.0 across all 14 core files
 - Updated CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md
 ```

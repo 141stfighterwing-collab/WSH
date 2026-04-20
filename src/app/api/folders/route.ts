@@ -128,8 +128,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
     }
 
-    // Unlink notes from this folder
+    // Unlink notes and documents from this folder
     await db.note.updateMany({
+      where: { folderId: id },
+      data: { folderId: null },
+    });
+    await db.document.updateMany({
       where: { folderId: id },
       data: { folderId: null },
     });
