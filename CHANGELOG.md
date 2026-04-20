@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.1] - 2026-04-21
+
+### Fixed
+- **New notes now respect active folder** — Creating a Quick, Code, Deep, or any note type while a folder is selected automatically assigns the note to that folder (was hardcoded to null)
+
+### Added
+- **Drag-and-drop notes into folders** — Note cards in the grid are now draggable; drag any note onto a folder pill or sidebar folder to move it
+- **Drop targets on folder pills** — NotesGrid folder filter pills accept dragged notes with visual feedback (dashed border highlight)
+- **Drop targets on sidebar folders** — Folders component in the left sidebar accepts dragged notes
+- **"Drop on a folder to move" hint** — Animated hint text appears when dragging a note
+- **Folder badge on note cards** — Notes assigned to a folder show a small folder name badge in the card header
+- **Drag handle on note cards** — Subtle grip icon appears on hover to indicate cards are draggable
+
+### Technical
+- Uses existing `updateNote(id, { folderId })` store function and `PUT /api/notes` endpoint (no new API needed)
+
+---
+
 ## [4.4.0] - 2026-04-21
 
 ### Added

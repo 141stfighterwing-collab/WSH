@@ -312,7 +312,7 @@ export default function NoteEditor() {
           type: activeNoteType,
           tags: editorTags,
           color: 'yellow',
-          folderId: null,
+          folderId: useWSHStore.getState().activeFolderId || null,
           userId: useWSHStore.getState().user.username || '',
           isDeleted: false,
           createdAt: new Date().toISOString(),

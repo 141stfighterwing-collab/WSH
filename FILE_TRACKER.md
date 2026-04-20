@@ -1,4 +1,4 @@
-# WSH v4.4.0 — File Tracker
+# WSH v4.4.1 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this release.
 
@@ -8,10 +8,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.4.0 |
+| **Version** | 4.4.1 |
 | **Release Date** | 2026-04-21 |
-| **Previous Version** | 4.3.9 |
-| **Release Type** | Minor feature (document folder organization + version bump) |
+| **Previous Version** | 4.4.0 |
+| **Release Type** | Patch (note folder DnD + folder assignment fix + version bump) |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
 | **Branch** | `main` |
 

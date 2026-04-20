@@ -1,3 +1,57 @@
+# WSH v4.4.1 — Coding Changes
+
+## Overview
+v4.4.1 enables drag-and-drop folder organization for all note types (Quick, Code, Deep, Notebook, Project, Documents, AI Prompts). Previously, only Documents could be organized into folders via the DocumentManager. Now notes can be dragged onto folder pills in the grid or sidebar folders to organize them. Also fixes a bug where new notes were never assigned to the active folder.
+
+## 1. NoteEditor — Fix Folder Assignment on Create
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### Bug
+The `handleSave` function hardcoded `folderId: null` when creating new notes, ignoring the currently selected folder (`activeFolderId`).
+
+### Fix
+Changed line 315 from:
+```
+folderId: null,
+```
+to:
+```
+folderId: useWSHStore.getState().activeFolderId || null,
+```
+
+## 2. NotesGrid — Draggable Note Cards + Folder Drop Targets
+**File:** `src/components/wsh/NotesGrid.tsx`
+
+### Changes
+- **NoteCard** is now `draggable` — added `onDragStart` prop that sets note ID in dataTransfer
+- **Folder filter pills** are drop targets — `onDragOver`, `onDragLeave`, `onDrop` handlers on each pill
+- **Visual feedback** — Dragged-over pills show dashed border + highlight; "Drop on a folder to move" hint text
+- **Drag state tracking** — `draggedNoteId` and `dragOverFolderId` state variables
+- **Folder assignment** — On drop, calls `updateNote(noteId, { folderId })` via existing store function
+- **Folder badges** — Notes with a folderId show a small folder name badge in the card header
+- **Drag handle** — Subtle `GripVertical` icon on hover at top-left of cards
+
+## 3. Folders Sidebar — Drop Targets
+**File:** `src/components/wsh/Folders.tsx`
+
+### Changes
+- **All Notes** button is a drop target — dropping a note here sets `folderId: null` (unfiles it)
+- **Each folder button** is a drop target — dropping a note assigns it to that folder
+- **Visual feedback** — Dashed border + highlight on drag-over; "drop to move" hint in section header
+- **Drop handler** calls `updateNote(noteId, { folderId })`
+
+## 4. No API Changes
+The existing `PUT /api/notes` endpoint already supports `folderId` updates via the `updateNote` store function. No new endpoints or schema changes were needed.
+
+## Files Changed
+| # | File | Lines | Description |
+|---|------|-------|-------------|
+| 1 | `src/components/wsh/NoteEditor.tsx` | 1 | Fix folderId on new note creation |
+| 2 | `src/components/wsh/NotesGrid.tsx` | ~80 | Draggable cards, folder drop targets, badges |
+| 3 | `src/components/wsh/Folders.tsx` | ~40 | Sidebar folder drop targets |
+
+---
+
 # WSH v4.4.0 — Coding Changes
 
 ## Overview

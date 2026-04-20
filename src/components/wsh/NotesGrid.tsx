@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { Clock, Tag, FolderOpen, FileText, Code, Briefcase, BookOpen, Brain, Plus, MoreVertical, Eye, Trash2 } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { Clock, Tag, FolderOpen, Folder, FileText, Code, Briefcase, BookOpen, Brain, Plus, MoreVertical, Eye, Trash2, GripVertical } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -34,7 +34,7 @@ const typeColors: Record<string, string> = {
   'ai-prompts': 'bg-violet-500/15 text-violet-400',
 };
 
-function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onClick: () => void; onViewDetail: () => void; onDelete: () => void }) {
+function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note: Note; onClick: () => void; onViewDetail: () => void; onDelete: () => void; onDragStart: (e: React.DragEvent) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +59,8 @@ function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onCli
 
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
       onClick={onClick}
       className={`bg-card rounded-2xl border p-4 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:ring-pri-500/20 transition-all duration-300 group relative ${
         note.type === 'project'
@@ -68,6 +70,9 @@ function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onCli
           : 'border-border/50'
       }`}
     >
+      {/* Drag handle */}
+      <GripVertical className="absolute top-2 left-2 w-3 h-3 text-muted-foreground/20 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+
       {/* Context menu button */}
       <div
         ref={menuRef}
@@ -103,10 +108,19 @@ function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onCli
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 pr-6">
-        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || 'bg-secondary text-muted-foreground'}`}>
-          {typeIcons[note.type]}
-          {note.type}
+      <div className="flex items-center justify-between mb-2 pr-6 pl-4">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || 'bg-secondary text-muted-foreground'}`}>
+            {typeIcons[note.type]}
+            {note.type}
+          </div>
+          {/* Folder badge */}
+          {note.folderId && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-pri-500/10 text-pri-400 border border-pri-500/20 whitespace-nowrap">
+              <Folder className="w-2 h-2" />
+              {useWSHStore.getState().folders.find(f => f.id === note.folderId)?.name || 'Folder'}
+            </span>
+          )}
         </div>
         <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
           <Clock className="w-2.5 h-2.5" />
@@ -115,25 +129,25 @@ function NoteCard({ note, onClick, onViewDetail, onDelete }: { note: Note; onCli
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-sm text-foreground mb-1.5 line-clamp-2 group-hover:text-pri-400 transition-colors">
+      <h3 className="font-bold text-sm text-foreground mb-1.5 line-clamp-2 group-hover:text-pri-400 transition-colors pl-4">
         {note.title || 'Untitled Note'}
       </h3>
 
       {/* Content preview */}
-      <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
+      <p className="text-xs text-muted-foreground line-clamp-3 mb-3 pl-4">
         {note.rawContent || note.content?.replace(/<[^>]*>/g, '').slice(0, 150) || 'No content'}
       </p>
 
       {/* Type description for project/document */}
       {(note.type === 'project' || note.type === 'document') && (
-        <p className="text-[9px] text-muted-foreground/50 italic mb-2">
+        <p className="text-[9px] text-muted-foreground/50 italic mb-2 pl-4">
           {typeDescriptions[note.type]}
         </p>
       )}
 
       {/* Tags */}
       {note.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="flex flex-wrap gap-1 mb-2 pl-4">
           {note.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
@@ -167,10 +181,15 @@ export default function NotesGrid() {
     searchQuery,
     viewMode,
     deleteNote,
+    updateNote,
     setNoteDetailId,
     calendarDateFilter,
     setCalendarDateFilter,
   } = useWSHStore();
+
+  // Drag & drop state
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
 
   const filteredNotes = useMemo(() => {
     let filtered = notes.filter((n) => !n.isDeleted);
@@ -218,6 +237,38 @@ export default function NotesGrid() {
     deleteNote(note.id);
   };
 
+  // ── Drag & Drop Handlers ──
+
+  const handleNoteDragStart = useCallback((e: React.DragEvent, noteId: string) => {
+    e.dataTransfer.setData('text/plain', noteId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedNoteId(noteId);
+  }, []);
+
+  const handleNoteDragEnd = useCallback(() => {
+    setDraggedNoteId(null);
+    setDragOverFolderId(null);
+  }, []);
+
+  const handleFolderDragOver = useCallback((e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverFolderId(folderId);
+  }, []);
+
+  const handleFolderDragLeave = useCallback(() => {
+    setDragOverFolderId(null);
+  }, []);
+
+  const handleFolderDrop = useCallback(async (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    setDragOverFolderId(null);
+    const noteId = e.dataTransfer.getData('text/plain');
+    if (noteId) {
+      await updateNote(noteId, { folderId });
+    }
+  }, [updateNote]);
+
   if (viewMode === 'focus') {
     return null;
   }
@@ -263,14 +314,19 @@ export default function NotesGrid() {
         </span>
       </div>
 
-      {/* Folder filter pills */}
+      {/* Folder filter pills — also serve as drop targets */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveFolderId(null)}
+          onDragOver={(e) => handleFolderDragOver(e, null)}
+          onDragLeave={handleFolderDragLeave}
+          onDrop={(e) => handleFolderDrop(e, null)}
           className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-all duration-200 active:scale-95 ${
             activeFolderId === null
               ? 'bg-pri-600 text-white shadow-sm'
-              : 'bg-secondary text-muted-foreground hover:text-foreground'
+              : dragOverFolderId === null && draggedNoteId
+                ? 'bg-pri-500/20 text-pri-400 border-2 border-dashed border-pri-500/40'
+                : 'bg-secondary text-muted-foreground hover:text-foreground'
           }`}
         >
           All Notes
@@ -279,16 +335,24 @@ export default function NotesGrid() {
           <button
             key={folder.id}
             onClick={() => setActiveFolderId(folder.id)}
+            onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+            onDragLeave={handleFolderDragLeave}
+            onDrop={(e) => handleFolderDrop(e, folder.id)}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-all duration-200 active:scale-95 ${
               activeFolderId === folder.id
                 ? 'bg-pri-600 text-white shadow-sm'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
+                : dragOverFolderId === folder.id && draggedNoteId
+                  ? 'bg-pri-500/20 text-pri-400 border-2 border-dashed border-pri-500/40'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
             }`}
           >
             <FolderOpen className="w-2.5 h-2.5" />
             {folder.name}
           </button>
         ))}
+        {draggedNoteId && (
+          <span className="text-[9px] text-pri-400 animate-pulse whitespace-nowrap ml-1">Drop on a folder to move</span>
+        )}
       </div>
 
       {/* Notes Grid */}
@@ -301,6 +365,7 @@ export default function NotesGrid() {
               onClick={() => handleNoteClick(note)}
               onViewDetail={() => handleViewDetail(note)}
               onDelete={() => handleDelete(note)}
+              onDragStart={(e) => handleNoteDragStart(e, note.id)}
             />
           ))}
         </div>
