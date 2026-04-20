@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.3] - 2026-04-21
+
+### Fixed
+- **Docker build fails with stale cache — prisma binary not found** — The v4.4.2 fix used `node node_modules/prisma/build/index.js generate` which is an internal path within the prisma npm package. When Docker uses stale layer cache (from a previous build), this file may not exist, causing `MODULE_NOT_FOUND` error. Fixed by:
+  - Using `./node_modules/.bin/prisma generate` (the standard npm bin wrapper path)
+  - Adding a self-healing fallback: if the prisma binary is missing from node_modules, the build automatically runs `npm install prisma@^6` before generating. This makes the Docker build resilient to stale cache issues without requiring `--no-cache`.
+
+### Changed
+- **Version bumped to 4.4.3** across all core files.
+
+---
+
 ## [4.4.2] - 2026-04-21
 
 ### Fixed

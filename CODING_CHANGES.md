@@ -1,3 +1,41 @@
+# WSH v4.4.3 — Coding Changes
+
+## Overview
+v4.4.3 improves the Docker build's resilience to stale layer cache. The v4.4.2 fix used an internal prisma path (`node_modules/prisma/build/index.js`) that doesn't exist when Docker reuses cached layers from a previous build. This version switches to the standard npm bin path and adds a self-healing fallback.
+
+## 1. Dockerfile — Self-healing Prisma generate
+
+**File:** `Dockerfile`
+
+### Problem
+v4.4.2 changed `npx prisma generate` to `node node_modules/prisma/build/index.js generate`. While this prevents npx from downloading Prisma v7.x, it fails when Docker's layer cache is stale — the cached `npm install` layer may not have the prisma package properly installed, causing `Cannot find module '/app/node_modules/prisma/build/index.js'`.
+
+### Fix
+Changed both prisma generate steps (builder stage + runner stage) to:
+```dockerfile
+if [ ! -x ./node_modules/.bin/prisma ]; then \
+  echo "  [prisma] CLI missing from cache, installing prisma@^6..." && \
+  npm install prisma@^6 --no-audit --no-fund 2>&1; \
+fi && \
+./node_modules/.bin/prisma generate 2>&1
+```
+
+This approach:
+1. Checks if `node_modules/.bin/prisma` exists and is executable
+2. If missing (stale cache), installs `prisma@^6` (matches package.json range)
+3. Runs `./node_modules/.bin/prisma generate` (standard npm bin path)
+4. Never uses `npx` (prevents v7.x download)
+
+### Why ./node_modules/.bin/prisma
+This is the standard path that npm creates for all CLI packages. On Alpine Linux, it's a shell script wrapper that correctly resolves the prisma binary. It's more robust than the internal `build/index.js` path because it's the officially supported way to invoke locally-installed npm CLIs.
+
+## Files Changed
+| # | File | Lines | Description |
+|---|------|-------|-------------|
+| 1 | `Dockerfile` | ~15 | Self-healing prisma generate with fallback install |
+
+---
+
 # WSH v4.4.2 — Coding Changes
 
 ## Overview
