@@ -1,3 +1,75 @@
+# WSH v4.4.4 — Coding Changes
+
+## Overview
+v4.4.4 fixes THREE cascading issues that caused the Docker build to fail:
+
+1. **`react-devtools-inline@4.4.1` was yanked from npm** — The `package-lock.json` pinned this transitive dependency to a version that no longer exists, causing `npm install` to fail with `ETARGET No matching version found`.
+2. **`| tail -5` pipe hid the npm install error** — The Dockerfile piped `npm install` output through `tail`. Since shell returns the exit code of the LAST command in a pipeline, `tail`'s exit code (0) replaced `npm install`'s non-zero exit code. The build silently continued with 0 packages installed.
+3. **`docker-entrypoint.sh` used stale prisma path** — Still referenced `node /app/node_modules/prisma/build/index.js` which doesn't exist in Docker.
+
+## 1. package-lock.json — Regenerated
+
+**File:** `package-lock.json`
+
+### Problem
+The lock file pinned `react-devtools-inline` to `4.4.1` (a transitive dependency of `@codesandbox/sandpack-react`). This version was yanked/unpublished from npm, causing:
+```
+npm error code ETARGET
+npm error notarget No matching version found for react-devtools-inline@4.4.1.
+```
+
+### Fix
+Deleted and regenerated the lock file. It now resolves to `react-devtools-inline@4.4.0` (the latest available version). Also fixes the version field mismatch (was `4.4.2`, now matches `package.json` at `4.4.4`).
+
+## 2. Dockerfile — Removed error-hiding pipes
+
+**File:** `Dockerfile`
+
+### Problem
+Three RUN commands piped npm output to `tail`:
+```dockerfile
+# deps stage (line 23):
+npm install 2>&1 | tail -5
+
+# runner stage (line 79):
+npm install --omit=dev --no-audit --no-fund 2>&1 | tail -3
+
+# runner stage prisma (line 92):
+./node_modules/.bin/prisma generate 2>&1 | tail -1
+```
+
+When `npm install` fails, `tail` succeeds (exit 0). The shell `&&` chain sees success and continues. This means the build proceeds with NO `node_modules`, causing every subsequent step to fail with confusing errors like `chown: node_modules: No such file or directory`.
+
+### Fix
+Removed ALL `| tail` pipes. Now `npm install` errors are fully visible and cause the build to stop immediately:
+```dockerfile
+npm install 2>&1 && \
+    echo "[2/6] ✓ npm install complete"
+```
+
+## 3. docker-entrypoint.sh — Fixed prisma CLI path
+
+**File:** `docker-entrypoint.sh`
+
+### Problem
+Still used `PRISMA_CLI="node /app/node_modules/prisma/build/index.js"` from the v4.4.2 fix. This internal path doesn't exist in the Docker container's node_modules.
+
+### Fix
+```diff
+-PRISMA_CLI="node /app/node_modules/prisma/build/index.js"
++PRISMA_CLI="./node_modules/.bin/prisma"
+```
+Also updated the pre-flight check from `-f` (file exists) to `-x` (executable exists).
+
+## Files Changed
+| # | File | Lines | Description |
+|---|------|-------|-------------|
+| 1 | `package-lock.json` | Regenerated | Removed yanked dep version, updated to v4.4.4 |
+| 2 | `Dockerfile` | ~8 | Removed `| tail` pipes, version bump to 4.4.4 |
+| 3 | `docker-entrypoint.sh` | ~4 | Fixed prisma CLI path, version bump |
+
+---
+
 # WSH v4.4.3 — Coding Changes
 
 ## Overview

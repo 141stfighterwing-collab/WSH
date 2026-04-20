@@ -1,13 +1,19 @@
-# ── WSH Dockerfile v4.2.1 ────────────────────────────────────────
+# ── WSH Dockerfile v4.4.4 ────────────────────────────────────────
 # Multi-stage build with progress output. Update with: ./update.sh
 #
 # Stage 1 (deps):   npm install (cached unless package.json changes)
 # Stage 2 (build):  prisma generate → next build → standalone output
 # Stage 3 (runner): Lean production image with standalone server
+#
+# v4.4.4 FIX: Removed | tail pipes that hid npm install errors.
+# The pipe caused npm install failures to be silently swallowed
+# (tail's exit code 0 replaced npm's non-zero exit code).
+# Root cause: react-devtools-inline@4.4.1 was yanked from npm,
+# making npm install fail with no visible error message.
 
 FROM node:20-alpine AS deps
 
-ARG BUILD_VERSION=4.4.3
+ARG BUILD_VERSION=4.4.4
 
 # System deps for building
 RUN echo "[1/6] Installing system dependencies..." && \
@@ -19,8 +25,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install ALL dependencies (production + dev needed for build)
+# IMPORTANT: Do NOT pipe npm output to tail — that hides errors!
+# If npm install fails, the build MUST stop here.
 RUN echo "[2/6] Installing npm packages..." && \
-    npm install 2>&1 | tail -5 && \
+    npm install 2>&1 && \
     echo "[2/6] ✓ npm install complete ($(ls node_modules | wc -l) packages)"
 
 # ── Stage 2: Build ─────────────────────────────────────────────
@@ -44,7 +52,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN echo "[4/6] Generating Prisma client..." && \
     if [ ! -x ./node_modules/.bin/prisma ]; then \
       echo "  [prisma] CLI missing from cache, installing prisma@^6..." && \
-      npm install prisma@^6 --no-audit --no-fund 2>&1; \
+      npm install prisma@^6 --no-audit --no-fund; \
     fi && \
     ./node_modules/.bin/prisma generate 2>&1 && \
     echo "[4/6] ✓ Prisma client generated"
@@ -57,7 +65,7 @@ RUN echo "[5/6] Building Next.js application..." && \
 # ── Stage 3: Production Runner ─────────────────────────────────
 FROM node:20-alpine AS runner
 
-ARG BUILD_VERSION=4.4.3
+ARG BUILD_VERSION=4.4.4
 ENV BUILD_VERSION=${BUILD_VERSION}
 
 RUN echo "[6/6] Creating production image (v${BUILD_VERSION})..." && \
@@ -72,11 +80,10 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Install production deps (includes prisma + ALL transitive deps).
-# This replaces the old manual per-package COPY block that broke every
-# time Prisma added new transitive dependencies (empathic, c12, etc.).
-# npm resolves the full dependency tree automatically — future-proof.
+# IMPORTANT: Do NOT pipe npm output to tail — that hides errors!
+# If npm install fails, the build MUST stop here.
 COPY --from=deps --chown=nextjs:nodejs /app/package.json /app/package-lock.json* ./
-RUN npm install --omit=dev --no-audit --no-fund 2>&1 | tail -3 && \
+RUN npm install --omit=dev --no-audit --no-fund && \
     chown -R nextjs:nodejs node_modules && \
     echo "[prisma] ✓ Production deps + Prisma CLI + all transitive deps installed"
 
@@ -87,9 +94,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # matches the schema version, not a stale copy from the build stage)
 RUN if [ ! -x ./node_modules/.bin/prisma ]; then \
       echo "  [prisma] CLI missing, installing prisma@^6..." && \
-      npm install prisma@^6 --no-audit --no-fund 2>&1; \
+      npm install prisma@^6 --no-audit --no-fund; \
     fi && \
-    ./node_modules/.bin/prisma generate 2>&1 | tail -1 && \
+    ./node_modules/.bin/prisma generate && \
     chown -R nextjs:nodejs node_modules/.prisma && \
     echo "[prisma] ✓ Client regenerated for production"
 

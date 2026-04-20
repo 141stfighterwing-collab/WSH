@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.4] - 2026-04-21
+
+### Fixed
+- **CRITICAL FIX — Docker build fails silently (npm install error hidden by pipe)** — The Dockerfile piped `npm install` output through `tail -5` (`npm install 2>&1 | tail -5`). In shell, the exit code of a pipeline is the exit code of the LAST command, so when `npm install` failed (non-zero exit), `tail`'s success (exit 0) replaced it. The build continued with ZERO packages installed, causing every subsequent step to fail with confusing errors. Fixed by removing all `| tail` pipes on `npm install` commands so errors are visible and the build stops immediately on failure.
+- **CRITICAL FIX — npm install fails: `react-devtools-inline@4.4.1` yanked from npm** — The `package-lock.json` pinned `react-devtools-inline` to version 4.4.1, which was yanked/unpublished from npm. This transitive dependency (of `@codesandbox/sandpack-react`) caused `npm install` to fail with `ETARGET No matching version found`. The lock file has been regenerated, resolving to `react-devtools-inline@4.4.0`.
+- **docker-entrypoint.sh used non-existent prisma path** — The entrypoint still referenced `node /app/node_modules/prisma/build/index.js` (from the v4.4.2 fix) which doesn't exist in Docker. Updated to use `./node_modules/.bin/prisma` (standard npm bin path) consistent with the Dockerfile.
+
+### Changed
+- **Regenerated `package-lock.json`** — Old lock file had a yanked dependency version. Fresh generation resolves to valid versions.
+- **Version bumped to 4.4.4** across all core files.
+
+---
+
 ## [4.4.3] - 2026-04-21
 
 ### Fixed

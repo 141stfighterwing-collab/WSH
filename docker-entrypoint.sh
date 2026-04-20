@@ -1,5 +1,5 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.4.3
+# WSH Docker Entrypoint v4.4.4
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 #
@@ -10,7 +10,7 @@
 
 WSH_UID="${WSH_UID:-1001}"
 WSH_GID="${WSH_GID:-1001}"
-PRISMA_CLI="node /app/node_modules/prisma/build/index.js"
+PRISMA_CLI="./node_modules/.bin/prisma"
 SCHEMA_FLAG="--schema=./prisma/schema.prisma"
 MARKER_FILE="/app/tmp/.db-initialized"
 SEED_MARKER="/app/tmp/.admin-seeded"
@@ -47,8 +47,8 @@ if [ -f "$PERSISTENT_ENV" ]; then
 fi
 
 # ── Pre-flight checks ──────────────────────────────────────────
-if [ ! -f "/app/node_modules/prisma/build/index.js" ]; then
-  echo "[ERROR] Prisma CLI not found at /app/node_modules/prisma/build/index.js"
+if [ ! -x "./node_modules/.bin/prisma" ]; then
+  echo "[ERROR] Prisma CLI not found at ./node_modules/.bin/prisma"
   echo "[ERROR] Container image may be corrupted. Rebuild: docker compose build --no-cache"
   exit 1
 fi

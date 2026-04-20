@@ -1,4 +1,4 @@
-# WSH v4.4.3 — File Tracker
+# WSH v4.4.4 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this release.
 
@@ -8,10 +8,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.4.3 |
+| **Version** | 4.4.4 |
 | **Release Date** | 2026-04-21 |
-| **Previous Version** | 4.4.2 |
-| **Release Type** | Hotfix (Docker build stale cache — prisma binary not found) |
+| **Previous Version** | 4.4.3 |
+| **Release Type** | Hotfix (Docker build fails silently — npm install error hidden by pipe + yanked dependency) |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
 | **Branch** | `main` |
 
@@ -23,33 +23,35 @@
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 1 | `Dockerfile` | ~15 | **Fix** | Self-healing prisma generate with fallback npm install |
+| 1 | `Dockerfile` | ~8 | **Fix** | Removed `| tail` pipes that hid npm install errors; version bump |
+| 2 | `docker-entrypoint.sh` | ~4 | **Fix** | Fixed prisma CLI path from `node /app/node_modules/prisma/build/index.js` to `./node_modules/.bin/prisma`; version bump |
+| 3 | `package-lock.json` | Regenerated | **Fix** | Removed yanked `react-devtools-inline@4.4.1` dep; resolves to 4.4.0 |
 
 ### Version Bump (14 files)
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 2 | `package.json` | 1 | **Version** | `"version": "4.4.2"` → `"4.4.3"` |
-| 3 | `Dockerfile` | 2 | **Version** | `ARG BUILD_VERSION=4.4.2` → `4.4.3` (both stages) |
-| 4 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag |
-| 5 | `docker-entrypoint.sh` | 2 | **Version** | Header version references |
-| 6 | `install.sh` | ~5 | **Version** | Script header, banner, image tags |
-| 7 | `install.ps1` | ~5 | **Version** | Script header, banner, image tags |
-| 8 | `update.sh` | 2 | **Version** | Script header + banner |
-| 9 | `update.ps1` | 2 | **Version** | Script header + banner |
-| 10 | `test-env.sh` | 2 | **Version** | Script header + banner |
-| 11 | `test-env.ps1` | 2 | **Version** | Script header + banner |
-| 12 | `src/app/api/health/route.ts` | 1 | **Version** | `version: '4.4.2'` → `version: '4.4.3'` |
-| 13 | `src/app/api/admin/system/route.ts` | 1 | **Version** | `version: '4.4.2'` → `version: '4.4.3'` |
-| 14 | `README.md` | ~5 | **Version** | Title, image tags, API example version references |
+| 4 | `package.json` | 1 | **Version** | `"version": "4.4.3"` → `"4.4.4"` |
+| 5 | `Dockerfile` | 2 | **Version** | `ARG BUILD_VERSION=4.4.3` → `4.4.4` (both stages) |
+| 6 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag |
+| 7 | `docker-entrypoint.sh` | 1 | **Version** | Header version reference |
+| 8 | `install.sh` | ~5 | **Version** | Script header, banner, image tags |
+| 9 | `install.ps1` | ~5 | **Version** | Script header, banner, image tags |
+| 10 | `update.sh` | 2 | **Version** | Script header + banner |
+| 11 | `update.ps1` | 2 | **Version** | Script header + banner |
+| 12 | `test-env.sh` | 2 | **Version** | Script header + banner |
+| 13 | `test-env.ps1` | 2 | **Version** | Script header + banner |
+| 14 | `src/app/api/health/route.ts` | 1 | **Version** | `version: '4.4.3'` → `version: '4.4.4'` |
+| 15 | `src/app/api/admin/system/route.ts` | 1 | **Version** | `version: '4.4.3'` → `version: '4.4.4'` |
+| 16 | `README.md` | ~5 | **Version** | Title, image tags, API example version references |
 
 ### Documentation
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 15 | `CHANGELOG.md` | +12 | **Prepend** | Added v4.4.3 hotfix release entry |
-| 16 | `CODING_CHANGES.md` | +40 | **Prepend** | New v4.4.3 section with Dockerfile fix details |
-| 17 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated to v4.4.3 with new file inventory |
+| 17 | `CHANGELOG.md` | +20 | **Prepend** | Added v4.4.4 hotfix release entry |
+| 18 | `CODING_CHANGES.md` | +70 | **Prepend** | New v4.4.4 section with three root cause fixes |
+| 19 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated to v4.4.4 with new file inventory |
 
 ---
 
@@ -63,9 +65,13 @@
 
 ## Verification Checklist
 
+- [x] `package-lock.json` regenerated (no yanked dependencies)
+- [x] Dockerfile has NO `| tail` pipes on `npm install` commands
 - [x] Dockerfile uses `./node_modules/.bin/prisma generate` (standard npm bin path)
 - [x] Dockerfile has self-healing fallback (`npm install prisma@^6` if binary missing)
-- [x] No `npx prisma` calls remain (prevents v7.x download)
+- [x] `docker-entrypoint.sh` uses `./node_modules/.bin/prisma` (not internal path)
+- [x] No `npx prisma` calls remain anywhere (prevents v7.x download)
+- [x] `package-lock.json` version matches `package.json` (both 4.4.4)
 - [x] Build passes locally (3 iterations, all clean)
 - [x] Version string consistent across all 14 core files
 - [x] CHANGELOG.md follows Keep a Changelog format
@@ -76,6 +82,6 @@
 
 | Iteration | Result | Time | Notes |
 |-----------|--------|------|-------|
-| 1 | ✅ PASS | 6.3s | Compiled successfully, all 23 routes generated |
-| 2 | ✅ PASS | 6.4s | Compiled successfully, all 23 routes generated |
-| 3 | ✅ PASS | 6.6s | Compiled successfully, all 23 routes generated |
+| 1 | ✅ PASS | ~6s | Compiled successfully, all routes generated |
+| 2 | ✅ PASS | ~6s | Compiled successfully, all routes generated |
+| 3 | ✅ PASS | ~6s | Compiled successfully, all routes generated |

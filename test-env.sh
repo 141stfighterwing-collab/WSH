@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# WSH — ENV Persistence Test Script v4.4.3
+# WSH — ENV Persistence Test Script v4.4.4
 #
 # Validates the full lifecycle of environment variable persistence:
 #   1. Health check
@@ -51,7 +51,7 @@ section() { echo ""; echo -e "${BOLD}── $1 ──${NC}"; }
 # ── Pre-flight ──────────────────────────────────────────────────────────────
 echo ""
 echo "========================================="
-echo "  WSH — ENV Persistence Test v4.4.3"
+echo "  WSH — ENV Persistence Test v4.4.4"
 echo "========================================="
 echo ""
 info "Base URL:  $BASE_URL"
