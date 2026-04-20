@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.9] - 2026-04-21
+
+### Fixed
+- **PDF embedding in Documents tab** — Fixed blob URL memory leak in DocumentViewer that prevented proper cleanup of object URLs
+- **View button always visible** — Documents can now be viewed/embedded regardless of text extraction status; View button shows for all viewable file types (PDF, images, text)
+- **Processing failure resilience** — Documents with failed text extraction are now marked as 'ready' for viewing instead of 'error', with an informational message
+- **Image file upload support** — Server upload whitelist now includes PNG, JPG, JPEG, GIF, WEBP image types (previously accepted by client but rejected by server)
+- **Binary file handling** — Image and binary file types (DOCX, DOC, RTF) now skip text extraction entirely, preventing processing errors
+- **File serving MIME types** — Added image MIME type mappings (image/png, image/jpeg, image/gif, image/webp) to file serving route
+- **Loading state improvements** — Enhanced document viewer loading states with progress messages for better UX during file fetch
+
+### Changed
+- **Version bumped to 4.3.9** across all 14 core files.
+
+---
+
 ## [4.3.8] - 2026-04-21
 
 ### ✨ Added

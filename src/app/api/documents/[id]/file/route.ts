@@ -56,6 +56,11 @@ export async function GET(
       doc: 'application/msword',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       rtf: 'application/rtf',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
     };
 
     const contentType = document.mimeType || mimeMap[ext] || 'application/octet-stream';

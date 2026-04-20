@@ -92,9 +92,17 @@ export function extractPlainText(buffer: Buffer): ExtractedPage[] {
 
 /**
  * Full pipeline: extract text from file → chunk it → return processed result.
+ * For binary/image files, returns empty result (file is still saved and viewable).
  */
 export async function processDocument(buffer: Buffer, fileName: string): Promise<ProcessedDocument> {
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
+
+  // Skip text extraction for binary/image files — they are saved for viewing, not parsing
+  const skipExtraction = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'docx', 'doc', 'rtf'];
+  if (skipExtraction.includes(ext)) {
+    return { pages: [], chunks: [], totalChars: 0, totalPages: 0, totalChunks: 0 };
+  }
+
   let pages: ExtractedPage[] = [];
 
   if (ext === 'pdf') {

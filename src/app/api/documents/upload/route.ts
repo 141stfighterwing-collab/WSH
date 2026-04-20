@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
 
-    const allowed = ['pdf', 'txt', 'md', 'docx', 'doc', 'rtf', 'html', 'htm', 'csv', 'json', 'xml', 'yaml', 'yml', 'log'];
+    const allowed = ['pdf', 'txt', 'md', 'docx', 'doc', 'rtf', 'html', 'htm', 'csv', 'json', 'xml', 'yaml', 'yml', 'log', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     if (!allowed.includes(ext)) {
       return NextResponse.json({ error: `Unsupported file type: .${ext}` }, { status: 400 });
@@ -74,11 +74,16 @@ export async function POST(request: NextRequest) {
     } catch (processError) {
       const errorMsg = processError instanceof Error ? processError.message : 'Processing failed';
       addLog('error', `Document processing failed for ${file.name}: ${errorMsg}`, 'documents');
+      // Mark as 'ready' anyway so the file can still be viewed/embedded — text extraction is optional
       await db.document.update({
         where: { id: document.id },
-        data: { status: 'error', errorMessage: errorMsg },
+        data: { status: 'ready', errorMessage: errorMsg, pageCount: 0, totalChars: 0, chunkCount: 0 },
       });
-      return NextResponse.json({ success: false, error: `Upload saved but processing failed: ${errorMsg}` }, { status: 500 });
+      return NextResponse.json({
+        success: true,
+        document: { id: document.id, title: document.title },
+        message: `File uploaded and ready to view. Note: text extraction encountered an issue (${errorMsg}) — document can still be viewed inline.`,
+      });
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Upload failed';

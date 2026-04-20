@@ -1,3 +1,55 @@
+# WSH v4.3.9 — Coding Changes
+
+## Overview
+v4.3.9 fixes critical PDF embedding issues in the Documents tab. The DocumentViewer component had a blob URL memory leak that could cause viewing failures. Additionally, documents with failed text extraction were inaccessible — this fix ensures all uploaded files remain viewable regardless of processing status.
+
+## 1. DocumentViewer Blob URL Fix
+**File:** `src/components/wsh/editors/DocumentManager.tsx`
+
+### Problem
+The `useEffect` cleanup in `DocumentViewer` referenced the stale `blobUrl` state variable from the initial closure (always `null`). This meant `URL.revokeObjectURL()` was never called on the actual blob URL, causing:
+- Memory leaks on repeated document viewing
+- Potential browser instability with large files
+
+### Fix
+Introduced a `blobUrlRef` (useRef) to track the current blob URL independently of React state:
+```tsx
+const blobUrlRef = useRef<string | null>(null);
+// ... in useEffect:
+blobUrlRef.current = url;
+setBlobUrl(url);
+// ... in cleanup:
+if (blobUrlRef.current) {
+  URL.revokeObjectURL(blobUrlRef.current);
+  blobUrlRef.current = null;
+}
+```
+
+### Files Changed
+| # | File | Lines Changed | Type | Description |
+|---|------|---------------|------|-------------|
+| 1 | `src/components/wsh/editors/DocumentManager.tsx` | ~20 | **Fix** | Blob URL ref tracking, loading states, View button condition |
+
+## 2. View Button Always Visible for Viewable Files
+**File:** `src/components/wsh/editors/DocumentManager.tsx`
+
+### Problem
+The "View" button was gated behind `doc.status === 'ready'`. If text extraction failed (status='error'), users couldn't view their uploaded PDFs.
+
+### Fix
+Changed the View button condition from `doc.status === 'ready' && isViewableFile(...)` to just `isViewableFile(...)`, so viewable files (PDF, images, text) always show the View button regardless of processing status.
+
+## 3. Server-Side Changes
+**Files:** `src/app/api/documents/upload/route.ts`, `src/lib/pdfProcessor.ts`, `src/app/api/documents/[id]/file/route.ts`
+
+### Changes
+- **Upload whitelist**: Added `png, jpg, jpeg, gif, webp` to allowed file types
+- **Error resilience**: Processing failures now set status to 'ready' (not 'error') with errorMessage for reference
+- **Binary skip**: Image and binary file types skip text extraction entirely in pdfProcessor
+- **MIME types**: Added image MIME type mappings to file serving route
+
+---
+
 # WSH v4.3.8 — Coding Changes
 
 > Patch release: "Things to do Today" todo checklist and version unification

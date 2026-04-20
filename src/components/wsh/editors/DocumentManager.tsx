@@ -98,11 +98,15 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentRecord; onClose: () => 
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadProgress, setLoadProgress] = useState('Fetching document...');
   const fileUrl = `/api/documents/${doc.id}/file`;
   const ext = doc.fileName.split('.').pop()?.toLowerCase() || '';
   const isPdf = ext === 'pdf' || doc.mimeType === 'application/pdf';
   const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext);
   const isText = ['txt', 'md', 'csv', 'json', 'xml', 'yaml', 'yml', 'log', 'html', 'htm'].includes(ext);
+
+  // Use a ref to track the current blob URL for proper cleanup
+  const blobUrlRef = useRef<string | null>(null);
 
   // Fetch the file with auth headers and create a blob URL
   useEffect(() => {
@@ -110,15 +114,18 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentRecord; onClose: () => 
     const fetchFile = async () => {
       setLoading(true);
       setError('');
+      setLoadProgress(`Loading ${doc.fileName}...`);
       try {
         const res = await fetch(fileUrl, { headers: getAuth() });
         if (!res.ok) {
           setError(`Failed to load file (${res.status})`);
           return;
         }
+        setLoadProgress('Preparing document for viewing...');
         const blob = await res.blob();
         if (revoked) return;
         const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
         setBlobUrl(url);
       } catch {
         setError('Failed to load file. Check your connection.');
@@ -129,9 +136,11 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentRecord; onClose: () => 
     fetchFile();
     return () => {
       revoked = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc.id]);
 
   return (
@@ -169,7 +178,8 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentRecord; onClose: () => 
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <Loader2 className="w-8 h-8 text-pri-400 animate-spin" />
-            <span className="text-sm text-muted-foreground">Loading {doc.title}...</span>
+            <span className="text-sm text-muted-foreground">{loadProgress}</span>
+            <span className="text-[10px] text-muted-foreground">This may take a moment for large files</span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
@@ -480,8 +490,8 @@ export default function DocumentManager() {
                     {doc.status === 'ready' ? 'Ready' : doc.status === 'processing' ? 'Processing' : 'Error'}
                   </span>
 
-                  {/* View button */}
-                  {doc.status === 'ready' && isViewableFile(doc.mimeType, doc.fileName) && (
+                  {/* View button — always show for viewable files (PDF, images, text) regardless of processing status */}
+                  {isViewableFile(doc.mimeType, doc.fileName) && (
                     <button
                       onClick={() => handleViewDoc(doc)}
                       className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-pri-600/20 text-pri-400 hover:bg-pri-600/30 hover:text-pri-300 transition-all active:scale-95"
