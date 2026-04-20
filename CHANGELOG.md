@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.8] - 2026-04-21
+
+### ✨ Added
+
+- **Things to do Today — Manual Todo Checklist** — A new interactive todo checklist component in the right sidebar that lets users manually enter tasks, check them off when done, and clear completed items. Features:
+  - Text input with Enter-to-add and Escape-to-cancel
+  - Checkbox toggle (amber empty → green completed) for each item
+  - Completed items shown with strikethrough and reduced opacity
+  - Progress bar showing completion percentage (amber→green gradient)
+  - "Clear done" button to remove all completed items at once
+  - Delete button on hover for individual items
+  - Auto-reset at midnight (todos from previous days are automatically cleared)
+  - localStorage persistence (`wsh-todo-today` key, `wsh-todo-date` for day tracking)
+  - Empty state with icon and instructional text
+  - Amber (#F59E0B) color theme with `ListTodo` icon
+  - Scrollable list with max-height to prevent sidebar overflow
+  - `crypto.randomUUID()` fallback for non-secure contexts
+
+### 🔧 Changed
+
+- **Version bumped to 4.3.8** across all 14 core files: `package.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `/api/health`, `/api/admin/system`, `CHANGELOG.md`, `README.md`.
+
+- **RightSidebar layout updated** — The new `TodoChecklist` component is now the second panel in the right sidebar (after Live Clock, before Today's Things), giving it prominent placement.
+
+---
+
 ## [4.3.6] - 2026-04-17
 
 ### ✨ Added

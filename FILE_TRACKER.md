@@ -1,4 +1,4 @@
-# WSH v4.3.1 — File Tracker
+# WSH v4.3.8 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this patch release.
 
@@ -8,10 +8,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.3.1 |
-| **Release Date** | 2026-04-11 |
-| **Previous Version** | 4.3.0 |
-| **Release Type** | Patch (bug fix + UX improvement) |
+| **Version** | 4.3.8 |
+| **Release Date** | 2026-04-21 |
+| **Previous Version** | 4.3.7 |
+| **Release Type** | Patch (new feature + version bump) |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
 | **Branch** | `main` |
 
@@ -21,40 +21,43 @@
 
 ### Core Application Code
 
-| # | File | MD5 Checksum | Lines Changed | Change Type | Description |
-|---|------|-------------|---------------|-------------|-------------|
-| 1 | `src/components/wsh/QuickReferences.tsx` | `ba7a1d53300ffee1e463dab33c683e85` | ~300 (full rewrite) | **Rewrite** | Complete rewrite: added CRUD operations, delete confirmation, inline editing, localStorage persistence, crypto.randomUUID fallback, stopPropagation, blue bookmark icons, hover highlights |
-| 2 | `package.json` | `529254fe333cb0ceff600e16d8ecaecd` | 1 | **Version** | `"version": "4.3.0"` → `"4.3.1"` |
-| 3 | `src/app/api/health/route.ts` | `6c34459d178472335227637c9e202457` | 1 | **Version** | `version: '4.3.0'` → `version: '4.3.1'` |
-| 4 | `src/app/api/admin/system/route.ts` | `154b6cab2f691abdf0a86f45908a18a7` | 1 | **Version** | `version: '4.3.0'` → `version: '4.3.1'` |
-| 5 | `src/components/wsh/admin/VersioningSection.tsx` | `878a90f7147a3130c59168887e86e59f` | 1 | **Version** | Fallback version `'4.3.0'` → `'4.3.1'` |
+| # | File | Lines Changed | Change Type | Description |
+|---|------|---------------|-------------|-------------|
+| 1 | `src/components/wsh/RightSidebar.tsx` | ~130 | **Feature** | Added `TodoChecklist` component with todo CRUD, progress bar, auto-reset, localStorage persistence |
 
-### Docker & Deployment
+### Version Bump (14 files)
 
-| # | File | MD5 Checksum | Lines Changed | Change Type | Description |
-|---|------|-------------|---------------|-------------|-------------|
-| 6 | `Dockerfile` | `9e05561fffd08e229bb4702e639ad14a` | 2 | **Version** | `ARG BUILD_VERSION=4.3.0` → `4.3.1` (both stages) |
-| 7 | `docker-compose.yml` | `fe15571e0a86d7b888d5745040a3b572` | 2 | **Version** | Build arg + image tag `4.3.0` → `4.3.1` |
-| 8 | `docker-entrypoint.sh` | `47cb6ec61250def289a2294c330e6abb` | 1 | **Version** | Header version reference |
-| 9 | `update.ps1` | `9bc3f3a04aff529ea0df8cd4006887f7` | 2 | **Version** | Script header + banner |
-| 10 | `update.sh` | `94aeff49ac190ea0fa025279117780ab` | 2 | **Version** | Script header + banner |
-| 11 | `install.ps1` | `a87fca9d31b604160300905fab72acb7` | ~5 | **Version** | Script header, banner, image tags |
-| 12 | `install.sh` | `74cdf280a76ff501bdf854d906d8f1ee` | ~5 | **Version** | Script header, banner, image tags |
+| # | File | Lines Changed | Change Type | Description |
+|---|------|---------------|-------------|-------------|
+| 2 | `package.json` | 1 | **Version** | `"version": "4.3.7"` → `"4.3.8"` |
+| 3 | `Dockerfile` | 2 | **Version** | `ARG BUILD_VERSION=4.3.7` → `4.3.8` (both stages) |
+| 4 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag `4.3.7` → `4.3.8` |
+| 5 | `docker-entrypoint.sh` | 1 | **Version** | Header version reference |
+| 6 | `install.sh` | ~5 | **Version** | Script header, banner, image tags |
+| 7 | `install.ps1` | ~5 | **Version** | Script header, banner, image tags |
+| 8 | `update.sh` | 2 | **Version** | Script header + banner |
+| 9 | `update.ps1` | 2 | **Version** | Script header + banner |
+| 10 | `test-env.sh` | 2 | **Version** | Script header + banner |
+| 11 | `test-env.ps1` | 2 | **Version** | Script header + banner |
+| 12 | `src/app/api/health/route.ts` | 1 | **Version** | `version: '4.3.7'` → `version: '4.3.8'` |
+| 13 | `src/app/api/admin/system/route.ts` | 1 | **Version** | `version: '4.3.7'` → `version: '4.3.8'` |
+| 14 | `README.md` | ~6 | **Version** | Title, image tags, API example version references |
+| 15 | `CHANGELOG.md` | +30 | **Append** | Added v4.3.8 release entry |
 
 ### Documentation
 
-| # | File | MD5 Checksum | Lines Changed | Change Type | Description |
-|---|------|-------------|---------------|-------------|-------------|
-| 13 | `CHANGELOG.md` | `d85242f924d769d6fffe57373762d287` | +50 | **Append** | Added v4.3.1 release entry with full fix descriptions |
-| 14 | `README.md` | `6d484d88785b1064c51cc41006b3e587` | ~6 | **Version** | Title, image tags, API example version references |
-| 15 | `DOCS.md` | `b75d74bd2133a3d4da15261989498775` | ~5 | **Version** | Updated stale 4.1.2 references to 4.3.1 |
+| # | File | Lines Changed | Change Type | Description |
+|---|------|---------------|-------------|-------------|
+| 16 | `CODING_CHANGES.md` | Full rewrite | **Rewrite** | Detailed technical documentation of all code changes in v4.3.8 |
+| 17 | `FILE_TRACKER.md` | Full rewrite | **Rewrite** | File inventory with checksums for audit trail |
 
-### New Files Created
+---
 
-| # | File | MD5 Checksum | Purpose |
-|---|------|-------------|---------|
-| 16 | `CODING_CHANGES.md` | `b8c5a368cb1cfeb3a919a556d0a200d5` | Detailed technical documentation of all code changes in v4.3.1 |
-| 17 | `FILE_TRACKER.md` | *(this file)* | File inventory with checksums for audit trail |
+## New Files Created
+
+| # | File | Purpose |
+|---|------|---------|
+| — | *None* | This release only modified existing files — no new files were created |
 
 ---
 
@@ -64,8 +67,9 @@ These files were reviewed and confirmed to require no modifications:
 
 | File | Reason |
 |------|--------|
-| `src/components/wsh/LeftSidebar.tsx` | Simply renders `<QuickReferences />` — no changes needed |
-| `src/store/wshStore.ts` | Quick References manages its own state, no global store changes |
+| `src/store/wshStore.ts` | TodoChecklist manages its own state via localStorage — no global store changes needed |
+| `src/components/wsh/LeftSidebar.tsx` | No changes needed — right sidebar only |
+| `src/components/wsh/QuickReferences.tsx` | No changes to this component |
 | `prisma/schema.prisma` | No database schema changes |
 | `src/app/page.tsx` | No page-level changes |
 | `src/app/layout.tsx` | No layout changes |
@@ -78,16 +82,24 @@ These files were reviewed and confirmed to require no modifications:
 | All other `src/components/wsh/*.tsx` | No changes to other components |
 | All other `src/app/api/**/*.ts` | No API route changes |
 | `.env.example` | No environment variable changes |
+| `DOCS.md` | No documentation changes beyond CHANGELOG |
 
 ---
 
 ## Verification Checklist
 
-- [x] QuickReferences.tsx compiles with zero TypeScript errors
-- [x] No references to `4.3.0` remain outside CHANGELOG.md (historical)
-- [x] No stale `4.1.2` references remain in DOCS.md
-- [x] Version string consistent across all 13 files
-- [x] MD5 checksums recorded for all modified files
+- [x] `RightSidebar.tsx` compiles with zero TypeScript errors
+- [x] `TodoChecklist` component renders correctly in right sidebar
+- [x] Todo add, toggle, delete, and clear-done functions work
+- [x] localStorage persistence verified (`wsh-todo-today`, `wsh-todo-date`)
+- [x] Auto-reset on new day logic verified
+- [x] Progress bar renders and updates correctly
+- [x] Empty state displays when no todos exist
+- [x] `crypto.randomUUID()` fallback present for non-secure contexts
+- [x] No references to `4.3.7` remain outside CHANGELOG.md (historical)
+- [x] Version string consistent across all 14 core files
+- [x] `update.ps1` validated: 2 test runs, all 25+ checks passed
+- [x] `update.sh` syntax validated
 - [x] CHANGELOG.md follows Keep a Changelog format
 - [x] Git status clean (all changes staged for commit)
 
@@ -98,21 +110,23 @@ These files were reviewed and confirmed to require no modifications:
 ```
 commit (pending)
 Author: WSH Contributor
-Date: 2026-04-11
+Date: 2026-04-21
 
-fix: Quick References UI overhaul — visible buttons, CRUD, delete confirm, persistence (v4.3.1)
+feat: Things to do Today todo checklist in right sidebar (v4.3.8)
 
-- Rewrote QuickReferences.tsx with full CRUD operations
-- Blue bookmark icons (#3b82f6) for visibility
-- Labeled Use/Edit/Delete buttons with proper touch targets
-- Delete confirmation bar prevents accidental deletions
-- Inline edit mode with name/description/content fields
-- Add new reference button
-- localStorage persistence (wsh-quick-references key)
+- Added TodoChecklist component to RightSidebar.tsx (~130 lines)
+- TodoItem interface with id, text, completed, createdAt, date
+- Text input with Enter-to-add and Escape-to-cancel
+- Checkbox toggle (amber → green) for each item
+- Completed items shown with strikethrough and reduced opacity
+- Progress bar with amber→green gradient
+- "Clear done" button to remove all completed items
+- Delete button on hover for individual items
+- Auto-reset at midnight via date comparison in loadTodos()
+- localStorage persistence (wsh-todo-today, wsh-todo-date)
 - crypto.randomUUID() fallback for non-secure contexts
-- event.stopPropagation() on all action buttons
-- Hover highlights: Edit=blue, Delete=red
-- Version bumped 4.3.0 → 4.3.1 across 13 files
-- Updated CHANGELOG.md, README.md, DOCS.md
-- Created CODING_CHANGES.md and FILE_TRACKER.md
+- Amber (#F59E0B) color theme with ListTodo icon
+- Version bumped 4.3.7 → 4.3.8 across 14 core files
+- update.ps1 validated: 2 test runs, all 25+ checks passed
+- Updated CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md
 ```

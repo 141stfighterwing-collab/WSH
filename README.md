@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v4.3.6
+# WSH — WeaveNote Self-Hosted v4.3.8
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -77,6 +77,20 @@ A fully interactive **SVG force-directed graph** that visualizes the relationshi
 - **Zoom indicator** — Current zoom percentage displayed in the bottom-right corner
 - **Reset view** — One-click button to reset pan and zoom to defaults
 - **Node/edge counter** — Header displays the total number of nodes and connections
+
+### ✅ Things to do Today
+
+A personal **daily task checklist** in the right sidebar that helps you track what needs to get done each day. It's separate from the note system — designed for quick, lightweight task management right from your workspace.
+
+- **Quick add** — Type a task and press Enter (or click the + button). Press Escape to cancel.
+- **Check off items** — Click the checkbox to mark a task as complete. Completed items get a green checkmark, strikethrough text, and reduced opacity.
+- **Progress tracking** — A gradient progress bar (amber → green) shows your completion percentage, with a counter showing remaining items.
+- **Clear completed** — One-click "Clear done" button removes all finished tasks at once.
+- **Delete individual items** — Hover over any task to reveal a trash icon for deletion.
+- **Auto-reset at midnight** — Todos automatically clear when a new day begins. No stale tasks from yesterday.
+- **Persistent** — All tasks are saved to your browser's `localStorage`, surviving page reloads and browser restarts. No database or server-side storage required.
+- **Empty state** — When no tasks exist, a friendly message guides you to click "Add" to create your first task.
+- **Scrollable** — The list has a maximum height with overflow scrolling, preventing sidebar overflow even with many tasks.
 
 ### 🗑️ Trash Modal
 
@@ -445,7 +459,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:4.3.6`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:4.3.8`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -538,7 +552,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:4.3.6` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:4.3.8` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -550,7 +564,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:4.3.6`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:4.3.8`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -713,7 +727,7 @@ wsh/
 │   │       ├── Header.tsx         # Application header
 │   │       ├── Footer.tsx         # Application footer
 │   │       ├── LeftSidebar.tsx    # Calendar, Folders, Tags
-│   │       ├── RightSidebar.tsx   # Live Clock, Today's Things, Projects
+│   │       ├── RightSidebar.tsx   # Live Clock, TodoChecklist (Things to do Today), Today's Things, Projects
 │   │       ├── Calendar.tsx       # Compact calendar view
 │   │       ├── QuickReferences.tsx # Template quick access
 │   │       ├── FarRightSidebar.tsx # Legacy (content merged into RightSidebar)
@@ -752,7 +766,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "4.3.6", "timestamp": "2026-04-17T12:00:00.000Z" }
+{ "status": "healthy", "version": "4.3.8", "timestamp": "2026-04-17T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`

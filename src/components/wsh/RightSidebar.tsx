@@ -1,9 +1,68 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Clock, Briefcase, CalendarDays, ChevronRight, Zap, Hash } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Clock, Briefcase, CalendarDays, ChevronRight, Zap, Hash, CheckSquare, Square, Plus, X, Trash2, ListTodo } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
+// ── Types ──────────────────────────────────────────────────────────────────
+interface TodoItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: string; // ISO date
+  date: string;      // YYYY-MM-DD — the day this todo belongs to
+}
+
+const TODO_STORAGE_KEY = 'wsh-todo-today';
+const TODO_DATE_KEY = 'wsh-todo-date';
+
+function generateTodoId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try { return crypto.randomUUID(); } catch { /* fallback */ }
+  }
+  return Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10);
+}
+
+function getTodayDateStr(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function loadTodos(): TodoItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const savedDate = localStorage.getItem(TODO_DATE_KEY);
+    const today = getTodayDateStr();
+    // Auto-clear if it's a new day
+    if (savedDate && savedDate !== today) {
+      localStorage.removeItem(TODO_STORAGE_KEY);
+      localStorage.setItem(TODO_DATE_KEY, today);
+      return [];
+    }
+    const raw = localStorage.getItem(TODO_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item: TodoItem) => item.id && typeof item.text === 'string');
+  } catch {
+    return [];
+  }
+}
+
+function saveTodos(todos: TodoItem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos));
+    localStorage.setItem(TODO_DATE_KEY, getTodayDateStr());
+  } catch {
+    // Storage full or disabled
+  }
+}
+
+// ── Live Clock ─────────────────────────────────────────────────────────────
 function LiveClock() {
   const [now, setNow] = useState(new Date());
 
@@ -45,6 +104,223 @@ function LiveClock() {
   );
 }
 
+// ── Things to do Today (Todo Checklist) ────────────────────────────────────
+function TodoChecklist() {
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isInputVisible, setIsInputVisible] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load todos from localStorage on mount
+  useEffect(() => {
+    setTodos(loadTodos());
+  }, []);
+
+  // Persist on change
+  useEffect(() => {
+    saveTodos(todos);
+  }, [todos]);
+
+  // Auto-focus input when it becomes visible
+  useEffect(() => {
+    if (isInputVisible && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isInputVisible]);
+
+  const handleAddTodo = useCallback(() => {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    const newItem: TodoItem = {
+      id: generateTodoId(),
+      text: trimmed,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      date: getTodayDateStr(),
+    };
+    setTodos((prev) => [newItem, ...prev]);
+    setInputValue('');
+    inputRef.current?.focus();
+  }, [inputValue]);
+
+  const handleToggleTodo = useCallback((id: string) => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+    );
+  }, []);
+
+  const handleDeleteTodo = useCallback((id: string) => {
+    setTodos((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const handleClearCompleted = useCallback(() => {
+    setTodos((prev) => prev.filter((t) => !t.completed));
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddTodo();
+      } else if (e.key === 'Escape') {
+        setInputValue('');
+        setIsInputVisible(false);
+      }
+    },
+    [handleAddTodo]
+  );
+
+  const pendingCount = todos.filter((t) => !t.completed).length;
+  const completedCount = todos.filter((t) => t.completed).length;
+
+  return (
+    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
+        <div className="flex items-center gap-2">
+          <ListTodo className="w-3.5 h-3.5 text-amber-400" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            Things to do Today
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {completedCount > 0 && (
+            <button
+              onClick={handleClearCompleted}
+              className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
+              title="Clear completed items"
+            >
+              Clear done
+            </button>
+          )}
+          <button
+            onClick={() => setIsInputVisible(!isInputVisible)}
+            className="flex items-center gap-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors"
+            title="Add new item"
+          >
+            {isInputVisible ? (
+              <><X className="w-2.5 h-2.5" /> Cancel</>
+            ) : (
+              <><Plus className="w-2.5 h-2.5" /> Add</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Input field */}
+      {isInputVisible && (
+        <div className="mb-2 flex items-center gap-1.5">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="What do you need to do?"
+            className="flex-1 text-xs bg-secondary/50 border border-border/50 rounded-lg px-2.5 py-1.5 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all"
+          />
+          <button
+            onClick={handleAddTodo}
+            disabled={!inputValue.trim()}
+            className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Add item"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Progress bar (shown when items exist) */}
+      {todos.length > 0 && (
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] text-muted-foreground/60">
+              {pendingCount} remaining
+            </span>
+            <span className="text-[9px] text-muted-foreground/60">
+              {todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : 0}%
+            </span>
+          </div>
+          <div className="w-full h-1 bg-secondary/50 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-amber-500 to-green-500 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${todos.length > 0 ? (completedCount / todos.length) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Todo items */}
+      <div className="space-y-1 max-h-[18rem] overflow-y-auto scrollbar-thin">
+        {todos.length === 0 && !isInputVisible ? (
+          <div className="py-4 text-center space-y-2">
+            <div className="flex justify-center">
+              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <CheckSquare className="w-4 h-4 text-amber-400/60" />
+              </div>
+            </div>
+            <p className="text-[10px] italic text-muted-foreground/60">
+              Nothing to do yet.
+            </p>
+            <p className="text-[9px] text-muted-foreground/40">
+              Click &quot;Add&quot; to create your first task.
+            </p>
+          </div>
+        ) : (
+          todos.map((todo) => (
+            <div
+              key={todo.id}
+              className={`group flex items-start gap-2 p-2 rounded-lg transition-all duration-200 ${
+                todo.completed
+                  ? 'bg-secondary/20 opacity-60'
+                  : 'hover:bg-secondary/40'
+              }`}
+            >
+              {/* Checkbox */}
+              <button
+                onClick={() => handleToggleTodo(todo.id)}
+                className="shrink-0 mt-0.5 transition-all duration-200"
+                title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+              >
+                {todo.completed ? (
+                  <div className="w-4 h-4 rounded bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+                    <CheckSquare className="w-3 h-3 text-green-400" />
+                  </div>
+                ) : (
+                  <div className="w-4 h-4 rounded border-2 border-amber-500/50 hover:border-amber-400 hover:bg-amber-500/10 flex items-center justify-center transition-colors">
+                    <Square className="w-2.5 h-2.5 text-amber-500/30" />
+                  </div>
+                )}
+              </button>
+
+              {/* Text */}
+              <span
+                className={`flex-1 text-xs leading-relaxed transition-all duration-200 ${
+                  todo.completed
+                    ? 'text-muted-foreground/50 line-through'
+                    : 'text-foreground'
+                }`}
+              >
+                {todo.text}
+              </span>
+
+              {/* Delete button (visible on hover) */}
+              <button
+                onClick={() => handleDeleteTodo(todo.id)}
+                className="shrink-0 opacity-0 group-hover:opacity-100 mt-0.5 text-muted-foreground/40 hover:text-red-400 transition-all duration-200"
+                title="Delete item"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Projects Section ───────────────────────────────────────────────────────
 function ProjectsSection() {
   const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
 
@@ -118,6 +394,7 @@ function ProjectsSection() {
   );
 }
 
+// ── Today Section (Notes filtered for today) ───────────────────────────────
 function TodaySection() {
   const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
 
@@ -236,13 +513,17 @@ function TodaySection() {
   );
 }
 
+// ── Main RightSidebar ─────────────────────────────────────────────────────
 export default function RightSidebar() {
   return (
     <aside className="wsh-right-sidebar">
       {/* Live Clock */}
       <LiveClock />
 
-      {/* Today's Things */}
+      {/* Things to do Today — Manual Todo Checklist */}
+      <TodoChecklist />
+
+      {/* Today's Things — Auto-filtered notes */}
       <TodaySection />
 
       {/* Projects */}

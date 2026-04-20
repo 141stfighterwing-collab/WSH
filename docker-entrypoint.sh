@@ -1,9 +1,9 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.3.7
+# WSH Docker Entrypoint v4.3.8
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 #
-# v4.3.7 FIX: Runs as root to fix Docker volume permissions (wsh-env owned by root),
+# v4.3.8 FIX: Runs as root to fix Docker volume permissions (wsh-env owned by root),
 # then drops to 'nextjs' user before starting the server.
 
 #set -e  # Disabled: individual errors are handled below to prevent crash loops
