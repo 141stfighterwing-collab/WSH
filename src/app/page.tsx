@@ -97,7 +97,7 @@ function LockedOverlay() {
 }
 
 export default function Home() {
-  const { loadFromLocalStorage, viewMode, user, setUser, logoutUser, syncFromServer } = useWSHStore();
+  const { loadFromLocalStorage, viewMode, user, setUser, logoutUser, syncFromServer, notes } = useWSHStore();
   const sessionVerified = useRef(false);
   const syncDone = useRef(false);
 
@@ -131,7 +131,17 @@ export default function Home() {
           return;
         }
 
-        // Token is valid — sync notes/folders from server
+        const data = await res.json();
+
+        if (data?.user) {
+          setUser({
+            isLoggedIn: true,
+            username: data.user.username,
+            email: data.user.email || '',
+            role: data.user.role,
+          });
+        }
+
         if (!syncDone.current) {
           syncDone.current = true;
           await syncFromServer();
@@ -149,7 +159,13 @@ export default function Home() {
     // Small delay to allow loadFromLocalStorage to complete
     const timer = setTimeout(verifyAndSync, 100);
     return () => clearTimeout(timer);
-  }, [logoutUser, syncFromServer]);
+  }, [logoutUser, setUser, syncFromServer]);
+
+  useEffect(() => {
+    if (!user.isLoggedIn || !user.token) return;
+    if (notes.length > 0) return;
+    syncFromServer();
+  }, [user.isLoggedIn, user.token, notes.length, syncFromServer]);
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">

@@ -67,18 +67,17 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
       }
 
       const loginData = data as AuthResponse;
-
-      // BUG-003 fix: role comes from server response, NOT client-side assignment
-      setUser({
+      const authenticatedUser = {
         isLoggedIn: true,
         username: loginData.user.username,
         email: loginData.user.email,
         token: loginData.token,
         role: loginData.user.role,
-      });
-      saveToLocalStorage();
-      // Sync notes from server after login
-      syncFromServer();
+      };
+
+      setUser(authenticatedUser);
+      saveToLocalStorage(authenticatedUser);
+      await syncFromServer();
       setError('');
       onClose();
     } catch {
@@ -125,16 +124,17 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
 
       // Auto-login after successful registration
       if (regData.token) {
-        setUser({
+        const authenticatedUser = {
           isLoggedIn: true,
           username: regData.user.username,
           email: regData.user.email,
           token: regData.token,
           role: regData.user.role,
-        });
-        saveToLocalStorage();
-        // Sync notes from server after registration
-        syncFromServer();
+        };
+
+        setUser(authenticatedUser);
+        saveToLocalStorage(authenticatedUser);
+        await syncFromServer();
         setError('');
         onClose();
       } else {

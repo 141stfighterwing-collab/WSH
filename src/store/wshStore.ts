@@ -127,7 +127,7 @@ interface WSHState {
   setCalendarDateFilter: (date: string | null) => void;
 
   // Persistence — only UI prefs, NEVER notes/folders data
-  saveToLocalStorage: () => void;
+  saveToLocalStorage: (userOverride?: Partial<UserState>) => void;
   loadFromLocalStorage: () => void;
 
   // Server Sync — database is the single source of truth
@@ -485,8 +485,9 @@ export const useWSHStore = create<WSHState>((set, get) => ({
 
   // Persistence — ONLY UI preferences, NEVER notes/folders data
   // Notes and folders live EXCLUSIVELY in the database
-  saveToLocalStorage: () => {
+  saveToLocalStorage: (userOverride) => {
     const state = get();
+    const effectiveUser = { ...state.user, ...userOverride };
     const toSave = {
       theme: state.theme,
       darkMode: state.darkMode,
@@ -496,13 +497,13 @@ export const useWSHStore = create<WSHState>((set, get) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
       // Persist auth session separately
-      if (state.user.isLoggedIn && state.user.token) {
+      if (effectiveUser.isLoggedIn && effectiveUser.token) {
         localStorage.setItem('wsh-auth', JSON.stringify({
           isLoggedIn: true,
-          username: state.user.username,
-          email: state.user.email,
-          token: state.user.token,
-          role: state.user.role,
+          username: effectiveUser.username,
+          email: effectiveUser.email,
+          token: effectiveUser.token,
+          role: effectiveUser.role,
         }));
       } else {
         localStorage.removeItem('wsh-auth');
