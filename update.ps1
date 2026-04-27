@@ -25,7 +25,7 @@ param(
     [switch]$InitDocs
 )
 
-# ── CRITICAL: Suppress PowerShell's NativeCommandError for git/docker ──
+# -- CRITICAL: Suppress PowerShell's NativeCommandError for git/docker --
 $ErrorActionPreference = "SilentlyContinue"
 
 # ============================================================================
@@ -38,7 +38,7 @@ $GIT_REMOTE    = "https://github.com/$REPO_OWNER/$REPO_NAME.git"
 $BRANCH        = "main"
 $API_BASE      = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME"
 
-# Version constants — patching starts at 1.0.1
+# Version constants -- patching starts at 1.0.1
 $MIN_PATCH_VERSION = [version]"1.0.1"
 $CURRENT_VERSION   = [version]"4.5.0"
 
@@ -293,7 +293,7 @@ function Get-PatchRegistry {
     #>
 
     $patches = @(
-        # ── v1.x Series ──────────────────────────────────────────────────
+        # -- v1.x Series --------------------------------------------------
         @{
             Version = "1.0.1"
             Date    = "2026-03-26"
@@ -331,7 +331,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v3.9.x Series ────────────────────────────────────────────────
+        # -- v3.9.x Series ------------------------------------------------
         @{
             Version = "3.9.0"
             Date    = "2026-03-27"
@@ -404,7 +404,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v4.0.x Series ────────────────────────────────────────────────
+        # -- v4.0.x Series ------------------------------------------------
         @{
             Version = "4.0.0"
             Date    = "2026-04-01"
@@ -436,7 +436,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v4.1.x Series ────────────────────────────────────────────────
+        # -- v4.1.x Series ------------------------------------------------
         @{
             Version = "4.1.0"
             Date    = "2026-04-05"
@@ -523,7 +523,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v4.2.x Series ────────────────────────────────────────────────
+        # -- v4.2.x Series ------------------------------------------------
         @{
             Version = "4.2.0"
             Date    = "2026-04-14"
@@ -550,7 +550,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v4.3.x Series ────────────────────────────────────────────────
+        # -- v4.3.x Series ------------------------------------------------
         @{
             Version = "4.3.0"
             Date    = "2026-04-16"
@@ -662,7 +662,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v4.4.x Series ────────────────────────────────────────────────
+        # -- v4.4.x Series ------------------------------------------------
         @{
             Version = "4.4.0"
             Date    = "2026-04-21"
@@ -727,7 +727,7 @@ function Get-PatchRegistry {
             )
         }
 
-        # ── v4.5.0 Series ────────────────────────────────────────────────
+        # -- v4.5.0 Series ------------------------------------------------
         @{
             Version = "4.5.0"
             Date    = "2026-04-28"
@@ -851,7 +851,7 @@ After installation, access:
 - **Analytics Dashboard** - Usage statistics and insights
 
 ### Category-Isolated Views
-When you select a note type tab (Quick, Code, Deep, etc.), the notes grid automatically filters to show only notes of that category. This keeps your workspace focused — if you're in Code, you only see code notes. If you're in Quick Notes, you only see quick notes.
+When you select a note type tab (Quick, Code, Deep, etc.), the notes grid automatically filters to show only notes of that category. This keeps your workspace focused -- if you're in Code, you only see code notes. If you're in Quick Notes, you only see quick notes.
 
 ## Tech Stack
 
@@ -893,7 +893,7 @@ WSH/
 
 | File | Description |
 |------|-------------|
-| \`README.md\` | This file — project overview, setup, and features |
+| \`README.md\` | This file -- project overview, setup, and features |
 | \`CHANGELOG.md\` | Complete version history (Keep a Changelog format) |
 | \`CODING_CHANGES.md\` | Technical details of code modifications per version |
 | \`FILE_TRACKER.md\` | File inventory and modification tracking per release |
@@ -1010,9 +1010,9 @@ function Update-CHANGELOG {
 ## [4.5.0] - $today
 
 ### Added
-- **Update script overhaul with patch management system** — Complete rewrite of \`update.ps1\` with a built-in patch registry spanning v1.0.1 through v4.5.0. The script now supports multiple modes: standard update, docs-only refresh, patch-only application, health check, version info, and patch listing. All documentation files (README.md, CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md) are maintained automatically.
-- **Category-isolated note views** — The NotesGrid now filters notes by the active note type tab. When viewing the Code tab, only code notes appear. When viewing Quick Notes, only quick notes appear. This provides a focused workspace where each note category shows only its own content.
-- **GitHub API integration** — The update script checks the GitHub repository for the latest version, tags, and release information to ensure you are always up to date.
+- **Update script overhaul with patch management system** -- Complete rewrite of \`update.ps1\` with a built-in patch registry spanning v1.0.1 through v4.5.0. The script now supports multiple modes: standard update, docs-only refresh, patch-only application, health check, version info, and patch listing. All documentation files (README.md, CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md) are maintained automatically.
+- **Category-isolated note views** -- The NotesGrid now filters notes by the active note type tab. When viewing the Code tab, only code notes appear. When viewing Quick Notes, only quick notes appear. This provides a focused workspace where each note category shows only its own content.
+- **GitHub API integration** -- The update script checks the GitHub repository for the latest version, tags, and release information to ensure you are always up to date.
 
 ### Changed
 - **Version bumped to 4.5.0** across all core files.
@@ -1510,7 +1510,7 @@ function Invoke-HealthCheck {
 
 Write-Logo
 
-# ── Mode: Version Info ────────────────────────────────────────────────────
+# -- Mode: Version Info ----------------------------------------------------
 if ($Version) {
     Write-DocHeader "Version Information"
 
@@ -1554,7 +1554,7 @@ if ($Version) {
     exit 0
 }
 
-# ── Mode: Patch List ──────────────────────────────────────────────────────
+# -- Mode: Patch List ------------------------------------------------------
 if ($PatchList) {
     Write-DocHeader "Patch Registry"
     Write-Info "Showing all patches from v1.0.1 to v$CURRENT_VERSION"
@@ -1578,7 +1578,7 @@ if ($PatchList) {
     exit 0
 }
 
-# ── Mode: Health Check Only ───────────────────────────────────────────────
+# -- Mode: Health Check Only -----------------------------------------------
 if ($HealthCheck) {
     $result = Invoke-HealthCheck
     if ($result) {
@@ -1596,7 +1596,7 @@ if ($HealthCheck) {
     exit 0
 }
 
-# ── Mode: Documentation Only ──────────────────────────────────────────────
+# -- Mode: Documentation Only ----------------------------------------------
 if ($DocsOnly -or $InitDocs) {
     Write-DocHeader "Documentation Refresh"
     Write-Info "Regenerating all documentation files..."
@@ -1631,7 +1631,7 @@ if ($DocsOnly -or $InitDocs) {
     exit 0
 }
 
-# ── Mode: Patch Only ──────────────────────────────────────────────────────
+# -- Mode: Patch Only ------------------------------------------------------
 if ($PatchOnly) {
     Invoke-PatchApplication
     exit 0
@@ -1649,13 +1649,13 @@ Write-Step "1/5" "Pulling latest code from GitHub..."
 $stashed = $false
 $localChanges = & git status --porcelain 2>&1
 if ($localChanges) {
-    Write-Info "Local changes detected — stashing before pull..."
+    Write-Info "Local changes detected -- stashing before pull..."
     & git stash push -m "wsh-update-v$CURRENT_VERSION-$(Get-Date -Format 'yyyyMMddHHmmss')" --include-untracked 2>&1 | ForEach-Object { Write-Host "  $_" }
     $stashed = $LASTEXITCODE -eq 0
     if ($stashed) {
         Write-OK "Local changes stashed"
     } else {
-        Write-Warn "Stash failed — attempting pull anyway"
+        Write-Warn "Stash failed -- attempting pull anyway"
     }
 }
 
@@ -1688,7 +1688,7 @@ if ($stashed) {
     if ($LASTEXITCODE -eq 0) {
         Write-OK "Local changes restored"
     } else {
-        Write-Warn "Stash pop had conflicts — run 'git stash pop' manually to resolve"
+        Write-Warn "Stash pop had conflicts -- run 'git stash pop' manually to resolve"
     }
 }
 
