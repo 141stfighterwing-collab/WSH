@@ -983,7 +983,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
     $readmePath = Join-Path $PSScriptRoot "README.md"
     Set-Content -Path $readmePath -Value $readme -Encoding UTF8 -NoNewline
-    Write-OK "README.md generated ($([m[Math]::Round($readme.Length / 1KB, 1)) KB)"
+    Write-OK "README.md generated ($([Math]::Round($readme.Length / 1KB, 1)) KB)"
 }
 
 function Update-CHANGELOG {
@@ -1300,7 +1300,7 @@ function New-FILE_TRACKER {
 
         foreach ($f in ($group.Group | Sort-Object File)) {
             $statusIcon = if ($f.Exists) { "[OK]" } else { "[MISSING]" }
-            $sizeStr = if ($f.Size -gt 0) { "$([m[Math]::Round($f.Size / 1KB, 1)) KB" } else { "-" }
+            $sizeStr = if ($f.Size -gt 0) { "$([Math]::Round($f.Size / 1KB, 1)) KB" } else { "-" }
             $modStr = if ($f.Modified) { $f.Modified } else { "-" }
             [void]$sb.AppendLine("| $($f.Number) | \`$($f.File)\` | $statusIcon | $sizeStr | $modStr |")
         }
@@ -1312,7 +1312,7 @@ function New-FILE_TRACKER {
     $existingFiles = ($allFiles | Where-Object { $_.Exists }).Count
     $missingFiles = $totalFiles - $existingFiles
     $totalSize = ($allFiles | Where-Object { $_.Exists } | Measure-Object -Property Size -Sum).Sum
-    $totalSizeKB = [m[Math]::Round($totalSize / 1KB, 1)
+    $totalSizeKB = [Math]::Round($totalSize / 1KB, 1)
 
     [void]$sb.AppendLine("---")
     [void]$sb.AppendLine("")
@@ -1495,7 +1495,7 @@ function Invoke-HealthCheck {
         $docPath = Join-Path $PSScriptRoot $doc
         if (Test-Path $docPath) {
             $size = (Get-Item $docPath).Length
-            Write-OK "$doc exists ($([m[Math]::Round($size / 1KB, 1)) KB)"
+            Write-OK "$doc exists ($([Math]::Round($size / 1KB, 1)) KB)"
         } else {
             Write-Warn "$doc missing (run .\update.ps1 -InitDocs to generate)"
         }
@@ -1623,7 +1623,7 @@ if ($DocsOnly -or $InitDocs) {
     foreach ($doc in $DOC_FILES) {
         $docPath = Join-Path $PSScriptRoot $doc
         if (Test-Path $docPath) {
-            $size = [m[Math]::Round((Get-Item $docPath).Length / 1KB, 1)
+            $size = [Math]::Round((Get-Item $docPath).Length / 1KB, 1)
             Write-Host "    $doc ($size KB)" -ForegroundColor Green
         }
     }
@@ -1784,7 +1784,7 @@ Write-Host "  Documentation updated:" -ForegroundColor Magenta
 foreach ($doc in $DOC_FILES) {
     $docPath = Join-Path $PSScriptRoot $doc
     if (Test-Path $docPath) {
-        $size = [m[Math]::Round((Get-Item $docPath).Length / 1KB, 1)
+        $size = [Math]::Round((Get-Item $docPath).Length / 1KB, 1)
         Write-Host "    $doc ($size KB)" -ForegroundColor Green
     }
 }
