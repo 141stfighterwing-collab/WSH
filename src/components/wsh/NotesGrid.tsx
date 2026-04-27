@@ -171,6 +171,7 @@ export default function NotesGrid() {
     notes,
     folders,
     activeFolderId,
+    activeNoteType,
     setActiveFolderId,
     setActiveNoteId,
     setEditorTitle,
@@ -193,6 +194,12 @@ export default function NotesGrid() {
 
   const filteredNotes = useMemo(() => {
     let filtered = notes.filter((n) => !n.isDeleted);
+
+    // Category-isolated view — filter by active note type tab
+    // When on "Code" tab, only show code notes. When on "Quick", only quick notes.
+    if (activeNoteType) {
+      filtered = filtered.filter((n) => n.type === activeNoteType);
+    }
 
     // Calendar date filter — only show notes from that specific day (local timezone)
     if (calendarDateFilter) {
@@ -221,7 +228,7 @@ export default function NotesGrid() {
     }
 
     return filtered;
-  }, [notes, activeFolderId, searchQuery, calendarDateFilter]);
+  }, [notes, activeFolderId, searchQuery, calendarDateFilter, activeNoteType]);
 
   const handleNoteClick = (note: Note) => {
     // Click on a note opens the detail view (read mode)
@@ -307,6 +314,8 @@ export default function NotesGrid() {
               })()}`
             : activeFolderId
             ? `📁 ${folders.find((f) => f.id === activeFolderId)?.name || 'Folder'}`
+            : activeNoteType
+            ? `${activeNoteType.charAt(0).toUpperCase() + activeNoteType.slice(1)} Notes`
             : 'All Notes'}
         </span>
         <span className="text-[10px] text-muted-foreground">
