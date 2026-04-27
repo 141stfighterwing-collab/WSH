@@ -107,10 +107,13 @@ async function callGemini(systemPrompt: string, content: string, model: string, 
 
   const geminiModel = GEMINI_MODELS[model] || model;
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ parts: [{ text: content }] }],
@@ -220,7 +223,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ── Provider GET endpoint — returns which provider is available ──────────
+// ── Public model catalogs (no secrets) ───────────────────────────────────
+const MODEL_CATALOG: Record<string, { id: string; label: string }[]> = {
+  claude: [
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { id: 'claude-haiku-4-20250414', label: 'Claude Haiku 4' },
+    { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+  ],
+  openai: [
+    { id: 'gpt-4o', label: 'GPT-4o' },
+    { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { id: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+  ],
+  gemini: [
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  ],
+};
+
+/** Key format patterns for client-side validation before saving */
+const KEY_PATTERNS: Record<string, { regex: RegExp; hint: string }> = {
+  ANTHROPIC_API_KEY: { regex: /^sk-ant-api03-[A-Za-z0-9_-]{80,}$/, hint: 'Claude keys start with sk-ant-api03- (95+ chars)' },
+  OPENAI_API_KEY: { regex: /^sk-[A-Za-z0-9_-]{20,}$/, hint: 'OpenAI keys start with sk- (48+ chars)' },
+  GEMINI_API_KEY: { regex: /^AIzaSy[A-Za-z0-9_-]{33}$/, hint: 'Gemini keys start with AIzaSy (39 chars)' },
+};
+
+// ── Provider GET endpoint — returns which provider is available + models ──
 export async function GET() {
   const available: Record<string, boolean> = {
     claude: !!process.env.ANTHROPIC_API_KEY,
@@ -234,11 +265,23 @@ export async function GET() {
 
   const defaultProvider = process.env.AI_PROVIDER || configured[0] || '';
 
+  // Build models list per provider (only for providers with API keys)
+  const models: Record<string, { id: string; label: string }[]> = {};
+  for (const [prov, isConfigured] of Object.entries(available)) {
+    if (isConfigured && MODEL_CATALOG[prov]) {
+      models[prov] = MODEL_CATALOG[prov];
+    }
+  }
+
   return NextResponse.json({
     provider: defaultProvider,
     available,
     configured,
     model: process.env.AI_SYNTHESIS_MODEL || '',
+    models,
+    keyPatterns: Object.fromEntries(
+      Object.entries(KEY_PATTERNS).map(([k, v]) => [k, { hint: v.hint }]),
+    ),
   });
 }
 
