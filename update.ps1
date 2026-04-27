@@ -1395,14 +1395,26 @@ function Invoke-PatchApplication {
     Write-Info "Your data (PostgreSQL, volumes) will NOT be destroyed."
     Write-Host ""
 
-    # Git pull
+    # Git pull (auto-stash local changes)
     Write-Step "1/3" "Pulling latest code..."
+    $localCh = & git status --porcelain 2>&1
+    $didStash = $false
+    if ($localCh) {
+        Write-Info "Stashing local changes..."
+        & git stash push -m "wsh-patch-$(Get-Date -Format 'yyyyMMddHHmmss')" --include-untracked 2>$null
+        $didStash = $LASTEXITCODE -eq 0
+    }
     $pullOutput = & git pull origin $BRANCH 2>&1
     if ($pullOutput) { $pullOutput | ForEach-Object { Write-Host "  $_" } }
     if ($LASTEXITCODE -ne 0) {
+        if ($didStash) { & git stash pop 2>$null }
         Write-Fail "Git pull failed (exit code $LASTEXITCODE)"
         Write-Host "  Fix: git stash && git pull origin $BRANCH && git stash pop" -ForegroundColor Yellow
         exit 1
+    }
+    if ($didStash) {
+        & git stash pop 2>&1 | ForEach-Object { Write-Host "  $_" }
+        Write-OK "Local changes restored"
     }
     Write-OK "Code updated"
 
@@ -1632,6 +1644,21 @@ if ($PatchOnly) {
 
 # Step 1: Pull latest code
 Write-Step "1/5" "Pulling latest code from GitHub..."
+
+# Auto-stash local changes before pulling (e.g., .env with user-specific values)
+$stashed = $false
+$localChanges = & git status --porcelain 2>&1
+if ($localChanges) {
+    Write-Info "Local changes detected — stashing before pull..."
+    & git stash push -m "wsh-update-v$CURRENT_VERSION-$(Get-Date -Format 'yyyyMMddHHmmss')" --include-untracked 2>&1 | ForEach-Object { Write-Host "  $_" }
+    $stashed = $LASTEXITCODE -eq 0
+    if ($stashed) {
+        Write-OK "Local changes stashed"
+    } else {
+        Write-Warn "Stash failed — attempting pull anyway"
+    }
+}
+
 $pullOutput = & git pull origin $BRANCH 2>&1
 if ($pullOutput) {
     $pullOutput | ForEach-Object { Write-Host "  $_" }
@@ -1639,6 +1666,10 @@ if ($pullOutput) {
 $pullExit = $LASTEXITCODE
 if ($pullExit -ne 0) {
     Write-Fail "Git pull failed (exit code $pullExit)!"
+    if ($stashed) {
+        Write-Info "Restoring stashed changes..."
+        & git stash pop 2>&1 | ForEach-Object { Write-Host "  $_" }
+    }
     Write-Host "  Possible causes:" -ForegroundColor DarkGray
     Write-Host "    - Local changes conflict with upstream" -ForegroundColor DarkGray
     Write-Host "    - Not on the '$BRANCH' branch" -ForegroundColor DarkGray
@@ -1648,6 +1679,19 @@ if ($pullExit -ne 0) {
     Write-Host "  Or:  git checkout $BRANCH && git pull origin $BRANCH" -ForegroundColor Yellow
     exit 1
 }
+
+# Restore stashed changes after successful pull
+if ($stashed) {
+    Write-Info "Restoring stashed changes..."
+    $stashPop = & git stash pop 2>&1
+    $stashPop | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -eq 0) {
+        Write-OK "Local changes restored"
+    } else {
+        Write-Warn "Stash pop had conflicts — run 'git stash pop' manually to resolve"
+    }
+}
+
 Write-OK "Code updated from GitHub"
 
 # Step 2: Refresh documentation
