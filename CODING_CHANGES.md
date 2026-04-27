@@ -1,3 +1,142 @@
+# WSH v4.5.0 — Coding Changes
+
+## Overview
+v4.5.0 is a security-focused release that addresses two critical issues: a hardcoded API key committed to the repository, and a Gemini API key exposed in URL query parameters. It also adds API key format validation, a model dropdown selector, and auto-provider detection.
+
+## 1. Hardcoded Gemini API Key Removed
+
+**Files:** `.env.example`, `.env`, `docker-compose.yml`
+**Severity:** CRITICAL — Real API key was committed to the git repository
+
+### Problem
+A real Google Gemini API key (`AIzaSy...`) was found in three files:
+- `.env.example` (committed to the repo, shipped with every clone)
+- `.env` (local development config)
+- `docker-compose.yml` (as the default value for `GEMINI_API_KEY`)
+
+This exposed the key to anyone with repository access and violated the project's own `.gitignore` intent.
+
+### Fix
+Removed the key from all three files. `.env.example` and `docker-compose.yml` now show `GEMINI_API_KEY=` (empty). `.env` was cleaned to remove the hardcoded value. Users must now configure their own keys at runtime via Settings > AI Engine or environment variables.
+
+## 2. Gemini API Key URL Leak Fixed
+
+**File:** `src/app/api/synthesis/route.ts` (line 110)
+**Severity:** CRITICAL — Key exposed in access logs, proxy logs, and browser history
+
+### Problem
+The `callGemini()` function passed the API key as a URL query parameter:
+```typescript
+`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+```
+This exposed the key in server access logs, proxy logs, CDN logs, load balancer logs, and browser history.
+
+### Fix
+Moved the key to the `x-goog-api-key` HTTP header:
+```typescript
+headers: {
+  'Content-Type': 'application/json',
+  'x-goog-api-key': apiKey,
+}
+```
+The URL no longer contains the key:
+```typescript
+`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+```
+
+## 3. API Key Format Validation
+
+**File:** `src/components/wsh/SettingsPanel.tsx` (new `KEY_VALIDATORS` object)
+
+### What Changed
+Added client-side regex validation for all three API key formats before saving:
+
+| Provider | Pattern | Hint |
+|----------|---------|------|
+| Gemini | `^AIzaSy[A-Za-z0-9_-]{33}$` | 39 chars starting with `AIzaSy` |
+| OpenAI | `^sk-[A-Za-z0-9_-]{20,}$` | 48+ chars starting with `sk-` |
+| Claude | `^sk-ant-api03-[A-Za-z0-9_-]{80,}$` | 95+ chars starting with `sk-ant-api03-` |
+
+- Real-time amber warning appears while typing if the format doesn't match
+- Save is blocked if validation fails, with a clear error message
+- Enter key submits the form (keyboard accessibility)
+
+## 4. Model Dropdown Selector
+
+**File:** `src/components/wsh/SettingsPanel.tsx`
+
+### Before
+Model selection used a list of individual `<button>` elements — one per model. Models were hardcoded in a static `PROVIDERS` array in the component.
+
+### After
+Model selection uses a native `<select>` dropdown:
+- Dynamically populated from the server based on configured API keys
+- Only shows models for providers with active keys
+- Server returns model lists via the enhanced `GET /api/synthesis` endpoint
+- Chevron icon indicates it's a dropdown
+- Selected model ID shown below the dropdown
+
+## 5. Server-Side Model Catalog
+
+**File:** `src/app/api/synthesis/route.ts` (new `MODEL_CATALOG` and enhanced `GET` handler)
+
+### What Changed
+The `GET /api/synthesis` endpoint now returns two new fields:
+- `models`: Record of per-provider model lists (only for providers with API keys configured)
+- `keyPatterns`: Record of format hints per provider (for client-side validation UX)
+
+## 6. Variable Scope Fix
+
+**File:** `src/app/api/synthesis/route.ts` (POST handler)
+
+### Problem
+`action` and `provider` were declared with `const` inside the `try` block but referenced in the `catch` block for error logging, causing TypeScript error TS2304.
+
+### Fix
+Hoisted both variables above the `try` block using `let`, then assigned inside `try`:
+```typescript
+let action = 'unknown';
+let provider = '';
+try {
+  // ... parse body, assign action and provider
+} catch (error: unknown) {
+  // action and provider are now accessible here
+}
+```
+
+## 7. Stale Docker Entrypoint Fallback
+
+**File:** `docker-entrypoint.sh` (line 63)
+
+### Problem
+The fallback version was `${BUILD_VERSION:-4.2.1}` — a version from April 2025, two major versions behind.
+
+### Fix
+Updated to `${BUILD_VERSION:-4.5.0}`.
+
+## Files Changed
+| # | File | Lines | Type | Description |
+|---|------|-------|------|-------------|
+| 1 | `.env` | 2 | Security | Removed hardcoded Gemini key, reset AI_PROVIDER |
+| 2 | `.env.example` | 1 | Security | Removed real API key, replaced with empty |
+| 3 | `docker-compose.yml` | 2 | Security | Removed key default, version bump to 4.5.0 |
+| 4 | `Dockerfile` | 4 | Version | BUILD_VERSION 4.4.4 → 4.5.0 |
+| 5 | `docker-entrypoint.sh` | 1 | Fix | Stale fallback 4.2.1 → 4.5.0 |
+| 6 | `install.sh` | 5 | Version | All 4.4.4 → 4.5.0 references |
+| 7 | `install.ps1` | 5 | Version | All 4.4.4 → 4.5.0 references |
+| 8 | `update.sh` | 2 | Version | Header and banner |
+| 9 | `test-env.sh` | 2 | Version | Header and banner |
+| 10 | `test-env.ps1` | 2 | Version | Header and banner |
+| 11 | `src/app/api/synthesis/route.ts` | ~65 | Security+Feature | URL leak fix, model catalog, key patterns, scope fix |
+| 12 | `src/app/api/health/route.ts` | 1 | Version | Fallback version 4.5.0 |
+| 13 | `src/app/api/admin/system/route.ts` | 1 | Version | Fallback version 4.5.0 |
+| 14 | `src/components/wsh/SettingsPanel.tsx` | ~200 | Feature+Security | Key validation, dropdown, dynamic model loading |
+| 15 | `package.json` | 1 | Version | 4.4.4 → 4.5.0 |
+| 16 | `CHANGELOG.md` | ~40 | Docs | New v4.5.0 release entry |
+| 17 | `CODING_CHANGES.md` | ~90 | Docs | This document |
+
+---
+
 # WSH v4.4.4 — Coding Changes
 
 ## Overview

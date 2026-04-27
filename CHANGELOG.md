@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.0] - 2026-04-28
+
+### Security
+
+- **CRITICAL — Hardcoded Gemini API key removed from committed files** — A real Google Gemini API key (`AIzaSy...`) was found in `.env.example` (committed to the repo), `.env`, and `docker-compose.yml` (as a default value). The key has been removed from all three files and replaced with empty placeholders. All API keys must now be entered at runtime via Settings > AI Engine or ENV configuration.
+
+- **CRITICAL — Gemini API key exposed in URL query parameter** — The `callGemini()` function in `src/app/api/synthesis/route.ts` passed the API key as a URL query parameter (`?key=${apiKey}`). This exposed the key in server access logs, proxy logs, CDN logs, and browser history. Fixed by moving the key to the `x-goog-api-key` HTTP header, which is the Google-recommended authentication method and keeps the key out of URLs.
+
+### Added
+
+- **API key format validation** — Client-side validation now checks the format of API keys before saving them to the server. Each provider has a specific pattern: Gemini keys must be 39 characters starting with `AIzaSy`, OpenAI keys must start with `sk-` (48+ chars), and Anthropic keys must start with `sk-ant-api03-` (95+ chars). Invalid keys are rejected with a clear hint showing the expected format. Real-time validation feedback (amber warning) appears while typing.
+
+- **Model dropdown selector** — The AI Engine settings tab now uses a proper `<select>` dropdown for model selection instead of a list of individual buttons. The dropdown is dynamically populated from the server based on which API keys are configured, showing only models for the selected provider. Models are fetched from the `GET /api/synthesis` endpoint's new `models` field.
+
+- **Auto-provider detection on key save** — When a new API key is saved, the system automatically refreshes the server status and switches to that provider if not already selected, defaulting to the first available model. This eliminates the need to manually switch providers after entering a key.
+
+- **Key status in configuration summary** — The Active Configuration panel in Settings > AI Engine now shows the key status alongside provider and model, displaying "Configured" when a key is active.
+
+- **Server-side model catalog endpoint** — `GET /api/synthesis` now returns a `models` object containing per-provider model lists (only for providers with configured API keys) and `keyPatterns` with format hints for each provider. This enables the client to build dynamic model selectors without hardcoding provider-specific models.
+
+### Fixed
+
+- **Variable scope issue in synthesis POST handler** — The `action` and `provider` variables were declared with `const` inside the `try` block but referenced in the `catch` block for error logging, causing a TypeScript compilation error. Fixed by hoisting the declarations above the `try` block with `let` and assigning inside `try`.
+
+- **Stale Docker entrypoint fallback version** — `docker-entrypoint.sh` had a hardcoded fallback of `${BUILD_VERSION:-4.2.1}` (from an old release). Updated to `${BUILD_VERSION:-4.5.0}`.
+
+### Changed
+
+- **Version bumped to 4.5.0** across all 12 core files: `package.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `CHANGELOG.md`.
+
+- **Docker compose default removed hardcoded Gemini key** — The `GEMINI_API_KEY` environment variable in `docker-compose.yml` no longer defaults to a real API key. It defaults to empty, requiring the key to be configured at runtime.
+
+- **Settings panel refactored for dynamic model loading** — The `SettingsPanel.tsx` component now fetches the model catalog from the server instead of using a static `PROVIDERS` array. Provider metadata and model lists are dynamically sourced from the `GET /api/synthesis` response.
+
+---
+
 ## [4.4.4] - 2026-04-21
 
 ### Fixed
