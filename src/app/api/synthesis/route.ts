@@ -138,6 +138,8 @@ async function callGemini(systemPrompt: string, content: string, model: string, 
 
 // ── Router ────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  let action = 'unknown';
+  let provider = '';
   try {
     // Daily limit reset
     const today = new Date().toDateString();
@@ -153,12 +155,13 @@ export async function POST(request: NextRequest) {
 
     // Parse body — accept optional provider/model overrides from client
     const body = await request.json();
-    const { content, action, provider: clientProvider, model: clientModel } = body as {
+    const { content, action: bodyAction, provider: clientProvider, model: clientModel } = body as {
       content: string;
       action: string;
       provider?: string;
       model?: string;
     };
+    action = bodyAction;
 
     if (!content || !action) {
       return NextResponse.json({ error: 'Missing required fields: content, action' }, { status: 400 });
@@ -175,7 +178,7 @@ export async function POST(request: NextRequest) {
     // 1. Client override (from settings) takes priority
     // 2. Fall back to env var AI_PROVIDER
     // 3. Fall back to checking which API keys are configured
-    const provider = clientProvider || process.env.AI_PROVIDER || detectProvider();
+    provider = clientProvider || process.env.AI_PROVIDER || detectProvider();
     const temperature = parseFloat(process.env.AI_SYNTHESIS_TEMPERATURE || '0.7');
     const maxTokens = parseInt(process.env.AI_SYNTHESIS_MAX_TOKENS || '4096', 10);
 
