@@ -1,4 +1,4 @@
-# WSH v4.4.4 — File Tracker
+# WSH v4.5.0 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this release.
 
@@ -8,10 +8,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.4.4 |
-| **Release Date** | 2026-04-21 |
-| **Previous Version** | 4.4.3 |
-| **Release Type** | Hotfix (Docker build fails silently — npm install error hidden by pipe + yanked dependency) |
+| **Version** | 4.5.0 |
+| **Release Date** | 2026-04-28 |
+| **Previous Version** | 4.4.4 |
+| **Release Type** | Update & Patch Manager overhaul, security fixes, version bump |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
 | **Branch** | `main` |
 
