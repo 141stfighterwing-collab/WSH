@@ -115,7 +115,7 @@ export default function QuickReferences() {
 
   // ── Load refs from localStorage on mount ───────────────────
   useEffect(() => {
-    setRefs(loadRefs());
+    queueMicrotask(() => setRefs(loadRefs()));
   }, []);
 
   // ── Persist refs to localStorage whenever they change ─────
@@ -246,7 +246,7 @@ export default function QuickReferences() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">
-          ⚡ Quick References
+          Quick References
         </span>
         <button
           onClick={(e) => handleAdd(e)}
@@ -267,7 +267,7 @@ export default function QuickReferences() {
           return (
             <div
               key={ref.id}
-              className="bg-secondary/50 rounded-xl border border-border/50 overflow-hidden transition-all duration-200 hover:border-pri-500/30"
+              className="wsh-soft-surface overflow-hidden rounded-lg transition-all duration-200 hover:border-amber-300/35"
             >
               {/* ── Header row ──────────────────────────────── */}
               <button

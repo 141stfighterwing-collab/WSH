@@ -1,4 +1,4 @@
-# WSH v4.5.0 — File Tracker
+# WSH v4.5.4 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this release.
 
@@ -8,12 +8,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.5.0 |
-| **Release Date** | 2026-04-28 |
-| **Previous Version** | 4.4.4 |
-| **Release Type** | Update & Patch Manager overhaul, security fixes, version bump |
+| **Version** | 4.5.4 |
+| **Release Date** | 2026-05-19 |
+| **Previous Version** | 4.5.3 |
+| **Release Type** | Quick References insertion, editor draft autosave, Docker version bump |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
-| **Branch** | `main` |
+| **Branch** | `TST-DEV` |
 
 ---
 
@@ -23,35 +23,36 @@
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 1 | `Dockerfile` | ~8 | **Fix** | Removed `| tail` pipes that hid npm install errors; version bump |
-| 2 | `docker-entrypoint.sh` | ~4 | **Fix** | Fixed prisma CLI path from `node /app/node_modules/prisma/build/index.js` to `./node_modules/.bin/prisma`; version bump |
-| 3 | `package-lock.json` | Regenerated | **Fix** | Removed yanked `react-devtools-inline@4.4.1` dep; resolves to 4.4.0 |
+| 1 | `src/components/wsh/NoteEditor.tsx` | ~120 | **Change** | Added Quick Reference insertion listener and draft autosave/restore |
+| 2 | `src/components/wsh/QuickReferences.tsx` | Existing | **Verify** | Add/edit/delete localStorage template behavior preserved |
 
-### Version Bump (14 files)
+### Version Bump
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 4 | `package.json` | 1 | **Version** | `"version": "4.4.3"` → `"4.4.4"` |
-| 5 | `Dockerfile` | 2 | **Version** | `ARG BUILD_VERSION=4.4.3` → `4.4.4` (both stages) |
-| 6 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag |
-| 7 | `docker-entrypoint.sh` | 1 | **Version** | Header version reference |
-| 8 | `install.sh` | ~5 | **Version** | Script header, banner, image tags |
-| 9 | `install.ps1` | ~5 | **Version** | Script header, banner, image tags |
-| 10 | `update.sh` | 2 | **Version** | Script header + banner |
-| 11 | `update.ps1` | 2 | **Version** | Script header + banner |
-| 12 | `test-env.sh` | 2 | **Version** | Script header + banner |
-| 13 | `test-env.ps1` | 2 | **Version** | Script header + banner |
-| 14 | `src/app/api/health/route.ts` | 1 | **Version** | `version: '4.4.3'` → `version: '4.4.4'` |
-| 15 | `src/app/api/admin/system/route.ts` | 1 | **Version** | `version: '4.4.3'` → `version: '4.4.4'` |
-| 16 | `README.md` | ~5 | **Version** | Title, image tags, API example version references |
+| 3 | `package.json` | 1 | **Version** | `4.5.3` -> `4.5.4` |
+| 4 | `package-lock.json` | 2 | **Version** | Root package metadata updated to `4.5.4` |
+| 5 | `Dockerfile` | 3 | **Version** | Build args and header updated to `4.5.4` |
+| 6 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag updated to `weavenote:4.5.4` |
+| 7 | `docker-entrypoint.sh` | 2 | **Version** | Entrypoint banner fallback updated |
+| 8 | `install.sh` | ~4 | **Version** | Banner, manifest, and image tags updated |
+| 9 | `install.ps1` | ~4 | **Version** | Banner, manifest, and image tags updated |
+| 10 | `update.sh` | 2 | **Version** | Script header + banner updated |
+| 11 | `update.ps1` | ~18 | **Version** | Script version, current version, fallback, and patch registry updated |
+| 12 | `test-env.sh` | 2 | **Version** | Script header + banner updated |
+| 13 | `test-env.ps1` | 2 | **Version** | Script header + banner updated |
+| 14 | `src/app/api/health/route.ts` | 1 | **Version** | fallback version updated to `4.5.4` |
+| 15 | `src/app/api/admin/system/route.ts` | 1 | **Version** | fallback version updated to `4.5.4` |
 
 ### Documentation
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 17 | `CHANGELOG.md` | +20 | **Prepend** | Added v4.4.4 hotfix release entry |
-| 18 | `CODING_CHANGES.md` | +70 | **Prepend** | New v4.4.4 section with three root cause fixes |
-| 19 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated to v4.4.4 with new file inventory |
+| 16 | `README.md` | ~12 | **Docs** | Added Quick References and draft safety docs |
+| 17 | `CHANGELOG.md` | +18 | **Prepend** | Added v4.5.4 release entry |
+| 18 | `CODING_CHANGES.md` | +35 | **Prepend** | Added implementation notes for v4.5.4 |
+| 19 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated file inventory for v4.5.4 |
+| 20 | `worklog.md` | +1 section | **Append** | Added task log for Quick References and draft autosave |
 
 ---
 
@@ -59,21 +60,18 @@
 
 | # | File | Purpose |
 |---|------|---------|
-| — | *None* | This release only modified existing files |
+| None | N/A | No new files created in v4.5.4 |
 
 ---
 
 ## Verification Checklist
 
-- [x] `package-lock.json` regenerated (no yanked dependencies)
-- [x] Dockerfile has NO `| tail` pipes on `npm install` commands
-- [x] Dockerfile uses `./node_modules/.bin/prisma generate` (standard npm bin path)
-- [x] Dockerfile has self-healing fallback (`npm install prisma@^6` if binary missing)
-- [x] `docker-entrypoint.sh` uses `./node_modules/.bin/prisma` (not internal path)
-- [x] No `npx prisma` calls remain anywhere (prevents v7.x download)
-- [x] `package-lock.json` version matches `package.json` (both 4.4.4)
-- [x] Build passes locally (3 iterations, all clean)
-- [x] Version string consistent across all 14 core files
+- [x] Quick References add/edit/delete behavior remains wired
+- [x] Quick Reference Use inserts into the editor and starts a draft
+- [x] Editor draft autosaves every five seconds and restores after reload
+- [x] README current header updated to `v4.5.4`
+- [x] Docker image tag updated to `weavenote:4.5.4`
+- [x] Health/system fallback versions updated to `4.5.4`
 - [x] CHANGELOG.md follows Keep a Changelog format
 
 ---
@@ -82,6 +80,6 @@
 
 | Iteration | Result | Time | Notes |
 |-----------|--------|------|-------|
-| 1 | ✅ PASS | ~6s | Compiled successfully, all routes generated |
-| 2 | ✅ PASS | ~6s | Compiled successfully, all routes generated |
-| 3 | ✅ PASS | ~6s | Compiled successfully, all routes generated |
+| 1 | PASS | ~11s | Targeted ESLint passed for `NoteEditor` and `QuickReferences` |
+| 2 | PASS | Static | Verified README has no stale `4.5.0` current-version reference |
+| 3 | BLOCKED | Existing repo issue | Full production build compiles frontend, then fails in existing `/api/admin/users/extract-text` due missing native `DOMMatrix`/canvas binding on local Windows |

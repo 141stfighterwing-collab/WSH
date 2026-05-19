@@ -1,3 +1,128 @@
+# WSH v4.5.4 — Coding Changes
+
+## Overview
+v4.5.4 completes the Quick References workflow and adds draft autosave protection for unsaved editor work.
+
+## 1. Quick References to Editor
+
+**Files:** `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/NoteEditor.tsx`
+
+### What Changed
+- `QuickReferences` continues to support add, edit, delete, delete confirmation, and localStorage persistence.
+- `NoteEditor` now listens for the existing `wsh:use-quick-ref` event.
+- Clicking **Use** sets the editor title to the template name, sets the matching note type, converts simple markdown-style template text into editor HTML for rich-text note types, and focuses the writing area.
+- The inserted template is immediately written as an editor draft.
+
+## 2. Draft Autosave
+
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### What Changed
+- Added a local draft record stored as `wsh-editor-draft`.
+- Drafts autosave every five seconds, when the page is hidden, and before unload.
+- Drafts restore after reload when the editor is otherwise empty.
+- Successful database save and editor clear remove the local draft.
+
+## 3. Version and Documentation
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
+
+### What Changed
+- Version bumped to `4.5.4`.
+- Docker build arg and compose image tag now use `weavenote:4.5.4`.
+- README documents Quick References insertion and draft autosave.
+- Update patch registry now includes the v4.5.4 release.
+
+---
+
+# WSH v4.5.3 — Coding Changes
+
+## Overview
+v4.5.3 modernizes the WSH workspace interface while keeping the original behavior intact. The update refreshes the visual shell, navigation, sidebars, note editor, note cards, and documentation/version metadata.
+
+## 1. Workspace Interface Refresh
+
+**Files:** `src/app/globals.css`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`, `src/components/wsh/LeftSidebar.tsx`, `src/components/wsh/RightSidebar.tsx`, `src/components/wsh/Calendar.tsx`, `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/Folders.tsx`, `src/components/wsh/NoteEditor.tsx`, `src/components/wsh/NotesGrid.tsx`
+
+### What Changed
+- Added shared workspace surface classes for the app shell, top bar, panels, and accent buttons.
+- Refreshed the top navigation with labeled Grid, Dashboard, and Focus controls while keeping existing Map, Notebook, Analytics, DB Test, Admin, Search, Login, and Settings actions.
+- Updated sidebar, calendar, quick reference, folder, right-rail, editor, and note-card styling for a cleaner modern layout.
+- Preserved the existing store actions, note editing/saving, search, calendar filtering, drag/drop, todo, project, login, DB test, admin, analytics, dashboard, mind map, and trash behavior.
+
+## 2. Version and Documentation
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
+
+### What Changed
+- Version bumped to `4.5.3`.
+- Docker build arg and compose image tag now use `weavenote:4.5.3`.
+- README now documents the modern workspace interface and current version.
+- Update patch registry now includes the v4.5.3 interface modernization release.
+
+---
+
+# WSH v4.5.2 — Coding Changes
+
+## Overview
+v4.5.2 refines the WSH Keeps Dashboard by removing the simulated realtime signal and replacing it with stable analytics, additional stats, and more useful graphs.
+
+## 1. Dashboard Analytics Redesign
+
+**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
+
+### What Changed
+- Removed the interval-driven realtime pulse chart.
+- Added a 30-day activity area chart for created Keeps, updated Keeps, and new word volume.
+- Added a type mix donut chart, content composition bar chart, folder distribution chart, review age chart, and weekday pattern chart.
+- Expanded KPI cards to include total Keeps, total words, link coverage, Keep Health, seven-day creates, seven-day updates, estimated reading time, and AI usage.
+- Added largest Keep, document/project counts, top tags, and recent update panels.
+
+## 2. Version and Docker Metadata
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`
+
+### What Changed
+- Version bumped to `4.5.2`.
+- Docker build arg and compose image tag now use `weavenote:4.5.2`.
+- Health and system endpoints fall back to `4.5.2` when build metadata is unavailable.
+
+---
+
+# WSH v4.5.1 — Coding Changes
+
+## Overview
+v4.5.1 adds the WSH Keeps Realtime Dashboard as a native workspace view and updates version metadata for the Docker deployment.
+
+## 1. WSH Keeps Realtime Dashboard
+
+**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
+
+### What Changed
+- Added a full dashboard view with live KPI cards, realtime line graph, 14-day Keeps trend chart, category load analytics, top tags, synthesis usage, and recently updated Keeps.
+- Dashboard metrics are derived from existing Zustand state: `notes`, `folders`, `aiUsageCount`, and `isSyncing`.
+- No database migration or API contract change is required.
+
+## 2. Dashboard View Mode
+
+**Files:** `src/store/wshStore.ts`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`
+
+### What Changed
+- Extended `ViewMode` with `dashboard`.
+- Added a dashboard header toggle using Lucide `LayoutDashboard`.
+- Updated the main page to render the dashboard instead of the editor/grid when dashboard mode is active.
+
+## 3. Version and Docker Metadata
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`
+
+### What Changed
+- Version bumped to `4.5.1`.
+- Docker build arg and compose image tag now use `weavenote:4.5.1`.
+- Health and system endpoints fall back to `4.5.1` when build metadata is unavailable.
+
+---
+
 # WSH v4.5.0 — Coding Changes
 
 ## Overview

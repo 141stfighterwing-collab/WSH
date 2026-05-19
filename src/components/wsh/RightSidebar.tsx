@@ -85,7 +85,7 @@ function LiveClock() {
   });
 
   return (
-    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
+    <div className="wsh-surface rounded-lg p-3">
       <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
         <Clock className="w-3.5 h-3.5 text-pri-400" />
         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -113,9 +113,8 @@ function TodoChecklist() {
 
   // Load todos from localStorage on mount
   useEffect(() => {
-    setTodos(loadTodos());
+    queueMicrotask(() => setTodos(loadTodos()));
   }, []);
-
   // Persist on change
   useEffect(() => {
     saveTodos(todos);
@@ -174,7 +173,7 @@ function TodoChecklist() {
   const completedCount = todos.filter((t) => t.completed).length;
 
   return (
-    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
+    <div className="wsh-surface rounded-lg p-3">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
         <div className="flex items-center gap-2">
@@ -341,7 +340,7 @@ function ProjectsSection() {
   };
 
   return (
-    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
+    <div className="wsh-surface rounded-lg p-3">
       <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
         <div className="flex items-center gap-2">
           <Briefcase className="w-3.5 h-3.5 text-pink-400" />
@@ -363,7 +362,7 @@ function ProjectsSection() {
             <button
               key={project.id}
               onClick={() => handleProjectClick(project)}
-              className="w-full text-left bg-secondary/30 rounded-xl p-3 border border-border/30 hover:border-pink-500/30 hover:bg-secondary/50 transition-all duration-200 active:scale-[0.99] group"
+              className="w-full text-left bg-secondary/30 rounded-lg p-3 border border-border/30 hover:border-pink-500/30 hover:bg-secondary/50 transition-all duration-200 active:scale-[0.99] group"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-semibold text-foreground truncate group-hover:text-pink-400 transition-colors">
@@ -466,7 +465,7 @@ function TodaySection() {
   };
 
   return (
-    <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
+    <div className="wsh-surface rounded-lg p-3">
       <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
@@ -488,7 +487,7 @@ function TodaySection() {
             <button
               key={item.id}
               onClick={() => handleNoteClick(item)}
-              className="w-full text-left flex items-start gap-2 p-2.5 rounded-xl hover:bg-secondary/50 transition-colors group active:scale-[0.99]"
+              className="w-full text-left flex items-start gap-2 p-2.5 rounded-lg hover:bg-secondary/50 transition-colors group active:scale-[0.99]"
             >
               <Zap className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${typeColors[item.type] || 'text-muted-foreground'}`} />
               <div className="flex-1 min-w-0">

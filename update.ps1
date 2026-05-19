@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.0
+#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.4
 # ============================================================================
 #  Maintains: README.md, CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md
 #  Handles:   Patching from v1.0.1+ to current, Docker rebuild, validation
@@ -31,7 +31,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # ============================================================================
 #  CONFIGURATION
 # ============================================================================
-$SCRIPT_VERSION = "4.5.0"
+$SCRIPT_VERSION = "4.5.4"
 $REPO_OWNER    = "141stfighterwing-collab"
 $REPO_NAME     = "WSH"
 $GIT_REMOTE    = "https://github.com/$REPO_OWNER/$REPO_NAME.git"
@@ -40,7 +40,7 @@ $API_BASE      = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME"
 
 # Version constants -- patching starts at 1.0.1
 $MIN_PATCH_VERSION = [version]"1.0.1"
-$CURRENT_VERSION   = [version]"4.5.0"
+$CURRENT_VERSION   = [version]"4.5.4"
 
 # Core files that get version-bumped (14 files)
 $VERSION_FILES = @(
@@ -94,6 +94,7 @@ $TRACKED_CATEGORIES = @{
         "src/components/wsh/TrashModal.tsx",
         "src/components/wsh/SettingsPanel.tsx",
         "src/components/wsh/AnalyticsPanel.tsx",
+        "src/components/wsh/WSHKeepsDashboard.tsx",
         "src/components/wsh/AdminPanel.tsx",
         "src/components/wsh/DBViewer.tsx",
         "src/components/wsh/LoginWidget.tsx",
@@ -288,7 +289,7 @@ function Get-LatestGitHubVersion {
 function Get-PatchRegistry {
     <#
     .SYNOPSIS
-    Returns the complete registry of all patches from v1.0.1 to v4.5.0.
+    Returns the complete registry of all patches from v1.0.1 to v4.5.4.
     Each patch entry contains: version, date, type, description, affectedFiles.
     #>
 
@@ -744,6 +745,66 @@ function Get-PatchRegistry {
                 "Automated FILE_TRACKER.md generation"
             )
         }
+
+        # -- v4.5.1 Series ------------------------------------------------
+        @{
+            Version = "4.5.1"
+            Date    = "2026-05-18"
+            Type    = "Patch"
+            Description = "WSH Keeps realtime dashboard, analytics, and Docker version metadata"
+            AffectedFiles = @("src/components/wsh/WSHKeepsDashboard.tsx", "src/components/wsh/Header.tsx", "src/app/page.tsx", "src/store/wshStore.ts", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", $VERSION_FILES)
+            Changes = @(
+                "Added native Dashboard workspace view",
+                "Added realtime line graph and 14-day Keeps trend chart",
+                "Added KPI cards, top tags, category load, and Hot Keeps analytics",
+                "Bumped Docker image metadata to weavenote:4.5.1"
+            )
+        }
+
+        # -- v4.5.2 Series ------------------------------------------------
+        @{
+            Version = "4.5.2"
+            Date    = "2026-05-19"
+            Type    = "Patch"
+            Description = "Dashboard analytics refinement with simulated realtime pulse removed"
+            AffectedFiles = @("src/components/wsh/WSHKeepsDashboard.tsx", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", "worklog.md", $VERSION_FILES)
+            Changes = @(
+                "Removed interval-driven realtime dashboard pulse",
+                "Added 30-day activity chart, type mix donut, content composition, folder distribution, review age, weekday pattern, top tags, and recent updates",
+                "Expanded dashboard KPI cards",
+                "Bumped Docker image metadata to weavenote:4.5.2"
+            )
+        }
+
+        # -- v4.5.3 Series ------------------------------------------------
+        @{
+            Version = "4.5.3"
+            Date    = "2026-05-19"
+            Type    = "Patch"
+            Description = "Interface modernization and README/version refresh"
+            AffectedFiles = @("src/app/globals.css", "src/app/page.tsx", "src/components/wsh/Header.tsx", "src/components/wsh/LeftSidebar.tsx", "src/components/wsh/RightSidebar.tsx", "src/components/wsh/Calendar.tsx", "src/components/wsh/QuickReferences.tsx", "src/components/wsh/Folders.tsx", "src/components/wsh/NoteEditor.tsx", "src/components/wsh/NotesGrid.tsx", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", $VERSION_FILES)
+            Changes = @(
+                "Modernized the app shell, top navigation, sidebars, editor surface, note cards, and sidebar panels",
+                "Kept existing note, folder, search, DB test, admin, login, analytics, dashboard, and drag/drop behavior intact",
+                "Refreshed README and release documentation so GitHub displays the current version",
+                "Bumped Docker image metadata to weavenote:4.5.3"
+            )
+        }
+
+        # -- v4.5.4 Series ------------------------------------------------
+        @{
+            Version = "4.5.4"
+            Date    = "2026-05-19"
+            Type    = "Patch"
+            Description = "Quick References insertion and editor draft autosave"
+            AffectedFiles = @("src/components/wsh/NoteEditor.tsx", "src/components/wsh/QuickReferences.tsx", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", "worklog.md", $VERSION_FILES)
+            Changes = @(
+                "Quick Reference Use now loads the template into the editor and sets the matching note type",
+                "Quick References remain add/edit/delete capable through localStorage persistence",
+                "Added editor draft autosave every five seconds with restore on reload",
+                "Bumped Docker image metadata to weavenote:4.5.4"
+            )
+        }
     )
 
     return $patches
@@ -766,7 +827,7 @@ function New-README {
     #>
 
     $currentVer = Get-CurrentVersion
-    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.0" }
+    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.4" }
 
     $readme = @"
 # WSH - WeaveNote Self Hosted

@@ -13,6 +13,7 @@ import SettingsPanel from '@/components/wsh/SettingsPanel';
 import AnalyticsPanel from '@/components/wsh/AnalyticsPanel';
 import AdminPanel from '@/components/wsh/AdminPanel';
 import MindMap from '@/components/wsh/MindMap';
+import WSHKeepsDashboard from '@/components/wsh/WSHKeepsDashboard';
 import TrashModal from '@/components/wsh/TrashModal';
 import NotebookView from '@/components/wsh/NotebookView';
 import NoteDetailModal from '@/components/wsh/NoteDetailModal';
@@ -168,7 +169,7 @@ export default function Home() {
   }, [user.isLoggedIn, user.token, notes.length, syncFromServer]);
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden wsh-app-shell">
       <Header />
 
       <div className="flex flex-1 min-h-0">
@@ -180,12 +181,18 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto min-w-0">
           {user.isLoggedIn ? (
-            <div className="px-2 py-2 md:px-4 md:py-3">
-              {/* Editor */}
-              <NoteEditor />
+            <div className="wsh-main-frame">
+              {viewMode === 'dashboard' ? (
+                <WSHKeepsDashboard />
+              ) : (
+                <>
+                  {/* Editor */}
+                  <NoteEditor />
 
-              {/* Notes Grid (hidden in focus mode) */}
-              {viewMode === 'grid' && <NotesGrid />}
+                  {/* Notes Grid (hidden in focus mode) */}
+                  {viewMode === 'grid' && <NotesGrid />}
+                </>
+              )}
             </div>
           ) : (
             <LockedOverlay />

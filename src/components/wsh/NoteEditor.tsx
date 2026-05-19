@@ -58,6 +58,43 @@ const synthesisModes: { mode: SynthesisMode; label: string; icon: React.ReactNod
   { mode: 'outline', label: 'Create Outline', icon: <ListTree className="w-3 h-3" /> },
 ];
 
+const EDITOR_DRAFT_KEY = 'wsh-editor-draft';
+const DRAFT_AUTOSAVE_MS = 5000;
+const VALID_NOTE_TYPES = new Set<NoteType>(NOTE_TYPES.map((item) => item.type));
+
+interface EditorDraft {
+  title: string;
+  content: string;
+  rawContent: string;
+  tags: string[];
+  type: NoteType;
+  activeNoteId: string | null;
+  updatedAt: string;
+}
+
+interface QuickReferenceDetail {
+  name?: string;
+  content?: string;
+  type?: string;
+}
+
+function textToEditorHtml(text: string): string {
+  return sanitizeHTML(
+    text
+      .split(/\n{2,}/)
+      .map((block) => {
+        const lines = block.split('\n').map((line) => line.trimEnd());
+        const joined = lines.join('<br>');
+        if (joined.startsWith('### ')) return `<h3>${joined.slice(4)}</h3>`;
+        if (joined.startsWith('## ')) return `<h2>${joined.slice(3)}</h2>`;
+        if (joined.startsWith('# ')) return `<h1>${joined.slice(2)}</h1>`;
+        return `<p>${joined || '<br>'}</p>`;
+      })
+      .join('')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  );
+}
+
 export default function NoteEditor() {
   const {
     activeNoteType,
@@ -84,6 +121,8 @@ export default function NoteEditor() {
   const synthesisMenuRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftHydratedRef = useRef(false);
+  const lastDraftSavedRef = useRef('');
   const [tagInput, setTagInput] = useState('');
   const [engineStatus, setEngineStatus] = useState('Intelligence Idle');
   const [saveStatus, setSaveStatus] = useState('');
@@ -98,6 +137,59 @@ export default function NoteEditor() {
   const [imageUrl, setImageUrl] = useState('');
   const attachFileRef = useRef<HTMLInputElement>(null);
 
+  const hasDraftableContent = useCallback(() => {
+    const rawText = editorRef.current?.innerText || '';
+    return Boolean(
+      activeNoteId ||
+      editorTitle.trim() ||
+      rawText.trim() ||
+      editorContent.replace(/<[^>]*>/g, '').trim() ||
+      editorTags.length > 0
+    );
+  }, [activeNoteId, editorTitle, editorContent, editorTags.length]);
+
+  const persistDraft = useCallback((showStatus = false) => {
+    if (typeof window === 'undefined' || !draftHydratedRef.current) return;
+
+    if (!hasDraftableContent()) {
+      localStorage.removeItem(EDITOR_DRAFT_KEY);
+      lastDraftSavedRef.current = '';
+      return;
+    }
+
+    const rawContent = editorRef.current?.innerText || '';
+    const draft: EditorDraft = {
+      title: editorTitle,
+      content: editorContent,
+      rawContent,
+      tags: editorTags,
+      type: activeNoteType,
+      activeNoteId,
+      updatedAt: new Date().toISOString(),
+    };
+    const serialized = JSON.stringify(draft);
+    if (serialized === lastDraftSavedRef.current) return;
+
+    try {
+      localStorage.setItem(EDITOR_DRAFT_KEY, serialized);
+      lastDraftSavedRef.current = serialized;
+      if (showStatus && !saveStatus) {
+        setSaveStatus('Draft saved');
+        if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1200);
+      }
+    } catch {
+      // localStorage may be disabled or full.
+    }
+  }, [activeNoteId, activeNoteType, editorContent, editorTags, editorTitle, hasDraftableContent, saveStatus]);
+
+  const clearDraft = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(EDITOR_DRAFT_KEY);
+    }
+    lastDraftSavedRef.current = '';
+  }, []);
+
   // Sync content from active note (sanitized)
   useEffect(() => {
     if (editorRef.current) {
@@ -107,6 +199,132 @@ export default function NoteEditor() {
       }
     }
   }, [activeNoteId]);
+
+  // Restore the last unsaved editor draft once the editor has mounted.
+  useEffect(() => {
+    if (draftHydratedRef.current || typeof window === 'undefined') return;
+    draftHydratedRef.current = true;
+
+    const rawDraft = localStorage.getItem(EDITOR_DRAFT_KEY);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as Partial<EditorDraft>;
+      const hasExistingEditorState = Boolean(
+        activeNoteId ||
+        editorTitle.trim() ||
+        editorContent.replace(/<[^>]*>/g, '').trim() ||
+        editorTags.length > 0
+      );
+      if (hasExistingEditorState) return;
+
+      const draftType = draft.type && VALID_NOTE_TYPES.has(draft.type) ? draft.type : 'quick';
+      queueMicrotask(() => {
+        setActiveNoteId(draft.activeNoteId || null);
+        setActiveNoteType(draftType);
+        setEditorTitle(draft.title || '');
+        setEditorContent(draft.content || '');
+        setEditorRawContent(draft.rawContent || '');
+        setEditorTags(Array.isArray(draft.tags) ? draft.tags : []);
+        if (editorRef.current && (draftType === 'quick' || draftType === 'notebook' || draftType === 'deep')) {
+          editorRef.current.innerHTML = sanitizeHTML(draft.content || '');
+        }
+        setSaveStatus('Draft restored');
+        clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1800);
+      });
+    } catch {
+      localStorage.removeItem(EDITOR_DRAFT_KEY);
+    }
+  }, [
+    activeNoteId,
+    editorContent,
+    editorTags.length,
+    editorTitle,
+    setActiveNoteId,
+    setActiveNoteType,
+    setEditorContent,
+    setEditorRawContent,
+    setEditorTags,
+    setEditorTitle,
+  ]);
+
+  // Autosave drafts at a steady interval, plus once when the page is hidden.
+  useEffect(() => {
+    const interval = setInterval(() => persistDraft(true), DRAFT_AUTOSAVE_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistDraft(false);
+    };
+    const handleBeforeUnload = () => persistDraft(false);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      persistDraft(false);
+    };
+  }, [persistDraft]);
+
+  // Quick References inject into the active editor through this event.
+  useEffect(() => {
+    const handleQuickReference = (event: Event) => {
+      const detail = (event as CustomEvent<QuickReferenceDetail>).detail;
+      if (!detail?.content) return;
+
+      const type = detail.type && VALID_NOTE_TYPES.has(detail.type as NoteType)
+        ? detail.type as NoteType
+        : 'quick';
+      const html = type === 'quick' || type === 'notebook' || type === 'deep'
+        ? textToEditorHtml(detail.content)
+        : detail.content;
+
+      setActiveNoteId(null);
+      setActiveNoteType(type);
+      setEditorTitle(detail.name || '');
+      setEditorContent(html);
+      setEditorRawContent(detail.content);
+      setEditorTags([]);
+
+      if (editorRef.current && (type === 'quick' || type === 'notebook' || type === 'deep')) {
+        editorRef.current.innerHTML = html;
+        editorRef.current.focus();
+      }
+
+      try {
+        const draft: EditorDraft = {
+          title: detail.name || '',
+          content: html,
+          rawContent: detail.content,
+          tags: [],
+          type,
+          activeNoteId: null,
+          updatedAt: new Date().toISOString(),
+        };
+        const serialized = JSON.stringify(draft);
+        localStorage.setItem(EDITOR_DRAFT_KEY, serialized);
+        lastDraftSavedRef.current = serialized;
+      } catch {
+        // localStorage may be disabled or full.
+      }
+
+      setSaveStatus('Draft from Quick Reference');
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1800);
+    };
+
+    window.addEventListener('wsh:use-quick-ref', handleQuickReference);
+    return () => window.removeEventListener('wsh:use-quick-ref', handleQuickReference);
+  }, [
+    persistDraft,
+    setActiveNoteId,
+    setActiveNoteType,
+    setEditorContent,
+    setEditorRawContent,
+    setEditorTags,
+    setEditorTitle,
+  ]);
 
   // Close synthesis menu on outside click
   useEffect(() => {
@@ -329,6 +547,7 @@ export default function NoteEditor() {
           return;
         }
       }
+      clearDraft();
       setSaveStatus('Saved ✓');
       clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1500);
     } catch {
@@ -348,6 +567,7 @@ export default function NoteEditor() {
     if (editorRef.current) {
       editorRef.current.innerHTML = '';
     }
+    clearDraft();
   };
 
   const handleSynthesis = async () => {
@@ -479,17 +699,17 @@ export default function NoteEditor() {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-2xl ring-4 ring-black/5 overflow-hidden transition-theme">
+    <div className="wsh-surface overflow-hidden rounded-lg transition-theme">
       {/* Note Type Tabs */}
-      <div className="flex gap-1 p-2 bg-secondary/30 overflow-x-auto">
+      <div className="flex gap-1 overflow-x-auto border-b border-border/50 bg-secondary/35 p-2">
         {NOTE_TYPES.map(({ type, label }) => (
           <button
             key={type}
             onClick={() => setActiveNoteType(type)}
-            className={`py-2 px-3 text-[10px] font-black rounded-xl min-w-[85px] uppercase tracking-widest whitespace-nowrap transition-all duration-200 active:scale-95 ${
+            className={`min-w-[85px] whitespace-nowrap rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-200 active:scale-95 ${
               activeNoteType === type
-                ? 'bg-pri-600 text-white shadow-lg'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                ? 'wsh-accent-button'
+                : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground'
             }`}
           >
             {label}
@@ -504,7 +724,7 @@ export default function NoteEditor() {
           value={editorTitle}
           onChange={(e) => setEditorTitle(e.target.value)}
           placeholder="Title of this Idea block..."
-          className="w-full bg-transparent font-bold text-lg text-foreground placeholder:text-muted-foreground/40 focus:outline-none border-b border-transparent focus:border-pri-500/30 pb-2 transition-colors"
+          className="w-full border-b border-transparent bg-transparent pb-2 text-xl font-bold text-foreground transition-colors placeholder:text-muted-foreground/35 focus:border-amber-300/35 focus:outline-none"
         />
       </div>
 
@@ -819,7 +1039,7 @@ export default function NoteEditor() {
             contentEditable
             onInput={handleContentInput}
             data-placeholder="Start writing your thoughts..."
-            className="min-h-[450px] h-[450px] max-h-[600px] overflow-y-auto bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 text-sm text-foreground leading-relaxed editor-inner focus:ring-2 focus:ring-pri-500/20 transition-all duration-200 resize-y"
+            className="h-[450px] min-h-[450px] max-h-[600px] resize-y overflow-y-auto rounded-lg border border-border/45 bg-background/35 p-4 text-sm leading-relaxed text-foreground transition-all duration-200 editor-inner focus:ring-2 focus:ring-amber-300/20"
             style={{ minHeight: '300px' }}
           />
         </div>
@@ -830,7 +1050,7 @@ export default function NoteEditor() {
       <div className="px-3 pb-2">
         <div
           onClick={() => tagInputRef.current?.focus()}
-          className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-800/30 rounded-xl px-3 py-2 min-h-[48px] border border-transparent focus-within:border-pri-500/30 transition-colors cursor-text"
+          className="flex min-h-[48px] cursor-text flex-wrap items-center gap-1.5 rounded-lg border border-border/45 bg-background/35 px-3 py-2 transition-colors focus-within:border-amber-300/35"
         >
           {editorTags.map((tag) => (
             <span
@@ -864,7 +1084,7 @@ export default function NoteEditor() {
 
       {/* Status Bar — hidden for AI Prompts tab */}
       {activeNoteType !== 'ai-prompts' && (
-      <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-t border-border/30">
+      <div className="flex items-center justify-between border-t border-border/40 bg-secondary/35 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-muted-foreground">
             Engine: {engineStatus}
@@ -889,7 +1109,7 @@ export default function NoteEditor() {
             <button
               onClick={() => setShowSynthesisMenu(!showSynthesisMenu)}
               disabled={synthesisLoading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg disabled:opacity-50"
+              className="wsh-accent-button flex items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
             >
               {synthesisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               Synthesis

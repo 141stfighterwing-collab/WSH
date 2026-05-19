@@ -62,7 +62,7 @@ export default function Folders() {
   const isDragActive = dragOverFolderId !== null;
 
   const folderBtnClass = (isActive: boolean, isOver: boolean) =>
-    `w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 active:scale-[0.99] ${
+    `w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 active:scale-[0.99] ${
       isActive
         ? 'bg-pri-600/15 text-pri-400 border border-pri-500/30'
         : isOver && isDragActive
@@ -74,7 +74,7 @@ export default function Folders() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">
-          🗂️ Folders
+          Folders
           {isDragActive && (
             <span className="ml-1 text-pri-400 animate-pulse text-[9px] normal-case tracking-normal"> — drop to move</span>
           )}

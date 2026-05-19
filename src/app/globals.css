@@ -283,36 +283,36 @@ body.theme-hyperblue {
 
 /* ========== DARK MODE SYSTEM ========== */
 .dark {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
-  --card: #1e293b;
-  --card-foreground: #e2e8f0;
-  --popover: #1e293b;
-  --popover-foreground: #e2e8f0;
+  --background: #080a18;
+  --foreground: #f4f1ff;
+  --card: #18182b;
+  --card-foreground: #f4f1ff;
+  --popover: #1b1b30;
+  --popover-foreground: #f4f1ff;
   --primary: var(--pri-600);
   --primary-foreground: #ffffff;
-  --secondary: #334155;
-  --secondary-foreground: #e2e8f0;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #334155;
-  --accent-foreground: #e2e8f0;
+  --secondary: #24243b;
+  --secondary-foreground: #f4f1ff;
+  --muted: #17172a;
+  --muted-foreground: #aaa4c5;
+  --accent: #2e2b47;
+  --accent-foreground: #fff5e9;
   --destructive: #ef4444;
-  --border: #334155;
-  --input: #334155;
+  --border: #2d2d46;
+  --input: #2b2b43;
   --ring: var(--pri-500);
   --chart-1: var(--pri-500);
   --chart-2: #06b6d4;
   --chart-3: #f59e0b;
   --chart-4: #10b981;
   --chart-5: #ef4444;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #e2e8f0;
+  --sidebar: #0c0d20;
+  --sidebar-foreground: #f4f1ff;
   --sidebar-primary: var(--pri-600);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #e2e8f0;
-  --sidebar-border: #334155;
+  --sidebar-accent: #1a1a30;
+  --sidebar-accent-foreground: #f4f1ff;
+  --sidebar-border: #24243b;
   --sidebar-ring: var(--pri-500);
 }
 
@@ -358,6 +358,8 @@ body.theme-hyperblue {
   }
   body {
     @apply bg-background text-foreground transition-colors duration-300;
+    background:
+      linear-gradient(180deg, #080a18 0%, #0d0d22 44%, #080a18 100%);
   }
 }
 
@@ -481,8 +483,8 @@ body.theme-hyperblue {
 /* ========== GLASS MORPHISM ========== */
 .glass {
   backdrop-filter: blur(12px);
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  background: rgba(13, 13, 33, 0.84);
+  border: 1px solid rgba(255, 202, 151, 0.08);
 }
 
 :root:not(.dark) .glass {
@@ -496,27 +498,65 @@ body.theme-hyperblue {
 .wsh-left-sidebar { display: none; }
 .wsh-right-sidebar { display: none; }
 
+.wsh-app-shell {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 82%, #1c1838 18%) 0%, var(--background) 100%);
+}
+
+.wsh-topbar {
+  height: 4.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, #ffbc7c 22%);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.26);
+}
+
+.wsh-main-frame {
+  padding: 1rem;
+}
+
+.wsh-surface {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, #ffbc7c 22%);
+  background: color-mix(in srgb, var(--card) 88%, #242238 12%);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+}
+
+.wsh-soft-surface {
+  border: 1px solid color-mix(in srgb, var(--border) 72%, #8bd3ff 28%);
+  background: color-mix(in srgb, var(--secondary) 72%, transparent 28%);
+}
+
+.wsh-accent-button {
+  background: linear-gradient(135deg, #ffb45c 0%, #ff8f3d 100%);
+  color: #21140b;
+  box-shadow: 0 12px 28px rgba(255, 143, 61, 0.24);
+}
+
+.wsh-accent-button:hover {
+  filter: brightness(1.05);
+}
+
 @media (min-width: 1024px) {
   .wsh-left-sidebar {
     display: flex;
     flex-direction: column;
-    width: 16rem;
-    min-width: 16rem;
+    width: 18.5rem;
+    min-width: 18.5rem;
     flex-shrink: 0;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid color-mix(in srgb, var(--border) 80%, #ffbc7c 20%);
+    background: color-mix(in srgb, var(--sidebar) 90%, transparent 10%);
     overflow-y: auto;
-    max-height: calc(100vh - 4rem - 3rem);
+    max-height: calc(100vh - 4.5rem - 3rem);
   }
   .wsh-right-sidebar {
     display: flex;
     flex-direction: column;
-    width: 18rem;
+    width: 20rem;
     flex-shrink: 0;
-    border-left: 1px solid var(--border);
+    border-left: 1px solid color-mix(in srgb, var(--border) 80%, #ffbc7c 20%);
+    background: color-mix(in srgb, var(--sidebar) 90%, transparent 10%);
     overflow-y: auto;
-    max-height: calc(100vh - 4rem - 3rem);
-    padding: 0.75rem;
-    gap: 0.75rem;
+    max-height: calc(100vh - 4.5rem - 3rem);
+    padding: 1rem;
+    gap: 1rem;
   }
 }
 
