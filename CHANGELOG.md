@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.4] - 2026-05-19
+
+### Added
+
+- **Quick Reference insertion** — The **Use** action now loads the selected template into the editor, sets the matching note type, fills the title, and starts a local draft.
+- **Editor draft autosave** — Unsaved editor work is saved to localStorage every five seconds, also on page hide/unload, and restored after reload so in-progress notes are not lost.
+
+### Changed
+
+- **Version bumped to 4.5.4** across package metadata, Docker build args, compose image tag, entrypoint banner, install/update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
+- Quick References add/edit/delete behavior remains localStorage-backed and now has an editor insertion path.
+
+### Technical
+
+- No database migration or API contract change is required.
+
+---
+
 ## [4.5.3] - 2026-05-19
 
 ### Changed

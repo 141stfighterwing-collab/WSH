@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.3
+#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.4
 # ============================================================================
 #  Maintains: README.md, CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md
 #  Handles:   Patching from v1.0.1+ to current, Docker rebuild, validation
@@ -31,7 +31,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # ============================================================================
 #  CONFIGURATION
 # ============================================================================
-$SCRIPT_VERSION = "4.5.3"
+$SCRIPT_VERSION = "4.5.4"
 $REPO_OWNER    = "141stfighterwing-collab"
 $REPO_NAME     = "WSH"
 $GIT_REMOTE    = "https://github.com/$REPO_OWNER/$REPO_NAME.git"
@@ -40,7 +40,7 @@ $API_BASE      = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME"
 
 # Version constants -- patching starts at 1.0.1
 $MIN_PATCH_VERSION = [version]"1.0.1"
-$CURRENT_VERSION   = [version]"4.5.3"
+$CURRENT_VERSION   = [version]"4.5.4"
 
 # Core files that get version-bumped (14 files)
 $VERSION_FILES = @(
@@ -289,7 +289,7 @@ function Get-LatestGitHubVersion {
 function Get-PatchRegistry {
     <#
     .SYNOPSIS
-    Returns the complete registry of all patches from v1.0.1 to v4.5.3.
+    Returns the complete registry of all patches from v1.0.1 to v4.5.4.
     Each patch entry contains: version, date, type, description, affectedFiles.
     #>
 
@@ -790,6 +790,21 @@ function Get-PatchRegistry {
                 "Bumped Docker image metadata to weavenote:4.5.3"
             )
         }
+
+        # -- v4.5.4 Series ------------------------------------------------
+        @{
+            Version = "4.5.4"
+            Date    = "2026-05-19"
+            Type    = "Patch"
+            Description = "Quick References insertion and editor draft autosave"
+            AffectedFiles = @("src/components/wsh/NoteEditor.tsx", "src/components/wsh/QuickReferences.tsx", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", "worklog.md", $VERSION_FILES)
+            Changes = @(
+                "Quick Reference Use now loads the template into the editor and sets the matching note type",
+                "Quick References remain add/edit/delete capable through localStorage persistence",
+                "Added editor draft autosave every five seconds with restore on reload",
+                "Bumped Docker image metadata to weavenote:4.5.4"
+            )
+        }
     )
 
     return $patches
@@ -812,7 +827,7 @@ function New-README {
     #>
 
     $currentVer = Get-CurrentVersion
-    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.3" }
+    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.4" }
 
     $readme = @"
 # WSH - WeaveNote Self Hosted

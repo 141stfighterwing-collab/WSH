@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v4.5.3
+# WSH — WeaveNote Self-Hosted v4.5.4
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -71,7 +71,16 @@ WSH now uses a refreshed dark workspace shell while keeping the original workflo
 - **Refined sidebars** — Calendar, quick references, folders, tags, time, todo, today's notes, and projects now use quieter structured panels
 - **Modern editor surface** — The note type tabs, title field, toolbar, writing canvas, tags, save, and synthesis controls have been visually refreshed without changing their behavior
 - **Updated note cards** — Notes retain drag/drop, detail view, trash, folder, type, and tag behavior with a cleaner card treatment
-- **Versioned patch release** — Current docs, scripts, health fallback, Docker metadata, and install/update references are aligned to `4.5.3`
+- **Versioned patch release** — Current docs, scripts, health fallback, Docker metadata, and install/update references are aligned to `4.5.4`
+
+### Quick References and Draft Safety
+
+Quick References are fully editable local templates for repeat note patterns. They are stored in the browser and can be added, edited, deleted, or sent straight into the current editor.
+
+- **Use inserts the template** — Clicking **Use** sets the matching note type, fills the title, and pastes the template body into the editor
+- **Add/Edit/Delete supported** — Template changes persist in localStorage across reloads
+- **Draft autosave** — Unsaved editor work is saved locally every five seconds and restored after a reload
+- **Save clears draft** — Once a note is successfully saved to the database, the local draft is cleared
 
 ### 📊 WSH Keeps Analytics Dashboard
 
@@ -482,7 +491,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:4.5.3`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:4.5.4`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -588,7 +597,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:4.5.3` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:4.5.4` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -600,7 +609,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:4.5.3`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:4.5.4`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -803,7 +812,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "4.5.3", "timestamp": "2026-05-19T12:00:00.000Z" }
+{ "status": "healthy", "version": "4.5.4", "timestamp": "2026-05-19T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`

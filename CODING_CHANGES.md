@@ -1,3 +1,40 @@
+# WSH v4.5.4 — Coding Changes
+
+## Overview
+v4.5.4 completes the Quick References workflow and adds draft autosave protection for unsaved editor work.
+
+## 1. Quick References to Editor
+
+**Files:** `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/NoteEditor.tsx`
+
+### What Changed
+- `QuickReferences` continues to support add, edit, delete, delete confirmation, and localStorage persistence.
+- `NoteEditor` now listens for the existing `wsh:use-quick-ref` event.
+- Clicking **Use** sets the editor title to the template name, sets the matching note type, converts simple markdown-style template text into editor HTML for rich-text note types, and focuses the writing area.
+- The inserted template is immediately written as an editor draft.
+
+## 2. Draft Autosave
+
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### What Changed
+- Added a local draft record stored as `wsh-editor-draft`.
+- Drafts autosave every five seconds, when the page is hidden, and before unload.
+- Drafts restore after reload when the editor is otherwise empty.
+- Successful database save and editor clear remove the local draft.
+
+## 3. Version and Documentation
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
+
+### What Changed
+- Version bumped to `4.5.4`.
+- Docker build arg and compose image tag now use `weavenote:4.5.4`.
+- README documents Quick References insertion and draft autosave.
+- Update patch registry now includes the v4.5.4 release.
+
+---
+
 # WSH v4.5.3 — Coding Changes
 
 ## Overview

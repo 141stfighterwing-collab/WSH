@@ -1,4 +1,16 @@
 ---
+## Task ID: 7 - Quick References and Draft Autosave
+### Work Task
+Ensure Quick References can be added, edited, deleted, and used directly in the editor, and add draft autosave so unsaved note work is protected.
+
+### Work Summary
+- Connected the existing `wsh:use-quick-ref` event to `NoteEditor`.
+- Clicking **Use** now sets the note type, fills the title, inserts the template content into the active editor, focuses the writing area, and stores the result as a draft.
+- Added editor draft autosave every five seconds, plus page hide/unload saves and restore-on-reload behavior.
+- Drafts are cleared after successful note save or explicit editor clear.
+- Bumped release metadata and Docker image references to v4.5.4.
+
+---
 ## Task ID: 6 - Interface Modernization and README Version Refresh
 ### Work Task
 Modernize the WeaveNote interface while preserving original functionality, and update GitHub-facing README/version metadata so the project no longer appears stale.

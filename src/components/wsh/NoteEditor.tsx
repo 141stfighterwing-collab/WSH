@@ -58,6 +58,43 @@ const synthesisModes: { mode: SynthesisMode; label: string; icon: React.ReactNod
   { mode: 'outline', label: 'Create Outline', icon: <ListTree className="w-3 h-3" /> },
 ];
 
+const EDITOR_DRAFT_KEY = 'wsh-editor-draft';
+const DRAFT_AUTOSAVE_MS = 5000;
+const VALID_NOTE_TYPES = new Set<NoteType>(NOTE_TYPES.map((item) => item.type));
+
+interface EditorDraft {
+  title: string;
+  content: string;
+  rawContent: string;
+  tags: string[];
+  type: NoteType;
+  activeNoteId: string | null;
+  updatedAt: string;
+}
+
+interface QuickReferenceDetail {
+  name?: string;
+  content?: string;
+  type?: string;
+}
+
+function textToEditorHtml(text: string): string {
+  return sanitizeHTML(
+    text
+      .split(/\n{2,}/)
+      .map((block) => {
+        const lines = block.split('\n').map((line) => line.trimEnd());
+        const joined = lines.join('<br>');
+        if (joined.startsWith('### ')) return `<h3>${joined.slice(4)}</h3>`;
+        if (joined.startsWith('## ')) return `<h2>${joined.slice(3)}</h2>`;
+        if (joined.startsWith('# ')) return `<h1>${joined.slice(2)}</h1>`;
+        return `<p>${joined || '<br>'}</p>`;
+      })
+      .join('')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  );
+}
+
 export default function NoteEditor() {
   const {
     activeNoteType,
@@ -84,6 +121,8 @@ export default function NoteEditor() {
   const synthesisMenuRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftHydratedRef = useRef(false);
+  const lastDraftSavedRef = useRef('');
   const [tagInput, setTagInput] = useState('');
   const [engineStatus, setEngineStatus] = useState('Intelligence Idle');
   const [saveStatus, setSaveStatus] = useState('');
@@ -98,6 +137,59 @@ export default function NoteEditor() {
   const [imageUrl, setImageUrl] = useState('');
   const attachFileRef = useRef<HTMLInputElement>(null);
 
+  const hasDraftableContent = useCallback(() => {
+    const rawText = editorRef.current?.innerText || '';
+    return Boolean(
+      activeNoteId ||
+      editorTitle.trim() ||
+      rawText.trim() ||
+      editorContent.replace(/<[^>]*>/g, '').trim() ||
+      editorTags.length > 0
+    );
+  }, [activeNoteId, editorTitle, editorContent, editorTags.length]);
+
+  const persistDraft = useCallback((showStatus = false) => {
+    if (typeof window === 'undefined' || !draftHydratedRef.current) return;
+
+    if (!hasDraftableContent()) {
+      localStorage.removeItem(EDITOR_DRAFT_KEY);
+      lastDraftSavedRef.current = '';
+      return;
+    }
+
+    const rawContent = editorRef.current?.innerText || '';
+    const draft: EditorDraft = {
+      title: editorTitle,
+      content: editorContent,
+      rawContent,
+      tags: editorTags,
+      type: activeNoteType,
+      activeNoteId,
+      updatedAt: new Date().toISOString(),
+    };
+    const serialized = JSON.stringify(draft);
+    if (serialized === lastDraftSavedRef.current) return;
+
+    try {
+      localStorage.setItem(EDITOR_DRAFT_KEY, serialized);
+      lastDraftSavedRef.current = serialized;
+      if (showStatus && !saveStatus) {
+        setSaveStatus('Draft saved');
+        if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1200);
+      }
+    } catch {
+      // localStorage may be disabled or full.
+    }
+  }, [activeNoteId, activeNoteType, editorContent, editorTags, editorTitle, hasDraftableContent, saveStatus]);
+
+  const clearDraft = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(EDITOR_DRAFT_KEY);
+    }
+    lastDraftSavedRef.current = '';
+  }, []);
+
   // Sync content from active note (sanitized)
   useEffect(() => {
     if (editorRef.current) {
@@ -107,6 +199,132 @@ export default function NoteEditor() {
       }
     }
   }, [activeNoteId]);
+
+  // Restore the last unsaved editor draft once the editor has mounted.
+  useEffect(() => {
+    if (draftHydratedRef.current || typeof window === 'undefined') return;
+    draftHydratedRef.current = true;
+
+    const rawDraft = localStorage.getItem(EDITOR_DRAFT_KEY);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as Partial<EditorDraft>;
+      const hasExistingEditorState = Boolean(
+        activeNoteId ||
+        editorTitle.trim() ||
+        editorContent.replace(/<[^>]*>/g, '').trim() ||
+        editorTags.length > 0
+      );
+      if (hasExistingEditorState) return;
+
+      const draftType = draft.type && VALID_NOTE_TYPES.has(draft.type) ? draft.type : 'quick';
+      queueMicrotask(() => {
+        setActiveNoteId(draft.activeNoteId || null);
+        setActiveNoteType(draftType);
+        setEditorTitle(draft.title || '');
+        setEditorContent(draft.content || '');
+        setEditorRawContent(draft.rawContent || '');
+        setEditorTags(Array.isArray(draft.tags) ? draft.tags : []);
+        if (editorRef.current && (draftType === 'quick' || draftType === 'notebook' || draftType === 'deep')) {
+          editorRef.current.innerHTML = sanitizeHTML(draft.content || '');
+        }
+        setSaveStatus('Draft restored');
+        clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1800);
+      });
+    } catch {
+      localStorage.removeItem(EDITOR_DRAFT_KEY);
+    }
+  }, [
+    activeNoteId,
+    editorContent,
+    editorTags.length,
+    editorTitle,
+    setActiveNoteId,
+    setActiveNoteType,
+    setEditorContent,
+    setEditorRawContent,
+    setEditorTags,
+    setEditorTitle,
+  ]);
+
+  // Autosave drafts at a steady interval, plus once when the page is hidden.
+  useEffect(() => {
+    const interval = setInterval(() => persistDraft(true), DRAFT_AUTOSAVE_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistDraft(false);
+    };
+    const handleBeforeUnload = () => persistDraft(false);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      persistDraft(false);
+    };
+  }, [persistDraft]);
+
+  // Quick References inject into the active editor through this event.
+  useEffect(() => {
+    const handleQuickReference = (event: Event) => {
+      const detail = (event as CustomEvent<QuickReferenceDetail>).detail;
+      if (!detail?.content) return;
+
+      const type = detail.type && VALID_NOTE_TYPES.has(detail.type as NoteType)
+        ? detail.type as NoteType
+        : 'quick';
+      const html = type === 'quick' || type === 'notebook' || type === 'deep'
+        ? textToEditorHtml(detail.content)
+        : detail.content;
+
+      setActiveNoteId(null);
+      setActiveNoteType(type);
+      setEditorTitle(detail.name || '');
+      setEditorContent(html);
+      setEditorRawContent(detail.content);
+      setEditorTags([]);
+
+      if (editorRef.current && (type === 'quick' || type === 'notebook' || type === 'deep')) {
+        editorRef.current.innerHTML = html;
+        editorRef.current.focus();
+      }
+
+      try {
+        const draft: EditorDraft = {
+          title: detail.name || '',
+          content: html,
+          rawContent: detail.content,
+          tags: [],
+          type,
+          activeNoteId: null,
+          updatedAt: new Date().toISOString(),
+        };
+        const serialized = JSON.stringify(draft);
+        localStorage.setItem(EDITOR_DRAFT_KEY, serialized);
+        lastDraftSavedRef.current = serialized;
+      } catch {
+        // localStorage may be disabled or full.
+      }
+
+      setSaveStatus('Draft from Quick Reference');
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1800);
+    };
+
+    window.addEventListener('wsh:use-quick-ref', handleQuickReference);
+    return () => window.removeEventListener('wsh:use-quick-ref', handleQuickReference);
+  }, [
+    persistDraft,
+    setActiveNoteId,
+    setActiveNoteType,
+    setEditorContent,
+    setEditorRawContent,
+    setEditorTags,
+    setEditorTitle,
+  ]);
 
   // Close synthesis menu on outside click
   useEffect(() => {
@@ -329,6 +547,7 @@ export default function NoteEditor() {
           return;
         }
       }
+      clearDraft();
       setSaveStatus('Saved ✓');
       clearTimerRef.current = setTimeout(() => setSaveStatus(''), 1500);
     } catch {
@@ -348,6 +567,7 @@ export default function NoteEditor() {
     if (editorRef.current) {
       editorRef.current.innerHTML = '';
     }
+    clearDraft();
   };
 
   const handleSynthesis = async () => {
