@@ -7,6 +7,7 @@ import {
   Settings,
   Grid3X3,
   Focus,
+  LayoutDashboard,
   LogIn,
   Shield,
   Network,
@@ -149,6 +150,17 @@ export default function Header() {
             }`}
           >
             <Grid3X3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('dashboard')}
+            className={`p-1.5 rounded-full transition-all duration-200 active:scale-95 ${
+              viewMode === 'dashboard'
+                ? 'bg-pri-600 text-white shadow-lg'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            }`}
+            title="WSH Keeps Dashboard"
+          >
+            <LayoutDashboard className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('focus')}

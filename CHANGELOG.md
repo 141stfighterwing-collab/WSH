@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.2] - 2026-05-19
+
+### Changed
+
+- **Dashboard no longer uses simulated realtime pulse data** — Removed the 2.5-second live signal chart and refreshed the Dashboard as a stable analytics surface.
+- **Richer dashboard analytics** — Added a 30-day activity chart, expanded KPI grid, type mix donut, content composition graph, folder distribution graph, review age chart, weekday pattern chart, top tags, largest Keep, document/project counters, and recent updates.
+- **Version bumped to 4.5.2** across package metadata, Docker build args, compose image tag, entrypoint banner, update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
+
+### Technical
+
+- Dashboard remains client-side and uses existing `notes`, `folders`, `aiUsageCount`, and `isSyncing` store state.
+- No database migration or new API route is required.
+
+---
+
+## [4.5.1] - 2026-05-18
+
+### Added
+
+- **WSH Keeps Realtime Dashboard** — Added a first-class Dashboard workspace view with live WSH Keeps telemetry, KPI cards, line graphs, 14-day creation/update trends, category load analytics, top tags, synthesis usage, and recently updated Keeps.
+- **Dashboard header toggle** — Added a dedicated dashboard icon beside the existing grid/focus controls so users can switch between editing, notes grid, focus mode, and analytics without opening a slide-over panel.
+
+### Changed
+
+- **Version bumped to 4.5.1** across the package metadata, Docker build args, compose image tag, entrypoint banner, update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
+
+### Technical
+
+- Uses the existing note, folder, tag, trash, and AI usage state from `useWSHStore`; no database migration or new API route is required.
+- Uses the existing `recharts` dependency for realtime line and area charts.
+
+---
+
 ## [4.5.0] - 2026-04-28
 
 ### Security
