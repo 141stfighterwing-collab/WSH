@@ -1,3 +1,30 @@
+# WSH v4.5.3 — Coding Changes
+
+## Overview
+v4.5.3 modernizes the WSH workspace interface while keeping the original behavior intact. The update refreshes the visual shell, navigation, sidebars, note editor, note cards, and documentation/version metadata.
+
+## 1. Workspace Interface Refresh
+
+**Files:** `src/app/globals.css`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`, `src/components/wsh/LeftSidebar.tsx`, `src/components/wsh/RightSidebar.tsx`, `src/components/wsh/Calendar.tsx`, `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/Folders.tsx`, `src/components/wsh/NoteEditor.tsx`, `src/components/wsh/NotesGrid.tsx`
+
+### What Changed
+- Added shared workspace surface classes for the app shell, top bar, panels, and accent buttons.
+- Refreshed the top navigation with labeled Grid, Dashboard, and Focus controls while keeping existing Map, Notebook, Analytics, DB Test, Admin, Search, Login, and Settings actions.
+- Updated sidebar, calendar, quick reference, folder, right-rail, editor, and note-card styling for a cleaner modern layout.
+- Preserved the existing store actions, note editing/saving, search, calendar filtering, drag/drop, todo, project, login, DB test, admin, analytics, dashboard, mind map, and trash behavior.
+
+## 2. Version and Documentation
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
+
+### What Changed
+- Version bumped to `4.5.3`.
+- Docker build arg and compose image tag now use `weavenote:4.5.3`.
+- README now documents the modern workspace interface and current version.
+- Update patch registry now includes the v4.5.3 interface modernization release.
+
+---
+
 # WSH v4.5.2 — Coding Changes
 
 ## Overview

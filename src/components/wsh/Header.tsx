@@ -133,44 +133,47 @@ export default function Header() {
     }
   };
 
+  const viewButtonClass = (active: boolean) =>
+    `flex items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-200 active:scale-95 ${
+      active
+        ? 'wsh-accent-button'
+        : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
+    }`;
+
+  const navButtonClass =
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95';
+
   return (
-    <header className="sticky top-0 z-50 h-20 glass border-b border-border">
-      <div className="flex items-center justify-between h-full px-4 gap-3">
+    <header className="sticky top-0 z-50 glass wsh-topbar">
+      <div className="flex h-full items-center justify-between gap-3 px-4">
         {/* Logo */}
         <Logo size={44} showText={true} />
 
         {/* View Toggles */}
-        <div className="hidden md:flex items-center bg-secondary rounded-full px-1 py-1 gap-0.5">
+        <div className="hidden items-center gap-1 rounded-lg border border-border/70 bg-secondary/45 p-1 md:flex">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-full transition-all duration-200 active:scale-95 ${
-              viewMode === 'grid'
-                ? 'bg-pri-600 text-white shadow-lg'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-            }`}
+            className={viewButtonClass(viewMode === 'grid')}
+            title="Grid view"
           >
             <Grid3X3 className="w-4 h-4" />
+            <span className="hidden xl:inline">Grid</span>
           </button>
           <button
             onClick={() => setViewMode('dashboard')}
-            className={`p-1.5 rounded-full transition-all duration-200 active:scale-95 ${
-              viewMode === 'dashboard'
-                ? 'bg-pri-600 text-white shadow-lg'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-            }`}
+            className={viewButtonClass(viewMode === 'dashboard')}
             title="WSH Keeps Dashboard"
           >
             <LayoutDashboard className="w-4 h-4" />
+            <span className="hidden xl:inline">Dashboard</span>
           </button>
           <button
             onClick={() => setViewMode('focus')}
-            className={`p-1.5 rounded-full transition-all duration-200 active:scale-95 ${
-              viewMode === 'focus'
-                ? 'bg-pri-600 text-white shadow-lg'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-            }`}
+            className={viewButtonClass(viewMode === 'focus')}
+            title="Focus view"
           >
             <Focus className="w-4 h-4" />
+            <span className="hidden xl:inline">Focus</span>
           </button>
         </div>
 
@@ -178,21 +181,21 @@ export default function Header() {
         <div className="hidden lg:flex items-center gap-1">
           <button
             onClick={() => setMindMapOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+            className={navButtonClass}
           >
             <Network className="w-3.5 h-3.5" />
             <span>Map</span>
           </button>
           <button
             onClick={() => setNotebookOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+            className={navButtonClass}
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Notebook</span>
           </button>
           <button
             onClick={() => setAnalyticsOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+            className={navButtonClass}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Analytics</span>
@@ -243,7 +246,7 @@ export default function Header() {
                 <button
                   onClick={handleDBTest}
                   disabled={dbTestResult.status === 'testing'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-cyan-300 transition-all duration-200 hover:bg-cyan-400/20 active:scale-95 disabled:opacity-50"
                   title="Test Database Read/Write"
                 >
                   {dbTestResult.status === 'testing' ? (
@@ -274,7 +277,7 @@ export default function Header() {
             {isAdmin && (
               <button
                 onClick={() => setAdminPanelOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 transition-all duration-200 active:scale-95"
+                className="flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition-all duration-200 hover:bg-amber-400/20 active:scale-95"
               >
                 <Shield className="w-3.5 h-3.5" />
                 <span>Admin</span>
@@ -284,7 +287,7 @@ export default function Header() {
         )}
 
         {/* Search */}
-        <div className="flex-1 max-w-xs mx-2">
+        <div className="mx-2 flex-1 max-w-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
@@ -292,7 +295,7 @@ export default function Header() {
               placeholder="Search notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-800/50 pl-9 pr-3 py-1.5 rounded-full text-sm border border-transparent focus:border-pri-500 focus:outline-none transition-colors duration-200 placeholder:text-muted-foreground"
+              className="w-full rounded-lg border border-border/60 bg-secondary/55 py-2 pl-9 pr-3 text-sm text-foreground transition-colors duration-200 placeholder:text-muted-foreground focus:border-amber-300/60 focus:outline-none"
             />
           </div>
         </div>
@@ -300,11 +303,11 @@ export default function Header() {
         {/* Login */}
         <button
           onClick={handleLoginClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95"
         >
           {mounted && user.isLoggedIn ? (
             <>
-              <div className="w-5 h-5 rounded-full bg-pri-600 flex items-center justify-center text-[9px] text-white font-bold">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-400 text-[9px] font-bold text-slate-950">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <span className="hidden sm:inline">{user.username}</span>
@@ -328,7 +331,7 @@ export default function Header() {
         {/* Settings */}
         <button
           onClick={() => setSettingsOpen(true)}
-          className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 active:scale-95"
+          className="rounded-lg p-2 text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95"
         >
           <Settings className="w-4 h-4" />
         </button>

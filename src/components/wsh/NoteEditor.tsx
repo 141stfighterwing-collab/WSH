@@ -479,17 +479,17 @@ export default function NoteEditor() {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-2xl ring-4 ring-black/5 overflow-hidden transition-theme">
+    <div className="wsh-surface overflow-hidden rounded-lg transition-theme">
       {/* Note Type Tabs */}
-      <div className="flex gap-1 p-2 bg-secondary/30 overflow-x-auto">
+      <div className="flex gap-1 overflow-x-auto border-b border-border/50 bg-secondary/35 p-2">
         {NOTE_TYPES.map(({ type, label }) => (
           <button
             key={type}
             onClick={() => setActiveNoteType(type)}
-            className={`py-2 px-3 text-[10px] font-black rounded-xl min-w-[85px] uppercase tracking-widest whitespace-nowrap transition-all duration-200 active:scale-95 ${
+            className={`min-w-[85px] whitespace-nowrap rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-200 active:scale-95 ${
               activeNoteType === type
-                ? 'bg-pri-600 text-white shadow-lg'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                ? 'wsh-accent-button'
+                : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground'
             }`}
           >
             {label}
@@ -504,7 +504,7 @@ export default function NoteEditor() {
           value={editorTitle}
           onChange={(e) => setEditorTitle(e.target.value)}
           placeholder="Title of this Idea block..."
-          className="w-full bg-transparent font-bold text-lg text-foreground placeholder:text-muted-foreground/40 focus:outline-none border-b border-transparent focus:border-pri-500/30 pb-2 transition-colors"
+          className="w-full border-b border-transparent bg-transparent pb-2 text-xl font-bold text-foreground transition-colors placeholder:text-muted-foreground/35 focus:border-amber-300/35 focus:outline-none"
         />
       </div>
 
@@ -819,7 +819,7 @@ export default function NoteEditor() {
             contentEditable
             onInput={handleContentInput}
             data-placeholder="Start writing your thoughts..."
-            className="min-h-[450px] h-[450px] max-h-[600px] overflow-y-auto bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 text-sm text-foreground leading-relaxed editor-inner focus:ring-2 focus:ring-pri-500/20 transition-all duration-200 resize-y"
+            className="h-[450px] min-h-[450px] max-h-[600px] resize-y overflow-y-auto rounded-lg border border-border/45 bg-background/35 p-4 text-sm leading-relaxed text-foreground transition-all duration-200 editor-inner focus:ring-2 focus:ring-amber-300/20"
             style={{ minHeight: '300px' }}
           />
         </div>
@@ -830,7 +830,7 @@ export default function NoteEditor() {
       <div className="px-3 pb-2">
         <div
           onClick={() => tagInputRef.current?.focus()}
-          className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-800/30 rounded-xl px-3 py-2 min-h-[48px] border border-transparent focus-within:border-pri-500/30 transition-colors cursor-text"
+          className="flex min-h-[48px] cursor-text flex-wrap items-center gap-1.5 rounded-lg border border-border/45 bg-background/35 px-3 py-2 transition-colors focus-within:border-amber-300/35"
         >
           {editorTags.map((tag) => (
             <span
@@ -864,7 +864,7 @@ export default function NoteEditor() {
 
       {/* Status Bar — hidden for AI Prompts tab */}
       {activeNoteType !== 'ai-prompts' && (
-      <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-t border-border/30">
+      <div className="flex items-center justify-between border-t border-border/40 bg-secondary/35 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-muted-foreground">
             Engine: {engineStatus}
@@ -889,7 +889,7 @@ export default function NoteEditor() {
             <button
               onClick={() => setShowSynthesisMenu(!showSynthesisMenu)}
               disabled={synthesisLoading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-lg disabled:opacity-50"
+              className="wsh-accent-button flex items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
             >
               {synthesisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               Synthesis

@@ -32,7 +32,7 @@ export default function Calendar() {
   const { days, monthName } = useMemo(() => {
     const dim = new Date(year, month + 1, 0).getDate();
     const fdm = new Date(year, month, 1).getDay();
-    const mn = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const mn = new Date(year, month, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
     const result: (number | null)[] = [];
     for (let i = 0; i < fdm; i++) result.push(null);
     for (let i = 1; i <= dim; i++) result.push(i);
@@ -94,7 +94,7 @@ export default function Calendar() {
   const isSelected = (day: number) => calendarDateFilter === toDateStr(day);
 
   return (
-    <div className="space-y-2">
+    <div className="wsh-surface rounded-lg p-3">
       {/* Active date filter indicator */}
       {calendarDateFilter && (
         <div className="flex items-center justify-between bg-pri-500/10 border border-pri-500/20 rounded-lg px-2 py-1.5 animate-fadeIn">
@@ -115,8 +115,8 @@ export default function Calendar() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-muted-foreground">{monthName}</span>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[11px] font-black uppercase tracking-widest text-amber-200">{monthName}</span>
         <div className="flex gap-0.5">
           <button
             onClick={prevMonth}

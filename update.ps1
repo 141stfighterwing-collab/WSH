@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.2
+#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.3
 # ============================================================================
 #  Maintains: README.md, CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md
 #  Handles:   Patching from v1.0.1+ to current, Docker rebuild, validation
@@ -31,7 +31,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # ============================================================================
 #  CONFIGURATION
 # ============================================================================
-$SCRIPT_VERSION = "4.5.2"
+$SCRIPT_VERSION = "4.5.3"
 $REPO_OWNER    = "141stfighterwing-collab"
 $REPO_NAME     = "WSH"
 $GIT_REMOTE    = "https://github.com/$REPO_OWNER/$REPO_NAME.git"
@@ -40,7 +40,7 @@ $API_BASE      = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME"
 
 # Version constants -- patching starts at 1.0.1
 $MIN_PATCH_VERSION = [version]"1.0.1"
-$CURRENT_VERSION   = [version]"4.5.2"
+$CURRENT_VERSION   = [version]"4.5.3"
 
 # Core files that get version-bumped (14 files)
 $VERSION_FILES = @(
@@ -289,7 +289,7 @@ function Get-LatestGitHubVersion {
 function Get-PatchRegistry {
     <#
     .SYNOPSIS
-    Returns the complete registry of all patches from v1.0.1 to v4.5.2.
+    Returns the complete registry of all patches from v1.0.1 to v4.5.3.
     Each patch entry contains: version, date, type, description, affectedFiles.
     #>
 
@@ -775,6 +775,21 @@ function Get-PatchRegistry {
                 "Bumped Docker image metadata to weavenote:4.5.2"
             )
         }
+
+        # -- v4.5.3 Series ------------------------------------------------
+        @{
+            Version = "4.5.3"
+            Date    = "2026-05-19"
+            Type    = "Patch"
+            Description = "Interface modernization and README/version refresh"
+            AffectedFiles = @("src/app/globals.css", "src/app/page.tsx", "src/components/wsh/Header.tsx", "src/components/wsh/LeftSidebar.tsx", "src/components/wsh/RightSidebar.tsx", "src/components/wsh/Calendar.tsx", "src/components/wsh/QuickReferences.tsx", "src/components/wsh/Folders.tsx", "src/components/wsh/NoteEditor.tsx", "src/components/wsh/NotesGrid.tsx", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", $VERSION_FILES)
+            Changes = @(
+                "Modernized the app shell, top navigation, sidebars, editor surface, note cards, and sidebar panels",
+                "Kept existing note, folder, search, DB test, admin, login, analytics, dashboard, and drag/drop behavior intact",
+                "Refreshed README and release documentation so GitHub displays the current version",
+                "Bumped Docker image metadata to weavenote:4.5.3"
+            )
+        }
     )
 
     return $patches
@@ -797,7 +812,7 @@ function New-README {
     #>
 
     $currentVer = Get-CurrentVersion
-    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.2" }
+    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.3" }
 
     $readme = @"
 # WSH - WeaveNote Self Hosted

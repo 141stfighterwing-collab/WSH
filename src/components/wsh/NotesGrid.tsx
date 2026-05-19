@@ -62,12 +62,12 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
       draggable
       onDragStart={onDragStart}
       onClick={onClick}
-      className={`bg-card rounded-2xl border p-4 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:ring-pri-500/20 transition-all duration-300 group relative ${
+      className={`wsh-surface group relative cursor-pointer rounded-lg p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300/35 hover:shadow-xl ${
         note.type === 'project'
-          ? 'border-l-4 border-l-pink-500 border-t-border/50 border-r-border/50 border-b-border/50'
+          ? 'border-l-4 border-l-pink-500'
           : note.type === 'document'
-          ? 'border-l-4 border-l-cyan-500 border-t-border/50 border-r-border/50 border-b-border/50'
-          : 'border-border/50'
+          ? 'border-l-4 border-l-cyan-500'
+          : ''
       }`}
     >
       {/* Drag handle */}
@@ -81,14 +81,14 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
       >
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="p-1 rounded-full bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+          className="rounded-lg bg-secondary/80 p-1 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
         >
           <MoreVertical className="w-3.5 h-3.5" />
         </button>
 
         {/* Dropdown */}
         {menuOpen && (
-          <div className="absolute top-full right-0 mt-1 w-36 bg-card rounded-xl border border-border/50 shadow-xl py-1 animate-fadeIn z-20">
+          <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-border/50 bg-card py-1 shadow-xl animate-fadeIn">
             <button
               onClick={(e) => { e.stopPropagation(); onViewDetail(); setMenuOpen(false); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-bold text-foreground hover:bg-secondary/50 transition-colors"
@@ -110,13 +110,13 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
       {/* Header */}
       <div className="flex items-center justify-between mb-2 pr-6 pl-4">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || 'bg-secondary text-muted-foreground'}`}>
+          <div className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || 'bg-secondary text-muted-foreground'}`}>
             {typeIcons[note.type]}
             {note.type}
           </div>
           {/* Folder badge */}
           {note.folderId && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-pri-500/10 text-pri-400 border border-pri-500/20 whitespace-nowrap">
+            <span className="inline-flex items-center gap-0.5 rounded-lg border border-pri-500/20 bg-pri-500/10 px-1.5 py-0.5 text-[8px] font-bold text-pri-400 whitespace-nowrap">
               <Folder className="w-2 h-2" />
               {useWSHStore.getState().folders.find(f => f.id === note.folderId)?.name || 'Folder'}
             </span>
@@ -151,7 +151,7 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
           {note.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-pri-500/10 text-pri-400"
+              className="inline-flex items-center gap-0.5 rounded-md bg-pri-500/10 px-1.5 py-0.5 text-[9px] font-bold text-pri-400"
             >
               <Tag className="w-2 h-2" />
               {tag}
@@ -284,7 +284,7 @@ export default function NotesGrid() {
     <div className="space-y-4 mt-6">
       {/* Calendar date filter indicator */}
       {calendarDateFilter && (
-        <div className="flex items-center gap-2 bg-pri-500/10 border border-pri-500/20 rounded-xl px-3 py-2 animate-fadeIn">
+        <div className="flex items-center gap-2 rounded-lg border border-pri-500/20 bg-pri-500/10 px-3 py-2 animate-fadeIn">
           <div className="w-1.5 h-1.5 rounded-full bg-pri-400" />
           <span className="text-[10px] font-bold text-pri-400">
             Showing notes from{' '}
@@ -307,13 +307,13 @@ export default function NotesGrid() {
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">
           {calendarDateFilter
-            ? `📅 ${(() => {
+            ? `${(() => {
                 try {
                   return new Date(calendarDateFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 } catch { return calendarDateFilter; }
               })()}`
             : activeFolderId
-            ? `📁 ${folders.find((f) => f.id === activeFolderId)?.name || 'Folder'}`
+            ? `${folders.find((f) => f.id === activeFolderId)?.name || 'Folder'}`
             : activeNoteType
             ? `${activeNoteType.charAt(0).toUpperCase() + activeNoteType.slice(1)} Notes`
             : 'All Notes'}
@@ -379,7 +379,7 @@ export default function NotesGrid() {
           ))}
         </div>
       ) : (
-        <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center">
+        <div className="rounded-lg border-2 border-dashed border-border/50 p-12 text-center">
           <Plus className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground/60">
             {calendarDateFilter && searchQuery

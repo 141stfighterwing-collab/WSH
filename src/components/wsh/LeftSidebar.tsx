@@ -8,13 +8,13 @@ import Tags from './Tags';
 export default function LeftSidebar() {
   return (
     <aside className="wsh-left-sidebar">
-      <div className="p-3 space-y-4 flex-1">
+      <div className="flex-1 space-y-5 p-4">
         <Calendar />
-        <div className="border-t border-border/50 pt-4" />
+        <div className="border-t border-border/40" />
         <QuickReferences />
-        <div className="border-t border-border/50 pt-4" />
+        <div className="border-t border-border/40" />
         <Folders />
-        <div className="border-t border-border/50 pt-4" />
+        <div className="border-t border-border/40" />
         <Tags />
       </div>
     </aside>

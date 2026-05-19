@@ -169,7 +169,7 @@ export default function Home() {
   }, [user.isLoggedIn, user.token, notes.length, syncFromServer]);
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden wsh-app-shell">
       <Header />
 
       <div className="flex flex-1 min-h-0">
@@ -181,7 +181,7 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto min-w-0">
           {user.isLoggedIn ? (
-            <div className="px-2 py-2 md:px-4 md:py-3">
+            <div className="wsh-main-frame">
               {viewMode === 'dashboard' ? (
                 <WSHKeepsDashboard />
               ) : (

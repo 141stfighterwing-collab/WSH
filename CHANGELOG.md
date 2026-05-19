@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.3] - 2026-05-19
+
+### Changed
+
+- **Modernized workspace interface** — Refreshed the app shell, top navigation, sidebars, editor surface, note cards, and right-side panels while preserving the existing workflows and controls.
+- **README and version refresh** — Updated README, package metadata, Docker build args, compose image tag, entrypoint banner, install/update/test scripts, health fallback, system fallback, and documentation trackers to `4.5.3`.
+- **Safer branch-based update flow** — Keeps the interface work on `TST-DEV` for validation before merging to the current-user branch.
+
+### Technical
+
+- No database migration or API contract change is required.
+- Existing note save/update, search, folder drag/drop, login, DB test, admin, dashboard, analytics, mind map, and trash behaviors remain wired through the same store/actions.
+
+---
+
 ## [4.5.2] - 2026-05-19
 
 ### Changed
