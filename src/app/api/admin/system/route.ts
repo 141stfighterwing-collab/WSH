@@ -4,6 +4,9 @@ import { join } from 'path';
 import { addLog } from '@/lib/logger';
 
 const startTime = Date.now();
+let aiEngineStartTime = Date.now();
+let dbStartTime = Date.now();
+let updateStatusStartTime = Date.now();
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,6 +135,27 @@ export async function GET() {
     containerCreated = hostname || '';
   } catch { /* ignore */ }
 
+  // Service status checks
+  let dbStatus: 'healthy' | 'degraded' = 'healthy';
+  try {
+    const { db } = await import('@/lib/db');
+    await db.$queryRaw`SELECT 1`;
+  } catch {
+    dbStatus = 'degraded';
+    dbStartTime = Date.now();
+  }
+
+  const aiStatus: 'healthy' | 'degraded' = (
+    !!process.env.ANTHROPIC_API_KEY ||
+    !!process.env.OPENAI_API_KEY ||
+    !!process.env.GEMINI_API_KEY
+  ) ? 'healthy' : 'degraded';
+  if (aiStatus === 'degraded') aiEngineStartTime = Date.now();
+
+  const updateFlagPath = '/app/tmp/.update-requested';
+  const updateStatus: 'healthy' | 'pending' = existsSync(updateFlagPath) ? 'pending' : 'healthy';
+  if (updateStatus === 'pending') updateStatusStartTime = Date.now();
+
   return NextResponse.json({
     status: 'healthy',
     version,
@@ -162,6 +186,24 @@ export async function GET() {
     environment: process.env.NODE_ENV || 'development',
     dockerVersion,
     hostname: containerCreated,
+    services: {
+      app: { status: 'healthy', uptime: formatUptime(uptime), uptimeMs: uptime },
+      ai: {
+        status: aiStatus,
+        uptime: formatUptime(Date.now() - aiEngineStartTime),
+        uptimeMs: Date.now() - aiEngineStartTime,
+      },
+      database: {
+        status: dbStatus,
+        uptime: formatUptime(Date.now() - dbStartTime),
+        uptimeMs: Date.now() - dbStartTime,
+      },
+      update: {
+        status: updateStatus,
+        uptime: formatUptime(Date.now() - updateStatusStartTime),
+        uptimeMs: Date.now() - updateStatusStartTime,
+      },
+    },
   });
 }
 

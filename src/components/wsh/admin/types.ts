@@ -43,6 +43,12 @@ export interface SystemData {
   environment: string;
   dockerVersion?: string;
   hostname?: string;
+  services?: {
+    app: { status: string; uptime: string; uptimeMs: number };
+    ai: { status: string; uptime: string; uptimeMs: number };
+    database: { status: string; uptime: string; uptimeMs: number };
+    update: { status: string; uptime: string; uptimeMs: number };
+  };
 }
 
 export interface UserData {

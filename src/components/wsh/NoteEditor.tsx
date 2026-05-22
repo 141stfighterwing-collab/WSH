@@ -95,6 +95,40 @@ function textToEditorHtml(text: string): string {
   );
 }
 
+function generateTagsAlgorithm(content: string): string[] {
+  const stopwords = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'have', 'into', 'your', 'about', 'there', 'their', 'were', 'which', 'when', 'what', 'will', 'would', 'could', 'should', 'been', 'then', 'than', 'just', 'over', 'under', 'also', 'very']);
+  const words = content
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 4 && !stopwords.has(w));
+
+  const frequency = new Map<string, number>();
+  for (const w of words) frequency.set(w, (frequency.get(w) || 0) + 1);
+  return [...frequency.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([w]) => w);
+}
+
+function generateOutlineAlgorithm(content: string): string {
+  const lines = content.split('\n').map((line) => line.trim()).filter(Boolean);
+  const headings = lines.filter((line) => line.startsWith('#') || line.length > 48).slice(0, 10);
+  if (headings.length === 0) {
+    const sentences = content.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 8);
+    return ['# Outline', ...sentences.map((s, i) => `${i + 1}. ${s}`)].join('\n');
+  }
+
+  return [
+    '# Outline',
+    ...headings.map((line, i) => {
+      const clean = line.replace(/^#+\s*/, '');
+      return `${i + 1}. ${clean}`;
+    }),
+  ].join('\n');
+}
+
 export default function NoteEditor() {
   const {
     activeNoteType,
@@ -580,6 +614,39 @@ export default function NoteEditor() {
 
     setSynthesisLoading(true);
     setEngineStatus(`Processing ${synthesisMode}...`);
+
+    if (synthesisMode === 'tags') {
+      const tags = generateTagsAlgorithm(rawContent);
+      tags.forEach((tag) => addEditorTag(tag));
+      setEngineStatus('Tags Generated (algorithm)');
+      setShowSynthesisMenu(false);
+      setSynthesisLoading(false);
+      setTimeout(() => setEngineStatus('Intelligence Idle'), 3000);
+      return;
+    }
+
+    if (synthesisMode === 'outline') {
+      const outline = generateOutlineAlgorithm(rawContent);
+      const outlineHtml = outline
+        .split('\n')
+        .map((line: string) => {
+          if (line.startsWith('# ')) return `<h1 style="font-size:18px;font-weight:700;margin:8px 0 4px">${line.slice(2)}</h1>`;
+          if (line.match(/^\d+\. /)) return `<div style="padding-left:16px">${line}</div>`;
+          return `<p>${line}</p>`;
+        })
+        .join('');
+      if (editorRef.current) {
+        const safeOutline = sanitizeHTML(outlineHtml);
+        editorRef.current.innerHTML = safeOutline;
+        setEditorContent(safeOutline);
+        setEditorRawContent(outline);
+      }
+      setEngineStatus('Outline Created (algorithm)');
+      setShowSynthesisMenu(false);
+      setSynthesisLoading(false);
+      setTimeout(() => setEngineStatus('Intelligence Idle'), 3000);
+      return;
+    }
 
     // Read AI provider/model from localStorage
     let aiProvider = '';
