@@ -15,6 +15,7 @@ import {
   Cpu,
   Clock,
   Info,
+  Activity,
 } from 'lucide-react';
 import type { SystemData, EnvVolumeStatus } from './types';
 
@@ -143,6 +144,38 @@ export default function VersioningSection() {
           </div>
 
           {/* ── Runtime Info ────────────────────────────────────── */}
+          {systemData.services && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                <Activity className="w-3 h-3" /> Service Status
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[
+                  { label: 'App', item: systemData.services.app },
+                  { label: 'AI Engine', item: systemData.services.ai },
+                  { label: 'Database', item: systemData.services.database },
+                  { label: 'Update Status', item: systemData.services.update },
+                ].map(({ label, item }) => (
+                  <div key={label} className="p-2.5 bg-secondary/30 rounded-xl border border-border/30 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground">{label}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                        item.status === 'healthy'
+                          ? 'bg-green-500/15 text-green-400'
+                          : item.status === 'pending'
+                          ? 'bg-yellow-500/15 text-yellow-400'
+                          : 'bg-red-500/15 text-red-400'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-mono text-foreground">Uptime: {item.uptime}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <Clock className="w-3 h-3" /> Runtime
