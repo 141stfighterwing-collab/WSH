@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.10] - 2026-06-15
+
+### Fixed
+- **Quick References now load into the editor correctly** — The Quick References sidebar was dispatching a `wsh:use-quick-ref` event, but the note editor was not listening for it. The editor now handles that event, loads the selected reference title/content into the current editor, and sets the note type appropriately.
+
+### Cleanup
+- Removed an unused `isAdding` state path in `QuickReferences.tsx` while fixing the event wiring.
+
+### Changed
+- **Version bumped to 4.4.10** for the Quick References integration fix.
+
+---
+
 ## [4.4.9] - 2026-06-15
 
 ### Changed

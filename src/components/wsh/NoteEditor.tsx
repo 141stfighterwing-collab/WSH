@@ -118,6 +118,30 @@ export default function NoteEditor() {
     }
   }, [activeNoteId]);
 
+  useEffect(() => {
+    const handleQuickRef = (event: Event) => {
+      const customEvent = event as CustomEvent<{ name?: string; content?: string; type?: NoteType }>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+
+      setEditorTitle(detail.name || 'Quick Reference');
+      setEditorContent(detail.content || '');
+      setEditorRawContent((detail.content || '').replace(/<[^>]*>/g, ''));
+      setActiveNoteType((detail.type as NoteType) || 'quick');
+      setActiveNoteId(null);
+
+      if (editorRef.current) {
+        editorRef.current.innerHTML = sanitizeHTML(detail.content || '');
+      }
+
+      setEngineStatus('Quick reference loaded');
+      setTimeout(() => setEngineStatus('Intelligence Idle'), 2500);
+    };
+
+    window.addEventListener('wsh:use-quick-ref', handleQuickRef as EventListener);
+    return () => window.removeEventListener('wsh:use-quick-ref', handleQuickRef as EventListener);
+  }, [setActiveNoteId, setActiveNoteType, setEditorContent, setEditorRawContent, setEditorTitle]);
+
   // Close synthesis menu on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

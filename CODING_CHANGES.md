@@ -1,3 +1,62 @@
+# WSH v4.4.10 — Coding Changes
+
+## Overview
+v4.4.10 fixes the Quick References feature path so selecting a quick reference from the sidebar actually populates the note editor.
+
+## 1. NoteEditor.tsx — add Quick Reference event listener
+
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### Problem
+`QuickReferences.tsx` dispatched a browser event:
+- `wsh:use-quick-ref`
+
+But the note editor was not listening for that event, so clicking **Use** did nothing visible for the user.
+
+### Fix
+Added a `useEffect` listener in `NoteEditor.tsx` that:
+- listens for `wsh:use-quick-ref`
+- reads the selected reference payload
+- sets the editor title
+- sets the editor content
+- sets raw text content
+- sets the note type
+- clears the active note ID so it behaves like loading a fresh editor draft
+- shows a short status message confirming load
+
+### Effect
+Quick references now actually flow into the editor as intended.
+
+## 2. QuickReferences.tsx — small cleanup
+
+**File:** `src/components/wsh/QuickReferences.tsx`
+
+### Changed
+- removed unused `isAdding` state path left behind in the component
+
+## 3. Versioning / release trail
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- bumped version from `4.4.9` to `4.4.10`
+- added changelog entry for the Quick References fix
+- added this technical patch note entry
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/NoteEditor.tsx` | Added listener for quick-reference use events and editor population logic |
+| 2 | `src/components/wsh/QuickReferences.tsx` | Removed unused state path during fix |
+| 3 | `package.json` | Version bump to 4.4.10 |
+| 4 | `CHANGELOG.md` | Added 4.4.10 release notes |
+| 5 | `CODING_CHANGES.md` | Added technical record for the fix |
+
+---
+
 # WSH v4.4.9 — Coding Changes
 
 ## Overview

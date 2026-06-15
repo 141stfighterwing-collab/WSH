@@ -106,7 +106,6 @@ export default function QuickReferences() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
 
   // Edit form state
   const [editName, setEditName] = useState('');
@@ -115,7 +114,7 @@ export default function QuickReferences() {
 
   // ── Load refs from localStorage on mount ───────────────────
   useEffect(() => {
-    queueMicrotask(() => setRefs(loadRefs()));
+    setRefs(loadRefs());
   }, []);
 
   // ── Persist refs to localStorage whenever they change ─────
@@ -239,14 +238,13 @@ export default function QuickReferences() {
     setEditName(newRef.name);
     setEditDesc(newRef.description);
     setEditContent(newRef.content);
-    setIsAdding(true);
   }, []);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">
-          Quick References
+          ⚡ Quick References
         </span>
         <button
           onClick={(e) => handleAdd(e)}
@@ -267,7 +265,7 @@ export default function QuickReferences() {
           return (
             <div
               key={ref.id}
-              className="wsh-soft-surface overflow-hidden rounded-lg transition-all duration-200 hover:border-amber-300/35"
+              className="bg-secondary/50 rounded-xl border border-border/50 overflow-hidden transition-all duration-200 hover:border-pri-500/30"
             >
               {/* ── Header row ──────────────────────────────── */}
               <button
