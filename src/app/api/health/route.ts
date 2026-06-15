@@ -3,15 +3,9 @@ import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
 
 // Version from BUILD_VERSION env (set by Dockerfile at build time),
-// fallback to package.json, fallback to hardcoded.
+// fallback to the current release string.
 function getVersion(): string {
-  if (process.env.BUILD_VERSION) return process.env.BUILD_VERSION;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('../../../package.json');
-    if (pkg.version) return pkg.version;
-  } catch { /* ignore */ }
-  return '4.5.4';
+  return process.env.BUILD_VERSION || '4.4.9';
 }
 
 // GET /api/health — Database connectivity health check

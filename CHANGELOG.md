@@ -7,109 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [4.5.4] - 2026-05-19
+## [4.4.9] - 2026-06-15
+
+### Changed
+- **Image guardrails for notes** — Added a hard cap of **4 images per note** and a **5 MB maximum per image attachment** in the note editor flow to keep note payloads responsive and reduce runaway image-heavy saves.
+
+### UX
+- When a user exceeds the image limit or file-size limit, the editor now surfaces a clear status message instead of silently accepting oversized content.
+
+### Changed
+- **Version bumped to 4.4.9** for the note-image limit enforcement patch.
+
+---
+
+## [4.4.8] - 2026-06-15
 
 ### Added
-
-- **Quick Reference insertion** — The **Use** action now loads the selected template into the editor, sets the matching note type, fills the title, and starts a local draft.
-- **Editor draft autosave** — Unsaved editor work is saved to localStorage every five seconds, also on page hide/unload, and restored after reload so in-progress notes are not lost.
+- **Resizable images in notes** — Images inserted into notes now support an explicit initial width control for URL-based inserts and are rendered with resize-friendly styling so users can make images smaller or larger directly inside note content.
 
 ### Changed
-
-- **Version bumped to 4.5.4** across package metadata, Docker build args, compose image tag, entrypoint banner, install/update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
-- Quick References add/edit/delete behavior remains localStorage-backed and now has an editor insertion path.
-
-### Technical
-
-- No database migration or API contract change is required.
+- **Image attachments in notes are compressed client-side before insertion** — Large attached images are resized down to a saner maximum dimension and re-encoded before being embedded into note HTML, reducing note payload size and making note load/save/render faster.
+- **Version bumped to 4.4.8** for the image-handling performance and usability patch.
 
 ---
 
-## [4.5.3] - 2026-05-19
-
-### Changed
-
-- **Modernized workspace interface** — Refreshed the app shell, top navigation, sidebars, editor surface, note cards, and right-side panels while preserving the existing workflows and controls.
-- **README and version refresh** — Updated README, package metadata, Docker build args, compose image tag, entrypoint banner, install/update/test scripts, health fallback, system fallback, and documentation trackers to `4.5.3`.
-- **Safer branch-based update flow** — Keeps the interface work on `TST-DEV` for validation before merging to the current-user branch.
-
-### Technical
-
-- No database migration or API contract change is required.
-- Existing note save/update, search, folder drag/drop, login, DB test, admin, dashboard, analytics, mind map, and trash behaviors remain wired through the same store/actions.
-
----
-
-## [4.5.2] - 2026-05-19
-
-### Changed
-
-- **Dashboard no longer uses simulated realtime pulse data** — Removed the 2.5-second live signal chart and refreshed the Dashboard as a stable analytics surface.
-- **Richer dashboard analytics** — Added a 30-day activity chart, expanded KPI grid, type mix donut, content composition graph, folder distribution graph, review age chart, weekday pattern chart, top tags, largest Keep, document/project counters, and recent updates.
-- **Version bumped to 4.5.2** across package metadata, Docker build args, compose image tag, entrypoint banner, update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
-
-### Technical
-
-- Dashboard remains client-side and uses existing `notes`, `folders`, `aiUsageCount`, and `isSyncing` store state.
-- No database migration or new API route is required.
-
----
-
-## [4.5.1] - 2026-05-18
-
-### Added
-
-- **WSH Keeps Realtime Dashboard** — Added a first-class Dashboard workspace view with live WSH Keeps telemetry, KPI cards, line graphs, 14-day creation/update trends, category load analytics, top tags, synthesis usage, and recently updated Keeps.
-- **Dashboard header toggle** — Added a dedicated dashboard icon beside the existing grid/focus controls so users can switch between editing, notes grid, focus mode, and analytics without opening a slide-over panel.
-
-### Changed
-
-- **Version bumped to 4.5.1** across the package metadata, Docker build args, compose image tag, entrypoint banner, update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
-
-### Technical
-
-- Uses the existing note, folder, tag, trash, and AI usage state from `useWSHStore`; no database migration or new API route is required.
-- Uses the existing `recharts` dependency for realtime line and area charts.
-
----
-
-## [4.5.0] - 2026-04-28
+## [4.4.7] - 2026-06-15
 
 ### Security
-
-- **CRITICAL — Hardcoded Gemini API key removed from committed files** — A real Google Gemini API key (`AIzaSy...`) was found in `.env.example` (committed to the repo), `.env`, and `docker-compose.yml` (as a default value). The key has been removed from all three files and replaced with empty placeholders. All API keys must now be entered at runtime via Settings > AI Engine or ENV configuration.
-
-- **CRITICAL — Gemini API key exposed in URL query parameter** — The `callGemini()` function in `src/app/api/synthesis/route.ts` passed the API key as a URL query parameter (`?key=${apiKey}`). This exposed the key in server access logs, proxy logs, CDN logs, and browser history. Fixed by moving the key to the `x-goog-api-key` HTTP header, which is the Google-recommended authentication method and keeps the key out of URLs.
-
-### Added
-
-- **API key format validation** — Client-side validation now checks the format of API keys before saving them to the server. Each provider has a specific pattern: Gemini keys must be 39 characters starting with `AIzaSy`, OpenAI keys must start with `sk-` (48+ chars), and Anthropic keys must start with `sk-ant-api03-` (95+ chars). Invalid keys are rejected with a clear hint showing the expected format. Real-time validation feedback (amber warning) appears while typing.
-
-- **Model dropdown selector** — The AI Engine settings tab now uses a proper `<select>` dropdown for model selection instead of a list of individual buttons. The dropdown is dynamically populated from the server based on which API keys are configured, showing only models for the selected provider. Models are fetched from the `GET /api/synthesis` endpoint's new `models` field.
-
-- **Auto-provider detection on key save** — When a new API key is saved, the system automatically refreshes the server status and switches to that provider if not already selected, defaulting to the first available model. This eliminates the need to manually switch providers after entering a key.
-
-- **Key status in configuration summary** — The Active Configuration panel in Settings > AI Engine now shows the key status alongside provider and model, displaying "Configured" when a key is active.
-
-- **Server-side model catalog endpoint** — `GET /api/synthesis` now returns a `models` object containing per-provider model lists (only for providers with configured API keys) and `keyPatterns` with format hints for each provider. This enables the client to build dynamic model selectors without hardcoding provider-specific models.
-
-### Fixed
-
-- **Variable scope issue in synthesis POST handler** — The `action` and `provider` variables were declared with `const` inside the `try` block but referenced in the `catch` block for error logging, causing a TypeScript compilation error. Fixed by hoisting the declarations above the `try` block with `let` and assigning inside `try`.
-
-- **Stale Docker entrypoint fallback version** — `docker-entrypoint.sh` had a hardcoded fallback of `${BUILD_VERSION:-4.2.1}` (from an old release). Updated to `${BUILD_VERSION:-4.5.0}`.
+- **CRITICAL FIX — JWT runtime now refuses insecure fallback secrets** — `src/lib/auth.ts` no longer falls back to the hardcoded placeholder `change-me-in-production`. The app now throws immediately if `JWT_SECRET` is missing or still set to the default placeholder value, preventing accidental deployment with a forgeable session secret.
+- **CRITICAL FIX — Admin bootstrap seeding no longer falls back to `admin` / `admin123` defaults** — `docker-entrypoint.sh` now requires explicit `ADMIN_DEFAULT_USERNAME`, `ADMIN_DEFAULT_EMAIL`, and `ADMIN_DEFAULT_PASSWORD` values for first-run admin seeding when no admin exists. If no admin exists and the bootstrap variables are not fully set, the entrypoint refuses to seed an insecure default account.
 
 ### Changed
-
-- **Version bumped to 4.5.0** across all 12 core files: `package.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `CHANGELOG.md`.
-
-- **Docker compose default removed hardcoded Gemini key** — The `GEMINI_API_KEY` environment variable in `docker-compose.yml` no longer defaults to a real API key. It defaults to empty, requiring the key to be configured at runtime.
-
-- **Settings panel refactored for dynamic model loading** — The `SettingsPanel.tsx` component now fetches the model catalog from the server instead of using a static `PROVIDERS` array. Provider metadata and model lists are dynamically sourced from the `GET /api/synthesis` response.
+- **Bootstrap behavior tightened** — If an admin or super-admin already exists, the entrypoint now skips bootstrap seeding cleanly without depending on hardcoded default credentials.
+- **Version bumped to 4.4.7** for the first security-hardening patch in the WeaveNote public exposure remediation sequence.
 
 ---
 
-## [4.4.4] - 2026-04-21
+## [4.4.6] - 2026-06-12
+
+### Added
+- **Algorithmic synthesis for Generate Tags** — The `/api/synthesis` route now supports a deterministic local tag-generation pipeline that strips editor HTML, removes stop words, ranks repeated keywords, detects technical terms/acronyms, and returns 4–8 relevant hashtags as a JSON array without requiring an LLM backend.
+- **Algorithmic synthesis for Create Outline** — The `/api/synthesis` route now supports a deterministic local outline generator that scores sentences, extracts high-signal topics, and returns a structured markdown outline with `Overview`, `Key Topics`, and `Suggested Next Steps` sections when enough content is available.
+
+### Changed
+- **Hybrid synthesis architecture** — `tags` and `outline` now run as local algorithms and return `provider: local-algorithm` with `tokensUsed: 0`, while `summarize`, `expand`, and `improve` remain LLM-backed.
+- **Daily AI limit scope tightened** — The AI daily limit now applies only to LLM-backed synthesis actions, not local algorithmic actions.
+- **README updated** — Documented the hybrid synthesis behavior, local algorithm path, API response differences, and new version references.
+- **Version bumped to 4.4.6** across core files and deployment metadata.
+
+---
+
+## [4.4.6] - 2026-04-21
 
 ### Fixed
 - **CRITICAL FIX — Docker build fails silently (npm install error hidden by pipe)** — The Dockerfile piped `npm install` output through `tail -5` (`npm install 2>&1 | tail -5`). In shell, the exit code of a pipeline is the exit code of the LAST command, so when `npm install` failed (non-zero exit), `tail`'s success (exit 0) replaced it. The build continued with ZERO packages installed, causing every subsequent step to fail with confusing errors. Fixed by removing all `| tail` pipes on `npm install` commands so errors are visible and the build stops immediately on failure.
@@ -118,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Regenerated `package-lock.json`** — Old lock file had a yanked dependency version. Fresh generation resolves to valid versions.
-- **Version bumped to 4.4.4** across all core files.
+- **Version bumped to 4.4.6** across all core files.
 
 ---
 

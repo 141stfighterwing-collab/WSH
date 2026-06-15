@@ -1,264 +1,188 @@
-# WSH v4.5.4 — Coding Changes
+# WSH v4.4.9 — Coding Changes
 
 ## Overview
-v4.5.4 completes the Quick References workflow and adds draft autosave protection for unsaved editor work.
+v4.4.9 adds simple but important image guardrails for note content:
 
-## 1. Quick References to Editor
+1. **Maximum 4 images per note**
+2. **Maximum 5 MB per image attachment**
 
-**Files:** `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/NoteEditor.tsx`
+This keeps image-heavy notes from turning into giant payloads and provides predictable limits for performance.
 
-### What Changed
-- `QuickReferences` continues to support add, edit, delete, delete confirmation, and localStorage persistence.
-- `NoteEditor` now listens for the existing `wsh:use-quick-ref` event.
-- Clicking **Use** sets the editor title to the template name, sets the matching note type, converts simple markdown-style template text into editor HTML for rich-text note types, and focuses the writing area.
-- The inserted template is immediately written as an editor draft.
-
-## 2. Draft Autosave
+## 1. NoteEditor.tsx — image count and size enforcement
 
 **File:** `src/components/wsh/NoteEditor.tsx`
 
-### What Changed
-- Added a local draft record stored as `wsh-editor-draft`.
-- Drafts autosave every five seconds, when the page is hidden, and before unload.
-- Drafts restore after reload when the editor is otherwise empty.
-- Successful database save and editor clear remove the local draft.
-
-## 3. Version and Documentation
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
-
-### What Changed
-- Version bumped to `4.5.4`.
-- Docker build arg and compose image tag now use `weavenote:4.5.4`.
-- README documents Quick References insertion and draft autosave.
-- Update patch registry now includes the v4.5.4 release.
-
----
-
-# WSH v4.5.3 — Coding Changes
-
-## Overview
-v4.5.3 modernizes the WSH workspace interface while keeping the original behavior intact. The update refreshes the visual shell, navigation, sidebars, note editor, note cards, and documentation/version metadata.
-
-## 1. Workspace Interface Refresh
-
-**Files:** `src/app/globals.css`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`, `src/components/wsh/LeftSidebar.tsx`, `src/components/wsh/RightSidebar.tsx`, `src/components/wsh/Calendar.tsx`, `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/Folders.tsx`, `src/components/wsh/NoteEditor.tsx`, `src/components/wsh/NotesGrid.tsx`
-
-### What Changed
-- Added shared workspace surface classes for the app shell, top bar, panels, and accent buttons.
-- Refreshed the top navigation with labeled Grid, Dashboard, and Focus controls while keeping existing Map, Notebook, Analytics, DB Test, Admin, Search, Login, and Settings actions.
-- Updated sidebar, calendar, quick reference, folder, right-rail, editor, and note-card styling for a cleaner modern layout.
-- Preserved the existing store actions, note editing/saving, search, calendar filtering, drag/drop, todo, project, login, DB test, admin, analytics, dashboard, mind map, and trash behavior.
-
-## 2. Version and Documentation
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
-
-### What Changed
-- Version bumped to `4.5.3`.
-- Docker build arg and compose image tag now use `weavenote:4.5.3`.
-- README now documents the modern workspace interface and current version.
-- Update patch registry now includes the v4.5.3 interface modernization release.
-
----
-
-# WSH v4.5.2 — Coding Changes
-
-## Overview
-v4.5.2 refines the WSH Keeps Dashboard by removing the simulated realtime signal and replacing it with stable analytics, additional stats, and more useful graphs.
-
-## 1. Dashboard Analytics Redesign
-
-**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
-
-### What Changed
-- Removed the interval-driven realtime pulse chart.
-- Added a 30-day activity area chart for created Keeps, updated Keeps, and new word volume.
-- Added a type mix donut chart, content composition bar chart, folder distribution chart, review age chart, and weekday pattern chart.
-- Expanded KPI cards to include total Keeps, total words, link coverage, Keep Health, seven-day creates, seven-day updates, estimated reading time, and AI usage.
-- Added largest Keep, document/project counts, top tags, and recent update panels.
-
-## 2. Version and Docker Metadata
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`
-
-### What Changed
-- Version bumped to `4.5.2`.
-- Docker build arg and compose image tag now use `weavenote:4.5.2`.
-- Health and system endpoints fall back to `4.5.2` when build metadata is unavailable.
-
----
-
-# WSH v4.5.1 — Coding Changes
-
-## Overview
-v4.5.1 adds the WSH Keeps Realtime Dashboard as a native workspace view and updates version metadata for the Docker deployment.
-
-## 1. WSH Keeps Realtime Dashboard
-
-**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
-
-### What Changed
-- Added a full dashboard view with live KPI cards, realtime line graph, 14-day Keeps trend chart, category load analytics, top tags, synthesis usage, and recently updated Keeps.
-- Dashboard metrics are derived from existing Zustand state: `notes`, `folders`, `aiUsageCount`, and `isSyncing`.
-- No database migration or API contract change is required.
-
-## 2. Dashboard View Mode
-
-**Files:** `src/store/wshStore.ts`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`
-
-### What Changed
-- Extended `ViewMode` with `dashboard`.
-- Added a dashboard header toggle using Lucide `LayoutDashboard`.
-- Updated the main page to render the dashboard instead of the editor/grid when dashboard mode is active.
-
-## 3. Version and Docker Metadata
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`
-
-### What Changed
-- Version bumped to `4.5.1`.
-- Docker build arg and compose image tag now use `weavenote:4.5.1`.
-- Health and system endpoints fall back to `4.5.1` when build metadata is unavailable.
-
----
-
-# WSH v4.5.0 — Coding Changes
-
-## Overview
-v4.5.0 is a security-focused release that addresses two critical issues: a hardcoded API key committed to the repository, and a Gemini API key exposed in URL query parameters. It also adds API key format validation, a model dropdown selector, and auto-provider detection.
-
-## 1. Hardcoded Gemini API Key Removed
-
-**Files:** `.env.example`, `.env`, `docker-compose.yml`
-**Severity:** CRITICAL — Real API key was committed to the git repository
-
-### Problem
-A real Google Gemini API key (`AIzaSy...`) was found in three files:
-- `.env.example` (committed to the repo, shipped with every clone)
-- `.env` (local development config)
-- `docker-compose.yml` (as the default value for `GEMINI_API_KEY`)
-
-This exposed the key to anyone with repository access and violated the project's own `.gitignore` intent.
-
-### Fix
-Removed the key from all three files. `.env.example` and `docker-compose.yml` now show `GEMINI_API_KEY=` (empty). `.env` was cleaned to remove the hardcoded value. Users must now configure their own keys at runtime via Settings > AI Engine or environment variables.
-
-## 2. Gemini API Key URL Leak Fixed
-
-**File:** `src/app/api/synthesis/route.ts` (line 110)
-**Severity:** CRITICAL — Key exposed in access logs, proxy logs, and browser history
-
-### Problem
-The `callGemini()` function passed the API key as a URL query parameter:
-```typescript
-`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-```
-This exposed the key in server access logs, proxy logs, CDN logs, load balancer logs, and browser history.
-
-### Fix
-Moved the key to the `x-goog-api-key` HTTP header:
-```typescript
-headers: {
-  'Content-Type': 'application/json',
-  'x-goog-api-key': apiKey,
-}
-```
-The URL no longer contains the key:
-```typescript
-`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-```
-
-## 3. API Key Format Validation
-
-**File:** `src/components/wsh/SettingsPanel.tsx` (new `KEY_VALIDATORS` object)
-
-### What Changed
-Added client-side regex validation for all three API key formats before saving:
-
-| Provider | Pattern | Hint |
-|----------|---------|------|
-| Gemini | `^AIzaSy[A-Za-z0-9_-]{33}$` | 39 chars starting with `AIzaSy` |
-| OpenAI | `^sk-[A-Za-z0-9_-]{20,}$` | 48+ chars starting with `sk-` |
-| Claude | `^sk-ant-api03-[A-Za-z0-9_-]{80,}$` | 95+ chars starting with `sk-ant-api03-` |
-
-- Real-time amber warning appears while typing if the format doesn't match
-- Save is blocked if validation fails, with a clear error message
-- Enter key submits the form (keyboard accessibility)
-
-## 4. Model Dropdown Selector
-
-**File:** `src/components/wsh/SettingsPanel.tsx`
-
-### Before
-Model selection used a list of individual `<button>` elements — one per model. Models were hardcoded in a static `PROVIDERS` array in the component.
-
-### After
-Model selection uses a native `<select>` dropdown:
-- Dynamically populated from the server based on configured API keys
-- Only shows models for providers with active keys
-- Server returns model lists via the enhanced `GET /api/synthesis` endpoint
-- Chevron icon indicates it's a dropdown
-- Selected model ID shown below the dropdown
-
-## 5. Server-Side Model Catalog
-
-**File:** `src/app/api/synthesis/route.ts` (new `MODEL_CATALOG` and enhanced `GET` handler)
-
-### What Changed
-The `GET /api/synthesis` endpoint now returns two new fields:
-- `models`: Record of per-provider model lists (only for providers with API keys configured)
-- `keyPatterns`: Record of format hints per provider (for client-side validation UX)
-
-## 6. Variable Scope Fix
-
-**File:** `src/app/api/synthesis/route.ts` (POST handler)
-
-### Problem
-`action` and `provider` were declared with `const` inside the `try` block but referenced in the `catch` block for error logging, causing TypeScript error TS2304.
-
-### Fix
-Hoisted both variables above the `try` block using `let`, then assigned inside `try`:
-```typescript
-let action = 'unknown';
-let provider = '';
-try {
-  // ... parse body, assign action and provider
-} catch (error: unknown) {
-  // action and provider are now accessible here
-}
-```
-
-## 7. Stale Docker Entrypoint Fallback
-
-**File:** `docker-entrypoint.sh` (line 63)
-
-### Problem
-The fallback version was `${BUILD_VERSION:-4.2.1}` — a version from April 2025, two major versions behind.
-
-### Fix
-Updated to `${BUILD_VERSION:-4.5.0}`.
+### Added
+- `MAX_IMAGES_PER_NOTE = 4`
+- `MAX_IMAGE_BYTES = 5 * 1024 * 1024`
+- helper to count images currently embedded in the editor
+
+### Changed
+- attached image files are rejected if they exceed 5 MB
+- attached image files are rejected if the note already contains 4 images
+- URL-based image insertion is also blocked once the note reaches 4 images
+- user gets explicit editor status feedback when either limit is hit
+
+### Effect
+- prevents runaway image stuffing into a single note/post
+- keeps note size and editor responsiveness more predictable
+
+## 2. Versioning / release trail
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- bumped version from `4.4.8` to `4.4.9`
+- added changelog entry for image limits
+- added this coding change record
 
 ## Files Changed
-| # | File | Lines | Type | Description |
-|---|------|-------|------|-------------|
-| 1 | `.env` | 2 | Security | Removed hardcoded Gemini key, reset AI_PROVIDER |
-| 2 | `.env.example` | 1 | Security | Removed real API key, replaced with empty |
-| 3 | `docker-compose.yml` | 2 | Security | Removed key default, version bump to 4.5.0 |
-| 4 | `Dockerfile` | 4 | Version | BUILD_VERSION 4.4.4 → 4.5.0 |
-| 5 | `docker-entrypoint.sh` | 1 | Fix | Stale fallback 4.2.1 → 4.5.0 |
-| 6 | `install.sh` | 5 | Version | All 4.4.4 → 4.5.0 references |
-| 7 | `install.ps1` | 5 | Version | All 4.4.4 → 4.5.0 references |
-| 8 | `update.sh` | 2 | Version | Header and banner |
-| 9 | `test-env.sh` | 2 | Version | Header and banner |
-| 10 | `test-env.ps1` | 2 | Version | Header and banner |
-| 11 | `src/app/api/synthesis/route.ts` | ~65 | Security+Feature | URL leak fix, model catalog, key patterns, scope fix |
-| 12 | `src/app/api/health/route.ts` | 1 | Version | Fallback version 4.5.0 |
-| 13 | `src/app/api/admin/system/route.ts` | 1 | Version | Fallback version 4.5.0 |
-| 14 | `src/components/wsh/SettingsPanel.tsx` | ~200 | Feature+Security | Key validation, dropdown, dynamic model loading |
-| 15 | `package.json` | 1 | Version | 4.4.4 → 4.5.0 |
-| 16 | `CHANGELOG.md` | ~40 | Docs | New v4.5.0 release entry |
-| 17 | `CODING_CHANGES.md` | ~90 | Docs | This document |
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/NoteEditor.tsx` | Enforced max-image count and per-image file-size guardrails |
+| 2 | `package.json` | Version bump to 4.4.9 |
+| 3 | `CHANGELOG.md` | Added 4.4.9 release notes |
+| 4 | `CODING_CHANGES.md` | Added technical record for the image-limit patch |
+
+---
+
+# WSH v4.4.8 — Coding Changes
+
+## Overview
+v4.4.8 improves image handling in the note editor so image-heavy notes feel lighter and more practical:
+
+1. **Client-side image compression for note attachments** reduces embedded payload size before images are inserted into note HTML.
+2. **Resizable note images / initial width controls** let users tune image size more naturally inside notes instead of being stuck with full-width inserts.
+
+## 1. New helper: src/lib/imageUtils.ts
+
+**File:** `src/lib/imageUtils.ts`
+
+### Added
+- browser-side image loading helper
+- client-side resize + re-encode flow for note images
+- HTML builder for resizable note-image markup
+
+### Effect
+This keeps large pasted/attached images from bloating the saved note content as badly as before.
+
+## 2. NoteEditor.tsx — smarter image insertion
+
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### Changed
+- attached image files now go through optimization before insertion
+- inserted images use resizable-friendly markup and width styling
+- URL-based image inserts now allow the user to choose an initial width percentage
+- editor status briefly reports compression savings after optimization succeeds
+
+### Effect
+- faster note save/load on image-heavy notes
+- better visual control over image size directly in the note flow
+
+## 3. Versioning / release trail
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- bumped version from `4.4.7` to `4.4.8`
+- added changelog entry for image compression/resizing improvements
+- added this technical patch note entry
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/lib/imageUtils.ts` | New note-image optimization helpers |
+| 2 | `src/components/wsh/NoteEditor.tsx` | Client-side image compression + resizable image insertion |
+| 3 | `package.json` | Version bump to 4.4.8 |
+| 4 | `CHANGELOG.md` | Added 4.4.8 release notes |
+| 5 | `CODING_CHANGES.md` | Added technical record for the image-handling patch |
+
+---
+
+# WSH v4.4.7 — Coding Changes
+
+## Overview
+v4.4.7 addresses the top two publicly exposed security risks identified in the first WeaveNote security audit:
+
+1. **Insecure JWT fallback secret** — `src/lib/auth.ts` previously allowed runtime operation with the known placeholder `change-me-in-production`, making session/token integrity dependent on a public default.
+2. **Insecure admin bootstrap fallback** — `docker-entrypoint.sh` previously seeded a super-admin using hardcoded defaults (`admin` / `admin@example.com` / `admin123`) whenever no matching user existed.
+
+This patch intentionally hardens only those two items first so the deployment can move in controlled security increments.
+
+## 1. src/lib/auth.ts — Fail closed on JWT secret configuration
+
+**File:** `src/lib/auth.ts`
+
+### Problem
+The JWT helper used:
+```ts
+const secret = process.env.JWT_SECRET || 'change-me-in-production';
+```
+That meant a public deployment could continue running with a known fallback secret if configuration drift or a missing env variable occurred.
+
+### Fix
+`getJWTSecret()` now:
+- requires `process.env.JWT_SECRET` to exist
+- rejects the placeholder value `change-me-in-production`
+- throws immediately instead of silently accepting an insecure fallback
+
+### Security effect
+- removes token-signing with a public/default secret
+- forces deployment correctness instead of tolerating insecure runtime state
+
+## 2. docker-entrypoint.sh — Remove default admin bootstrap credentials
+
+**File:** `docker-entrypoint.sh`
+
+### Problem
+The admin seeding logic previously used:
+```js
+const username = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
+const email = process.env.ADMIN_DEFAULT_EMAIL || 'admin@example.com';
+const password = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+```
+This allowed default bootstrap credentials to remain latent in a public deployment.
+
+### Fix
+The seeding logic now:
+- first checks whether any `admin` or `super-admin` user already exists
+- skips bootstrap seeding if one exists
+- requires explicit `ADMIN_DEFAULT_USERNAME`, `ADMIN_DEFAULT_EMAIL`, and `ADMIN_DEFAULT_PASSWORD` only when no admin exists yet
+- refuses to seed an insecure default account when those values are missing
+- logs a clear operator-facing message explaining why seeding was skipped
+
+### Security effect
+- removes hardcoded fallback admin credentials from bootstrap behavior
+- preserves first-run bootstrap capability without accepting unsafe defaults
+- keeps startup idempotent while failing safer
+
+## 3. Versioning and release notes
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changes
+- bumped version from `4.4.6` to `4.4.7`
+- added a security-focused changelog entry documenting the two critical fixes
+- added this coding changes entry so the remediation history is explicit and auditable
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/lib/auth.ts` | Removed insecure JWT fallback and enforced fail-closed secret checks |
+| 2 | `docker-entrypoint.sh` | Removed default bootstrap admin fallbacks and required explicit bootstrap config |
+| 3 | `package.json` | Version bump to 4.4.7 |
+| 4 | `CHANGELOG.md` | Added 4.4.7 security release notes |
+| 5 | `CODING_CHANGES.md` | Added technical record for the security patch |
 
 ---
 
