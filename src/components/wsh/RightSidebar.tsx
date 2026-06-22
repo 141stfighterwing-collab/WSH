@@ -321,7 +321,7 @@ function TodoChecklist() {
 
 // ── Projects Section ───────────────────────────────────────────────────────
 function ProjectsSection() {
-  const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+  const { notes, loadNoteIntoEditor } = useWSHStore();
 
   const projects = useMemo(() => {
     return notes
@@ -329,13 +329,8 @@ function ProjectsSection() {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [notes]);
 
-  const handleProjectClick = (project: Note) => {
-    setActiveNoteId(project.id);
-    setEditorTitle(project.title);
-    setEditorContent(project.content);
-    setEditorRawContent(project.rawContent || '');
-    setActiveNoteType('project');
-    setEditorTags(project.tags);
+  const handleProjectClick = async (project: Note) => {
+    await loadNoteIntoEditor(project.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -395,7 +390,7 @@ function ProjectsSection() {
 
 // ── Today Section (Notes filtered for today) ───────────────────────────────
 function TodaySection() {
-  const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+  const { notes, loadNoteIntoEditor } = useWSHStore();
 
   const now = new Date();
   const y = now.getFullYear();
@@ -444,13 +439,8 @@ function TodaySection() {
     return [...todayNotes, ...todayTags].slice(0, 10);
   }, [todayNotes, todayTags]);
 
-  const handleNoteClick = (note: Note) => {
-    setActiveNoteId(note.id);
-    setEditorTitle(note.title);
-    setEditorContent(note.content);
-    setEditorRawContent(note.rawContent || '');
-    setActiveNoteType(note.type);
-    setEditorTags(note.tags);
+  const handleNoteClick = async (note: Note) => {
+    await loadNoteIntoEditor(note.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

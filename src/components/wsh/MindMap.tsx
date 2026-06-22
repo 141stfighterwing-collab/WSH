@@ -42,7 +42,7 @@ interface SimEdge {
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export default function MindMap() {
-  const { mindMapOpen, setMindMapOpen, notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+  const { mindMapOpen, setMindMapOpen, notes, loadNoteIntoEditor } = useWSHStore();
   const svgRef = useRef<SVGSVGElement>(null);
   const animRef = useRef<number>(0);
   const nodesRef = useRef<SimNode[]>([]);
@@ -306,18 +306,13 @@ export default function MindMap() {
       if (nodeId) {
         const note = notes.find((n) => n.id === nodeId);
         if (note) {
-          setActiveNoteId(note.id);
-          setEditorTitle(note.title);
-          setEditorContent(note.content);
-          setEditorRawContent(note.rawContent || '');
-          setActiveNoteType(note.type);
-          setEditorTags(note.tags);
+          void loadNoteIntoEditor(note.id);
           setMindMapOpen(false);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
     }
-  }, [notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags, setMindMapOpen]);
+  }, [notes, loadNoteIntoEditor, setMindMapOpen]);
 
   const handleZoomIn = useCallback(() => {
     zoomRef.current = Math.min(zoomRef.current * 1.2, 3);

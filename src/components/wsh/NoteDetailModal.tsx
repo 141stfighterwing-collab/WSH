@@ -45,12 +45,7 @@ export default function NoteDetailModal() {
     noteDetailId,
     setNoteDetailId,
     deleteNote,
-    setActiveNoteId,
-    setEditorTitle,
-    setEditorContent,
-    setEditorRawContent,
-    setActiveNoteType,
-    setEditorTags,
+    loadNoteIntoEditor,
   } = useWSHStore();
   const { data: note, isLoading } = useNoteDetail(noteDetailId);
 
@@ -110,13 +105,8 @@ export default function NoteDetailModal() {
     }
   };
 
-  const handleEdit = () => {
-    setActiveNoteId(note.id);
-    setEditorTitle(note.title);
-    setEditorContent(note.content);
-    setEditorRawContent(note.rawContent || '');
-    setActiveNoteType(note.type);
-    setEditorTags(note.tags);
+  const handleEdit = async () => {
+    await loadNoteIntoEditor(note.id);
     setNoteDetailId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

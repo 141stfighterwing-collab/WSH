@@ -5,15 +5,10 @@ import { Circle, ChevronRight } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
 
 export default function FarRightSidebar() {
-  const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+  const { notes, loadNoteIntoEditor } = useWSHStore();
 
-  const openNote = (note: typeof notes[0]) => {
-    setActiveNoteId(note.id);
-    setEditorTitle(note.title);
-    setEditorContent(note.content);
-    setEditorRawContent(note.rawContent || '');
-    setActiveNoteType(note.type);
-    setEditorTags(note.tags);
+  const openNote = async (note: typeof notes[0]) => {
+    await loadNoteIntoEditor(note.id);
   };
 
   const todayTasks = useMemo(() => {

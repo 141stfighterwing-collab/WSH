@@ -46,6 +46,7 @@ interface WSHState {
   addNote: (note: Note) => Promise<string | null>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
+  loadNoteIntoEditor: (id: string) => Promise<boolean>;
 
   // Current Editor
   activeNoteId: string | null;
@@ -248,6 +249,33 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       // Server unreachable
     }
     return false;
+  },
+  loadNoteIntoEditor: async (id) => {
+    const token = get().user.token;
+    if (!token) return false;
+
+    try {
+      const res = await fetch(`/api/notes?id=${encodeURIComponent(id)}`, {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      const note = data.note as Note;
+      if (!note) return false;
+
+      set({
+        activeNoteId: note.id,
+        editorTitle: note.title,
+        editorContent: note.content,
+        editorRawContent: note.rawContent || '',
+        activeNoteType: note.type,
+        editorTags: Array.isArray(note.tags) ? note.tags : [],
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   // Current Editor
