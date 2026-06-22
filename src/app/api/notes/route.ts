@@ -12,6 +12,32 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (id) {
+      const note = await db.note.findUnique({ where: { id } });
+      if (!note || note.userId !== userId) {
+        return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        note: {
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          rawContent: note.rawContent,
+          preview: extractPreview({ rawContent: note.rawContent, content: note.content }),
+          type: note.type,
+          tags: safeParseTags(note.tags),
+          color: note.color,
+          folderId: note.folderId,
+          userId: note.userId,
+          isDeleted: note.isDeleted,
+          createdAt: note.createdAt.toISOString(),
+          updatedAt: note.updatedAt.toISOString(),
+        },
+      });
+    }
+
     const limit = Math.min(Math.max(Number(searchParams.get('limit') || '50'), 1), 100);
     const cursor = searchParams.get('cursor');
     const type = searchParams.get('type');
@@ -55,8 +81,8 @@ export async function GET(request: NextRequest) {
     const serialized = page.map((note) => ({
       id: note.id,
       title: note.title,
-      content: note.content,
-      rawContent: note.rawContent,
+      content: '',
+      rawContent: '',
       preview: extractPreview({ rawContent: note.rawContent, content: note.content }),
       type: note.type,
       tags: safeParseTags(note.tags),

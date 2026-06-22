@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { QueryClient } from '@tanstack/react-query';
+import { extractPreview } from '@/lib/notes';
 
 export type NoteType = 'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document' | 'ai-prompts';
 export type ViewMode = 'grid' | 'focus' | 'dashboard';
@@ -183,8 +184,14 @@ export const useWSHStore = create<WSHState>((set, get) => ({
       if (res.ok) {
         const data = await res.json();
         const serverNote = data.note as Note;
+        const listSafeNote = {
+          ...serverNote,
+          preview: serverNote.preview || extractPreview(serverNote),
+          content: '',
+          rawContent: '',
+        } as Note;
         // Add to local state using the SERVER-generated ID
-        set((state) => ({ notes: [serverNote, ...state.notes.filter((n) => n.id !== serverNote.id)] }));
+        set((state) => ({ notes: [listSafeNote, ...state.notes.filter((n) => n.id !== serverNote.id)] }));
         await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
         return serverNote.id;
       }
@@ -207,7 +214,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         const updated = new Date().toISOString();
         set((state) => ({
           notes: state.notes.map((n) =>
-            n.id === id ? { ...n, ...updates, updatedAt: updated } : n
+            n.id === id ? { ...n, ...updates, preview: extractPreview({ rawContent: updates.rawContent ?? n.rawContent, content: updates.content ?? n.content }), updatedAt: updated } : n
           ),
         }));
         await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
