@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { FolderPlus, Folder, ChevronRight } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 export default function Folders() {
   const {
@@ -10,9 +11,9 @@ export default function Folders() {
     addFolder,
     activeFolderId,
     setActiveFolderId,
-    notes,
     updateNote,
   } = useWSHStore();
+  const { notes } = useVisibleNotes();
 
   const [showNewInput, setShowNewInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');

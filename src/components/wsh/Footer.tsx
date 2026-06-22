@@ -2,9 +2,11 @@
 
 import { Trash2, Circle } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 export default function Footer() {
-  const { user, aiUsageCount, trashOpen, setTrashOpen, notes } = useWSHStore();
+  const { user, aiUsageCount, trashOpen, setTrashOpen } = useWSHStore();
+  const { notes } = useVisibleNotes();
 
   const deletedCount = notes.filter((n) => n.isDeleted).length;
 

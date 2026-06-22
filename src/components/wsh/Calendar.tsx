@@ -3,9 +3,11 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 export default function Calendar() {
-  const { notes, calendarDateFilter, setCalendarDateFilter } = useWSHStore();
+  const { calendarDateFilter, setCalendarDateFilter } = useWSHStore();
+  const { notes } = useVisibleNotes();
   const [currentDate, setCurrentDate] = useState(new Date());
   const today = new Date();
 

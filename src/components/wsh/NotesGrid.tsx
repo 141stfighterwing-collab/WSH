@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { useInfiniteNotes } from '@/hooks/useInfiniteNotes';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 import { Clock, Tag, FolderOpen, Folder, FileText, Code, Briefcase, BookOpen, Brain, Plus, MoreVertical, Eye, Trash2, GripVertical } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
@@ -159,7 +159,6 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
 
 export default function NotesGrid() {
   const {
-    notes,
     folders,
     activeFolderId,
     activeNoteType,
@@ -172,15 +171,14 @@ export default function NotesGrid() {
     calendarDateFilter,
     setCalendarDateFilter,
   } = useWSHStore();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteNotes();
+  const { notes, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useVisibleNotes();
 
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const filteredNotes = useMemo(() => {
-    const remoteNotes = data?.pages.flatMap((page) => page.notes) ?? [];
-    const fallbackNotes = remoteNotes.length > 0 ? remoteNotes : notes;
-    let filtered = fallbackNotes.filter((n) => !n.isDeleted);
+    let filtered = notes.filter((n) => !n.isDeleted);
 
     if (activeNoteType) {
       filtered = filtered.filter((n) => n.type === activeNoteType);
@@ -212,7 +210,7 @@ export default function NotesGrid() {
     }
 
     return filtered;
-  }, [data, notes, activeNoteType, calendarDateFilter, activeFolderId, searchQuery]);
+  }, [notes, activeNoteType, calendarDateFilter, activeFolderId, searchQuery]);
 
   const handleNoteClick = (note: Note) => {
     setNoteDetailId(note.id);
@@ -250,6 +248,23 @@ export default function NotesGrid() {
       await updateNote(noteId, { folderId });
     }
   }, [updateNote]);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '600px 0px' }
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, filteredNotes.length]);
 
   if (viewMode === 'focus') {
     return null;
@@ -354,6 +369,7 @@ export default function NotesGrid() {
               />
             ))}
           </div>
+          <div ref={sentinelRef} className="h-2" />
           {hasNextPage && (
             <div className="flex justify-center pt-4">
               <button
