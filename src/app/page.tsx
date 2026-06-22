@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { LogIn, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
 import Header from '@/components/wsh/Header';
+import QueryProvider from '@/components/wsh/QueryProvider';
 import Logo from '@/components/wsh/Logo';
 import LeftSidebar from '@/components/wsh/LeftSidebar';
 import NoteEditor from '@/components/wsh/NoteEditor';
@@ -41,9 +42,7 @@ function LockedOverlay() {
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="text-center max-w-lg animate-fadeIn">
-        {/* Large Logo */}
         <div className="relative mb-10">
-          {/* Ambient glow behind the logo mark */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-40 h-40 bg-pri-500/10 rounded-full blur-3xl" />
           </div>
@@ -63,7 +62,6 @@ function LockedOverlay() {
           Sign in to unlock your workspace and get started.
         </p>
 
-        {/* Note type badges */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 border border-border/30">
             <BookOpen className="w-4 h-4 text-blue-400" />
@@ -87,7 +85,6 @@ function LockedOverlay() {
           </div>
         </div>
 
-        {/* Login CTA */}
         <div className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-pri-600/10 border border-pri-500/20 text-pri-400 hover:bg-pri-600/15 transition-colors">
           <LogIn className="w-4 h-4" />
           <span className="text-xs font-bold">Login / Sign Up to unlock your workspace</span>
@@ -102,16 +99,12 @@ export default function Home() {
   const sessionVerified = useRef(false);
   const syncDone = useRef(false);
 
-  // Load persisted UI preferences + auth session on mount
-  // Notes/folders are loaded from database via syncFromServer
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
 
-  // Verify the restored JWT token + sync notes from server
   useEffect(() => {
     const verifyAndSync = async () => {
-      // Only run once after loadFromLocalStorage has hydrated the store
       const store = useWSHStore.getState();
       if (sessionVerified.current || !store.user.token) return;
       sessionVerified.current = true;
@@ -124,7 +117,6 @@ export default function Home() {
         });
 
         if (!res.ok) {
-          // Token is expired or invalid — log out
           logoutUser();
           if (typeof window !== 'undefined') {
             localStorage.removeItem('wsh-auth');
@@ -148,8 +140,6 @@ export default function Home() {
           await syncFromServer();
         }
       } catch {
-        // Network error — keep the session, use local data
-        // Still try to sync in background
         if (!syncDone.current) {
           syncDone.current = true;
           syncFromServer();
@@ -157,7 +147,6 @@ export default function Home() {
       }
     };
 
-    // Small delay to allow loadFromLocalStorage to complete
     const timer = setTimeout(verifyAndSync, 100);
     return () => clearTimeout(timer);
   }, [logoutUser, setUser, syncFromServer]);
@@ -169,69 +158,63 @@ export default function Home() {
   }, [user.isLoggedIn, user.token, notes.length, syncFromServer]);
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden wsh-app-shell">
-      <Header />
+    <QueryProvider>
+      <div className="h-screen flex flex-col bg-background overflow-hidden wsh-app-shell">
+        <Header />
 
-      <div className="flex flex-1 min-h-0">
-        {/* Left Sidebar — Calendar, Quick References, Folders, Tags */}
+        <div className="flex flex-1 min-h-0">
+          <AuthGate>
+            <LeftSidebar />
+          </AuthGate>
+
+          <main className="flex-1 overflow-y-auto min-w-0">
+            {user.isLoggedIn ? (
+              <div className="wsh-main-frame">
+                {viewMode === 'dashboard' ? (
+                  <WSHKeepsDashboard />
+                ) : (
+                  <>
+                    <NoteEditor />
+                    {viewMode === 'grid' && <NotesGrid />}
+                  </>
+                )}
+              </div>
+            ) : (
+              <LockedOverlay />
+            )}
+          </main>
+
+          <AuthGate>
+            <RightSidebar />
+          </AuthGate>
+        </div>
+
+        <Footer />
+
+        <SettingsPanel />
         <AuthGate>
-          <LeftSidebar />
+          <AnalyticsPanel />
+        </AuthGate>
+        <AuthGate>
+          <AdminPanel />
         </AuthGate>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto min-w-0">
-          {user.isLoggedIn ? (
-            <div className="wsh-main-frame">
-              {viewMode === 'dashboard' ? (
-                <WSHKeepsDashboard />
-              ) : (
-                <>
-                  {/* Editor */}
-                  <NoteEditor />
-
-                  {/* Notes Grid (hidden in focus mode) */}
-                  {viewMode === 'grid' && <NotesGrid />}
-                </>
-              )}
-            </div>
-          ) : (
-            <LockedOverlay />
-          )}
-        </main>
-
-        {/* Right Sidebar — Clock, Today's Things, Projects */}
         <AuthGate>
-          <RightSidebar />
+          <MindMap />
+        </AuthGate>
+        <AuthGate>
+          <TrashModal />
+        </AuthGate>
+        <AuthGate>
+          <NotebookView />
+        </AuthGate>
+        <AuthGate>
+          <NoteDetailModal />
+        </AuthGate>
+        <AuthGate>
+          <DBViewer />
         </AuthGate>
       </div>
-
-      <Footer />
-
-      {/* Slide-over Panels */}
-      <SettingsPanel />
-      <AuthGate>
-        <AnalyticsPanel />
-      </AuthGate>
-      <AuthGate>
-        <AdminPanel />
-      </AuthGate>
-
-      {/* Full-Screen Modals & Overlays */}
-      <AuthGate>
-        <MindMap />
-      </AuthGate>
-      <AuthGate>
-        <TrashModal />
-      </AuthGate>
-      <AuthGate>
-        <NotebookView />
-      </AuthGate>
-      <AuthGate>
-        <NoteDetailModal />
-      </AuthGate>
-      <AuthGate>
-        <DBViewer />
-      </AuthGate>
-    </div>
+    </QueryProvider>
   );
 }

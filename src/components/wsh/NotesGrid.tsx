@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useInfiniteNotes } from '@/hooks/useInfiniteNotes';
 import { Clock, Tag, FolderOpen, Folder, FileText, Code, Briefcase, BookOpen, Brain, Plus, MoreVertical, Eye, Trash2, GripVertical } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
 
@@ -45,7 +46,6 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
     minute: '2-digit',
   });
 
-  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
     const handleClick = (e: MouseEvent) => {
@@ -70,10 +70,8 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
           : ''
       }`}
     >
-      {/* Drag handle */}
       <GripVertical className="absolute top-2 left-2 w-3 h-3 text-muted-foreground/20 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity z-10" />
 
-      {/* Context menu button */}
       <div
         ref={menuRef}
         className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -86,7 +84,6 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
           <MoreVertical className="w-3.5 h-3.5" />
         </button>
 
-        {/* Dropdown */}
         {menuOpen && (
           <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-border/50 bg-card py-1 shadow-xl animate-fadeIn">
             <button
@@ -107,14 +104,12 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
         )}
       </div>
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-2 pr-6 pl-4">
         <div className="flex items-center gap-1.5 flex-wrap">
           <div className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest ${typeColors[note.type] || 'bg-secondary text-muted-foreground'}`}>
             {typeIcons[note.type]}
             {note.type}
           </div>
-          {/* Folder badge */}
           {note.folderId && (
             <span className="inline-flex items-center gap-0.5 rounded-lg border border-pri-500/20 bg-pri-500/10 px-1.5 py-0.5 text-[8px] font-bold text-pri-400 whitespace-nowrap">
               <Folder className="w-2 h-2" />
@@ -128,24 +123,20 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
         </span>
       </div>
 
-      {/* Title */}
       <h3 className="font-bold text-sm text-foreground mb-1.5 line-clamp-2 group-hover:text-pri-400 transition-colors pl-4">
         {note.title || 'Untitled Note'}
       </h3>
 
-      {/* Content preview */}
       <p className="text-xs text-muted-foreground line-clamp-3 mb-3 pl-4">
         {note.rawContent || note.content?.replace(/<[^>]*>/g, '').slice(0, 150) || 'No content'}
       </p>
 
-      {/* Type description for project/document */}
       {(note.type === 'project' || note.type === 'document') && (
         <p className="text-[9px] text-muted-foreground/50 italic mb-2 pl-4">
           {typeDescriptions[note.type]}
         </p>
       )}
 
-      {/* Tags */}
       {note.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2 pl-4">
           {note.tags.slice(0, 3).map((tag) => (
@@ -173,12 +164,6 @@ export default function NotesGrid() {
     activeFolderId,
     activeNoteType,
     setActiveFolderId,
-    setActiveNoteId,
-    setEditorTitle,
-    setEditorContent,
-    setEditorRawContent,
-    setActiveNoteType,
-    setEditorTags,
     searchQuery,
     viewMode,
     deleteNote,
@@ -187,21 +172,20 @@ export default function NotesGrid() {
     calendarDateFilter,
     setCalendarDateFilter,
   } = useWSHStore();
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteNotes();
 
-  // Drag & drop state
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
 
   const filteredNotes = useMemo(() => {
-    let filtered = notes.filter((n) => !n.isDeleted);
+    const remoteNotes = data?.pages.flatMap((page) => page.notes) ?? [];
+    const fallbackNotes = remoteNotes.length > 0 ? remoteNotes : notes;
+    let filtered = fallbackNotes.filter((n) => !n.isDeleted);
 
-    // Category-isolated view — filter by active note type tab
-    // When on "Code" tab, only show code notes. When on "Quick", only quick notes.
     if (activeNoteType) {
       filtered = filtered.filter((n) => n.type === activeNoteType);
     }
 
-    // Calendar date filter — only show notes from that specific day (local timezone)
     if (calendarDateFilter) {
       filtered = filtered.filter((n) => {
         if (!n.createdAt) return false;
@@ -228,11 +212,9 @@ export default function NotesGrid() {
     }
 
     return filtered;
-  }, [notes, activeFolderId, searchQuery, calendarDateFilter, activeNoteType]);
+  }, [data, notes, activeNoteType, calendarDateFilter, activeFolderId, searchQuery]);
 
   const handleNoteClick = (note: Note) => {
-    // Click on a note opens the detail view (read mode)
-    // User can then click "Edit Note" to load into the editor
     setNoteDetailId(note.id);
   };
 
@@ -244,16 +226,13 @@ export default function NotesGrid() {
     deleteNote(note.id);
   };
 
-  // ── Drag & Drop Handlers ──
-
   const handleNoteDragStart = useCallback((e: React.DragEvent, noteId: string) => {
     e.dataTransfer.setData('text/plain', noteId);
     e.dataTransfer.effectAllowed = 'move';
     setDraggedNoteId(noteId);
   }, []);
 
-  const handleNoteDragEnd = useCallback(() => {
-    setDraggedNoteId(null);
+  const handleFolderDragLeave = useCallback(() => {
     setDragOverFolderId(null);
   }, []);
 
@@ -261,10 +240,6 @@ export default function NotesGrid() {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverFolderId(folderId);
-  }, []);
-
-  const handleFolderDragLeave = useCallback(() => {
-    setDragOverFolderId(null);
   }, []);
 
   const handleFolderDrop = useCallback(async (e: React.DragEvent, folderId: string | null) => {
@@ -282,7 +257,6 @@ export default function NotesGrid() {
 
   return (
     <div className="space-y-4 mt-6">
-      {/* Calendar date filter indicator */}
       {calendarDateFilter && (
         <div className="flex items-center gap-2 rounded-lg border border-pri-500/20 bg-pri-500/10 px-3 py-2 animate-fadeIn">
           <div className="w-1.5 h-1.5 rounded-full bg-pri-400" />
@@ -303,7 +277,6 @@ export default function NotesGrid() {
         </div>
       )}
 
-      {/* Section header */}
       <div className="flex items-center justify-between">
         <span className="micro-label text-muted-foreground">
           {calendarDateFilter
@@ -323,7 +296,6 @@ export default function NotesGrid() {
         </span>
       </div>
 
-      {/* Folder filter pills — also serve as drop targets */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveFolderId(null)}
@@ -364,41 +336,41 @@ export default function NotesGrid() {
         )}
       </div>
 
-      {/* Notes Grid */}
-      {filteredNotes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filteredNotes.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              onClick={() => handleNoteClick(note)}
-              onViewDetail={() => handleViewDetail(note)}
-              onDelete={() => handleDelete(note)}
-              onDragStart={(e) => handleNoteDragStart(e, note.id)}
-            />
-          ))}
-        </div>
+      {isLoading ? (
+        <div className="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center text-sm text-muted-foreground/60">Loading recent notes…</div>
+      ) : error ? (
+        <div className="border-2 border-dashed border-red-500/20 rounded-2xl p-12 text-center text-sm text-red-400">Failed to load notes.</div>
+      ) : filteredNotes.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                onClick={() => handleNoteClick(note)}
+                onViewDetail={() => handleViewDetail(note)}
+                onDelete={() => handleDelete(note)}
+                onDragStart={(e) => handleNoteDragStart(e, note.id)}
+              />
+            ))}
+          </div>
+          {hasNextPage && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-4 py-2 rounded-full text-xs font-bold bg-secondary text-foreground hover:bg-secondary/80 disabled:opacity-50 transition-colors"
+              >
+                {isFetchingNextPage ? 'Loading more…' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="rounded-lg border-2 border-dashed border-border/50 p-12 text-center">
           <Plus className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground/60">
-            {calendarDateFilter && searchQuery
-              ? 'No notes match both the date and search'
-              : calendarDateFilter
-                ? 'No notes on this date'
-                : searchQuery
-                  ? 'No notes match your search'
-                  : 'No notes yet'}
-          </p>
-          <p className="text-xs text-muted-foreground/40 mt-1">
-            {calendarDateFilter && searchQuery
-              ? 'Try clearing the search or selecting a different date'
-              : calendarDateFilter
-                ? 'Select a different date or clear the filter'
-                : searchQuery
-                  ? 'Try different keywords'
-                  : 'Create your first note above'}
-          </p>
+          <p className="text-sm text-muted-foreground/60">No notes yet</p>
+          <p className="text-xs text-muted-foreground/40 mt-1">Create your first note above</p>
         </div>
       )}
     </div>

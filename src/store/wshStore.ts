@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { QueryClient } from '@tanstack/react-query';
 
 export type NoteType = 'quick' | 'notebook' | 'deep' | 'code' | 'project' | 'document' | 'ai-prompts';
 export type ViewMode = 'grid' | 'focus' | 'dashboard';
@@ -135,6 +136,8 @@ interface WSHState {
   isSyncing: boolean;
 }
 
+export const wshQueryClient = new QueryClient();
+
 const defaultUser: UserState = {
   isLoggedIn: false,
   username: '',
@@ -180,7 +183,8 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         const data = await res.json();
         const serverNote = data.note as Note;
         // Add to local state using the SERVER-generated ID
-        set((state) => ({ notes: [serverNote, ...state.notes] }));
+        set((state) => ({ notes: [serverNote, ...state.notes.filter((n) => n.id !== serverNote.id)] }));
+        await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
         return serverNote.id;
       }
     } catch {
@@ -205,6 +209,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
             n.id === id ? { ...n, ...updates, updatedAt: updated } : n
           ),
         }));
+        await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
         return true;
       }
     } catch {
@@ -228,6 +233,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
             n.id === id ? { ...n, isDeleted: true, updatedAt: new Date().toISOString() } : n
           ),
         }));
+        await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
         return true;
       }
     } catch {
@@ -372,6 +378,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
             n.id === id ? { ...n, isDeleted: false, updatedAt: new Date().toISOString() } : n
           ),
         }));
+        await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
       }
     } catch {
       // Server unreachable
@@ -389,6 +396,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
         set((state) => ({
           notes: state.notes.filter((n) => n.id !== id),
         }));
+        await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
       }
     } catch {
       // Server unreachable
@@ -410,6 +418,7 @@ export const useWSHStore = create<WSHState>((set, get) => ({
     set((state) => ({
       notes: state.notes.filter((n) => !n.isDeleted),
     }));
+    await wshQueryClient.invalidateQueries({ queryKey: ['notes'] });
   },
 
   // Mind Map
@@ -564,8 +573,8 @@ export const useWSHStore = create<WSHState>((set, get) => ({
 
     set({ isSyncing: true });
     try {
-      // Fetch notes from server — these REPLACE local notes entirely
-      const notesRes = await fetch('/api/notes', {
+      // Fetch a large first slice from server — compatibility state for components still using store.notes
+      const notesRes = await fetch('/api/notes?limit=200&includeDeleted=true', {
         method: 'GET',
         headers: authHeaders(),
       });
