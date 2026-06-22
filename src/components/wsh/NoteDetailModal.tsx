@@ -2,6 +2,7 @@
 
 import { X, Pencil, Trash2, Tag, Calendar, Clock, FileText, BookOpen, Brain, Code, Briefcase } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 const typeColors: Record<string, string> = {
   quick: 'bg-blue-500/15 text-blue-400',
@@ -43,7 +44,6 @@ export default function NoteDetailModal() {
   const {
     noteDetailId,
     setNoteDetailId,
-    notes,
     deleteNote,
     setActiveNoteId,
     setEditorTitle,
@@ -52,6 +52,7 @@ export default function NoteDetailModal() {
     setActiveNoteType,
     setEditorTags,
   } = useWSHStore();
+  const { notes } = useVisibleNotes();
 
   const note = noteDetailId ? notes.find((n) => n.id === noteDetailId) : null;
 

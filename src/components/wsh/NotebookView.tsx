@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 import {
   X, ChevronRight, Tag, Calendar, Link2, Quote,
   ImageIcon, ExternalLink, FileText, Code2, FolderKanban,
@@ -310,7 +311,8 @@ function ErrorCatch({ children }: { children: React.ReactNode }) {
 
 export default function NotebookView() {
   // ── ALL HOOKS FIRST — no conditional returns before this point ──
-  const { notebookOpen, setNotebookOpen, notes } = useWSHStore();
+  const { notebookOpen, setNotebookOpen } = useWSHStore();
+  const { notes } = useVisibleNotes();
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [filterType, setFilterType] = useState<string | null>(null);
@@ -776,6 +778,7 @@ function DesignNoteBox({ label, content }: { label: string; content: string }) {
 
 function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLast: boolean }) {
   // ALL hooks before any conditional logic
+  const [expanded, setExpanded] = useState(index < 8);
   const safeTitle = useMemo(() => safeString(note.title || 'Untitled Note'), [note.title]);
   const safeType = useMemo(() => String(note.type || 'quick'), [note.type]);
 
@@ -783,6 +786,11 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
     try { return safeString(note.rawContent || note.content); }
     catch { return ''; }
   }, [note.rawContent, note.content]);
+
+  const previewContent = useMemo(() => {
+    const base = safeString(note.preview || rawContent);
+    return base.slice(0, 500);
+  }, [note.preview, rawContent]);
 
   const safeNoteTags = useMemo(() => {
     try { return safeTags(note.tags); } catch { return []; }
@@ -872,8 +880,20 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
         {safeTitle}
       </h2>
 
+      {!expanded && (
+        <div className="mb-5">
+          <p className="text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap">{previewContent || 'No preview available'}</p>
+          <button
+            onClick={() => setExpanded(true)}
+            className="mt-3 px-3 py-1.5 rounded-full text-[10px] font-bold bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+          >
+            Expand note
+          </button>
+        </div>
+      )}
+
       {/* Image Gallery */}
-      {images.length > 0 && (
+      {expanded && images.length > 0 && (
         <div className="mb-6">
           <div className={`grid gap-3 ${
             images.length === 1 ? 'grid-cols-1' :
@@ -893,7 +913,7 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
       )}
 
       {/* Clean Main Content */}
-      {cleanContent.trim() && (
+      {expanded && cleanContent.trim() && (
         <div
           className="prose prose-sm prose-invert max-w-none mb-5 text-sm text-foreground/75 leading-relaxed"
           dangerouslySetInnerHTML={{
@@ -903,17 +923,17 @@ function NotebookPage({ note, index, isLast }: { note: Note; index: number; isLa
       )}
 
       {/* Design Note Boxes */}
-      {designNotes.length > 0 && designNotes.map((dn, i) => (
+      {expanded && designNotes.length > 0 && designNotes.map((dn, i) => (
         <DesignNoteBox key={`dn-${i}`} label={dn.label} content={dn.content} />
       ))}
 
       {/* Quote Blocks */}
-      {quotes.length > 0 && quotes.map((quote, i) => (
+      {expanded && quotes.length > 0 && quotes.map((quote, i) => (
         <QuoteBlock key={`q-${i}`} text={String(quote)} />
       ))}
 
       {/* Link Cards */}
-      {links.length > 0 && (
+      {expanded && links.length > 0 && (
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-2">
             <Link2 className="w-3 h-3 text-muted-foreground/50" />
