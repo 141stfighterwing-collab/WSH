@@ -10,6 +10,7 @@ export interface Note {
   title: string;
   content: string;
   rawContent: string;
+  preview?: string;
   type: NoteType;
   tags: string[];
   color: string;

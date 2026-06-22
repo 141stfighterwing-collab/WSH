@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 import { Clock, Tag, FolderOpen, Folder, FileText, Code, Briefcase, BookOpen, Brain, Plus, MoreVertical, Eye, Trash2, GripVertical } from 'lucide-react';
 import { useWSHStore, type Note } from '@/store/wshStore';
+import VirtualNotesList from '@/components/wsh/VirtualNotesList';
 
 const typeIcons: Record<string, React.ReactNode> = {
   quick: <FileText className="w-3.5 h-3.5" />,
@@ -128,7 +129,7 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
       </h3>
 
       <p className="text-xs text-muted-foreground line-clamp-3 mb-3 pl-4">
-        {note.rawContent || note.content?.replace(/<[^>]*>/g, '').slice(0, 150) || 'No content'}
+        {note.preview || note.rawContent || note.content?.replace(/<[^>]*>/g, '').slice(0, 150) || 'No content'}
       </p>
 
       {(note.type === 'project' || note.type === 'document') && (
@@ -357,8 +358,10 @@ export default function NotesGrid() {
         <div className="border-2 border-dashed border-red-500/20 rounded-2xl p-12 text-center text-sm text-red-400">Failed to load notes.</div>
       ) : filteredNotes.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filteredNotes.map((note) => (
+          <VirtualNotesList
+            notes={filteredNotes}
+            className="max-h-[70vh] overflow-y-auto"
+            renderItem={(note) => (
               <NoteCard
                 key={note.id}
                 note={note}
@@ -367,8 +370,8 @@ export default function NotesGrid() {
                 onDelete={() => handleDelete(note)}
                 onDragStart={(e) => handleNoteDragStart(e, note.id)}
               />
-            ))}
-          </div>
+            )}
+          />
           <div ref={sentinelRef} className="h-2" />
           {hasNextPage && (
             <div className="flex justify-center pt-4">
