@@ -1,5 +1,5 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.4.7
+# WSH Docker Entrypoint v4.4.11
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 #
@@ -60,7 +60,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.2.1}"
+echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.4.11}"
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 
@@ -157,17 +157,25 @@ echo "[*] Building document search indexes..."
 node -e '
   const { PrismaClient } = require("@prisma/client");
   const prisma = new PrismaClient({ log: [] });
-  prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('"'"'english'"'"', content));")
-    .then(function() { console.log("[+] Full-text GIN index created"); })
-    .catch(function(e) { console.log("[!] FTS index: " + e.message); })
-    .then(function() { return prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);"); })
-    .then(function() { console.log("[+] Trigram GIN index created"); })
-    .catch(function(e) { console.log("[!] Trigram index: " + e.message); })
+  async function run() {
+    const rows = await prisma.$queryRawUnsafe("SELECT to_regclass('"'"'public.document_chunks'"'"')::text AS regclass;");
+    const exists = Array.isArray(rows) && rows[0] && rows[0].regclass;
+    if (!exists) {
+      console.log("[!] document_chunks table not present yet — skipping search index creation");
+      return;
+    }
+    await prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('"'"'english'"'"', content));");
+    console.log("[+] Full-text GIN index created");
+    await prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);");
+    console.log("[+] Trigram GIN index created");
+  }
+  run()
+    .catch(function(e) { console.log("[!] Search index setup: " + e.message); })
     .finally(function() { return prisma.$disconnect(); });
 ' 2>&1
 
 # ── Seed initial admin user (explicit credentials required) ─────
-# Security hardening v4.4.7:
+# Security hardening v4.4.11:
 # - Refuses to fall back to default bootstrap credentials
 # - Requires explicit ADMIN_DEFAULT_* values on first bootstrap only
 # - Skips seeding safely when a real admin already exists

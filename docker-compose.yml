@@ -25,9 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_VERSION: "4.4.10"
+        BUILD_VERSION: "4.4.11"
     container_name: weavenote-app
-    image: weavenote:4.4.10
+    image: weavenote:4.4.11
     ports:
       - "${WSH_PORT:-8883}:3000"
     environment:
@@ -36,15 +36,15 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-AIzaSyDiZhsZhPNJ2bTps7MDZRuwJ18O7VLLXzg}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - AI_SYNTHESIS_MODEL=${AI_SYNTHESIS_MODEL:-}
       - AI_SYNTHESIS_TEMPERATURE=${AI_SYNTHESIS_TEMPERATURE:-0.7}
       - AI_SYNTHESIS_MAX_TOKENS=${AI_SYNTHESIS_MAX_TOKENS:-4096}
       - AI_DAILY_LIMIT=${AI_DAILY_LIMIT:-800}
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - ADMIN_DEFAULT_USERNAME=${ADMIN_DEFAULT_USERNAME:-admin}
-      - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-admin@example.com}
-      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-admin123}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - ADMIN_DEFAULT_USERNAME=${ADMIN_DEFAULT_USERNAME:-}
+      - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-}
+      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
       postgres:
