@@ -1,12 +1,30 @@
 'use client';
 
 import { Trash2, Circle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useWSHStore } from '@/store/wshStore';
 import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 export default function Footer() {
   const { user, aiUsageCount, trashOpen, setTrashOpen } = useWSHStore();
   const { notes } = useVisibleNotes();
+  const [online, setOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        if (!cancelled) setOnline(data?.database?.status === 'connected' || data?.database?.status === 'connected_no_tables');
+      } catch {
+        if (!cancelled) setOnline(false);
+      }
+    };
+    check();
+    const t = setInterval(check, 30000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
   const deletedCount = notes.filter((n) => n.isDeleted).length;
 
@@ -16,7 +34,7 @@ export default function Footer() {
         {/* Left */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <Circle className="w-2 h-2 fill-muted-foreground/40 text-muted-foreground/40" />
+            <Circle className={`w-2 h-2 ${online === null ? 'fill-muted-foreground/40 text-muted-foreground/40' : online ? 'fill-green-400 text-green-400' : 'fill-red-500 text-red-500'}`} />
             <span>
               {user.isLoggedIn ? user.username : 'Guest Mode (Local Only)'}
             </span>

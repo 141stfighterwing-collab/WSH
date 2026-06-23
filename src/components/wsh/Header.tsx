@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useSyncExternalStore, useEffect, useRef } from 'react';
+import { useState, useCallback, useSyncExternalStore, useEffect } from 'react';
 import {
   Search,
   BarChart3,
@@ -13,10 +13,6 @@ import {
   Network,
   BookOpen,
   Database,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  FlaskConical,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -50,11 +46,7 @@ export default function Header() {
     latencyMs: -1,
     lastChecked: '',
   });
-  const [dbTestResult, setDbTestResult] = useState<{
-    status: 'idle' | 'testing' | 'pass' | 'fail';
-    message: string;
-  }>({ status: 'idle', message: '' });
-  const dbTestTooltipRef = useRef<HTMLDivElement>(null);
+
 
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -97,41 +89,9 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  // Close db test tooltip on outside click
-  useEffect(() => {
-    if (dbTestResult.status === 'idle') return;
-    const handleClick = (e: MouseEvent) => {
-      if (dbTestTooltipRef.current && !dbTestTooltipRef.current.contains(e.target as Node)) {
-        setDbTestResult({ status: 'idle', message: '' });
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [dbTestResult.status]);
 
-  const handleDBTest = async () => {
-    setDbTestResult({ status: 'testing', message: 'Running read/write test...' });
-    try {
-      const res = await fetch('/api/db-test', { method: 'POST' });
-      const data = await res.json();
-      if (data.status === 'ok') {
-        setDbTestResult({
-          status: 'pass',
-          message: `✓ ${data.results.overall} (${data.results.count})`,
-        });
-      } else {
-        setDbTestResult({
-          status: 'fail',
-          message: `✗ ${data.results.overall}`,
-        });
-      }
-    } catch {
-      setDbTestResult({
-        status: 'fail',
-        message: '✗ Could not reach server',
-      });
-    }
-  };
+
+
 
   const viewButtonClass = (active: boolean) =>
     `flex items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-200 active:scale-95 ${
@@ -240,38 +200,9 @@ export default function Header() {
               </div>
             </div>
 
-            {/* DB Test Button — all logged-in users */}
-            {mounted && user.isLoggedIn && (
-              <div className="relative" ref={dbTestTooltipRef}>
-                <button
-                  onClick={handleDBTest}
-                  disabled={dbTestResult.status === 'testing'}
-                className="flex items-center gap-1.5 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-cyan-300 transition-all duration-200 hover:bg-cyan-400/20 active:scale-95 disabled:opacity-50"
-                  title="Test Database Read/Write"
-                >
-                  {dbTestResult.status === 'testing' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <FlaskConical className="w-3.5 h-3.5" />
-                  )}
-                  <span>DB Test</span>
-                </button>
 
-                {/* Test Result Tooltip */}
-                {dbTestResult.status !== 'idle' && (
-                  <div className="absolute top-full right-0 mt-2 w-72 px-3 py-2 rounded-xl bg-card border border-border shadow-xl z-[200] animate-fadeIn">
-                    <div className="flex items-start gap-2">
-                      {dbTestResult.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin mt-0.5 shrink-0" />}
-                      {dbTestResult.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />}
-                      {dbTestResult.status === 'fail' && <XCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />}
-                      <span className={`text-xs font-semibold break-all ${dbTestResult.status === 'pass' ? 'text-green-400' : dbTestResult.status === 'fail' ? 'text-red-400' : 'text-cyan-400'}`}>
-                        {dbTestResult.message}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+
+
 
             {/* Admin Button */}
             {isAdmin && (
