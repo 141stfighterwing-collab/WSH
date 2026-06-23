@@ -143,28 +143,28 @@ mkdir -p /app/tmp /app/upload
 
 # ── Enable PostgreSQL extensions for full-text search ──────────
 echo "[*] Setting up PostgreSQL full-text search extensions..."
-node -e "
-  const { PrismaClient } = require('@prisma/client');
+node -e '
+  const { PrismaClient } = require("@prisma/client");
   const prisma = new PrismaClient({ log: [] });
-  prisma.\\\$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pg_trgm;')
-    .then(function() { console.log('[+] pg_trgm extension enabled'); })
-    .catch(function(e) { console.log('[!] pg_trgm: ' + e.message); })
-    .finally(function() { return prisma.\\\$disconnect(); });
-" 2>&1
+  prisma.$executeRawUnsafe("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+    .then(function() { console.log("[+] pg_trgm extension enabled"); })
+    .catch(function(e) { console.log("[!] pg_trgm: " + e.message); })
+    .finally(function() { return prisma.$disconnect(); });
+' 2>&1
 
 # Build GIN indexes for document search (idempotent — IF NOT EXISTS)
 echo "[*] Building document search indexes..."
-node -e "
-  const { PrismaClient } = require('@prisma/client');
+node -e '
+  const { PrismaClient } = require("@prisma/client");
   const prisma = new PrismaClient({ log: [] });
-  prisma.\\\$executeRawUnsafe(\\\"CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('english', content));\\\")
-    .then(function() { console.log('[+] Full-text GIN index created'); })
-    .catch(function(e) { console.log('[!] FTS index: ' + e.message); })
-    .finally(function() { return prisma.\\\$executeRawUnsafe(\\\"CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);\\\"); })
-    .then(function() { console.log('[+] Trigram GIN index created'); })
-    .catch(function(e) { console.log('[!] Trigram index: ' + e.message); })
-    .finally(function() { return prisma.\\\$disconnect(); });
-" 2>&1
+  prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('"'"'english'"'"', content));")
+    .then(function() { console.log("[+] Full-text GIN index created"); })
+    .catch(function(e) { console.log("[!] FTS index: " + e.message); })
+    .then(function() { return prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);"); })
+    .then(function() { console.log("[+] Trigram GIN index created"); })
+    .catch(function(e) { console.log("[!] Trigram index: " + e.message); })
+    .finally(function() { return prisma.$disconnect(); });
+' 2>&1
 
 # ── Seed initial admin user (explicit credentials required) ─────
 # Security hardening v4.4.7:
@@ -268,20 +268,20 @@ if [ ! -f "$SEED_MARKER" ]; then
 else
   echo "[+] Admin seed already completed (marker: $SEED_MARKER) — skipping"
   # Still verify the admin user exists
-  node -e "
-    const { PrismaClient } = require('@prisma/client');
+  node -e '
+    const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
-    prisma.user.findFirst({ where: { role: { in: ['admin', 'super-admin'] } }, select: { username: true, role: true } })
+    prisma.user.findFirst({ where: { role: { in: ["admin", "super-admin"] } }, select: { username: true, role: true } })
       .then(function(admin) {
         if (admin) {
-          console.log('[+] Admin user verified: ' + admin.username + ' (role=' + admin.role + ')');
+          console.log("[+] Admin user verified: " + admin.username + " (role=" + admin.role + ")");
         } else {
-          console.log('[!] WARNING: No admin user found in database!');
-          console.log('[!] Remove /app/tmp/.admin-seeded and restart to re-seed.');
+          console.log("[!] WARNING: No admin user found in database!");
+          console.log("[!] Remove /app/tmp/.admin-seeded and restart to re-seed.");
         }
-        return prisma.\$disconnect();
+        return prisma.$disconnect();
       });
-  " 2>&1
+  ' 2>&1
 fi
 
 # ── Verify Prisma client ───────────────────────────────────────
