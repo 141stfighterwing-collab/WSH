@@ -41,6 +41,22 @@ export default function DocumentEditor({ title, setTitle, content, setContent }:
     setContent(JSON.stringify(next));
   };
 
+  const formatExtractedText = (text: string, fileName: string): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    let formatted = text.trim();
+
+    // Clean up common PDF extraction artifacts
+    formatted = formatted.replace(/\r\n/g, '\n');
+    formatted = formatted.replace(/\n{3,}/g, '\n\n');
+
+    // For code files, wrap in code block
+    if (['js', 'ts', 'jsx', 'tsx', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'swift', 'kt', 'sh', 'bash', 'sql', 'html', 'css', 'json', 'yaml', 'yml', 'toml', 'xml', 'md'].includes(ext)) {
+      return formatted;
+    }
+
+    return formatted;
+  };
+
   const processFile = useCallback(async (file: File) => {
     const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
@@ -112,22 +128,6 @@ export default function DocumentEditor({ title, setTitle, content, setContent }:
     }
     setUploading(false);
   }, [data, title, setContent, setTitle, update]);
-
-  const formatExtractedText = (text: string, fileName: string): string => {
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    let formatted = text.trim();
-
-    // Clean up common PDF extraction artifacts
-    formatted = formatted.replace(/\r\n/g, '\n');
-    formatted = formatted.replace(/\n{3,}/g, '\n\n');
-
-    // For code files, wrap in code block
-    if (['js', 'ts', 'jsx', 'tsx', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'swift', 'kt', 'sh', 'bash', 'sql', 'html', 'css', 'json', 'yaml', 'yml', 'toml', 'xml', 'md'].includes(ext)) {
-      return formatted;
-    }
-
-    return formatted;
-  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
