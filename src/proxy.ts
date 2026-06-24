@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 
 /**
- * BUG-004 fix: Server-side authentication middleware.
+ * BUG-004 fix: Server-side authentication proxy.
  *
  * Protected routes (all /api/* except login/register):
  *   - Require a valid JWT in the Authorization: Bearer <token> header
@@ -24,7 +24,7 @@ const PUBLIC_PATHS = [
   '/api/admin/users/verify',
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip public routes and non-API routes
