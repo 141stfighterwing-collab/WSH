@@ -49,7 +49,9 @@ export default function MindMap() {
   const [zoom, setZoom] = useState(1);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const rotationFrame = useRef<number | null>(null);
-  const [rotationDeg, setRotationDeg] = useState(0);
+  const orbitLayerRef = useRef<HTMLDivElement | null>(null);
+  const hubLabelRef = useRef<HTMLDivElement | null>(null);
+  const nodeLabelRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const activeNotes = useMemo(() => notes.filter((n) => !n.isDeleted), [notes]);
 
@@ -72,7 +74,18 @@ export default function MindMap() {
     const tick = (ts: number) => {
       if (start === null) start = ts;
       const elapsed = ts - start;
-      setRotationDeg((elapsed / 120000) * 360);
+      const rotationDeg = (elapsed / 120000) * 360;
+      if (orbitLayerRef.current) {
+        orbitLayerRef.current.style.transform = `rotate(${rotationDeg}deg)`;
+      }
+      if (hubLabelRef.current) {
+        hubLabelRef.current.style.transform = `translateX(-50%) rotate(${-rotationDeg}deg)`;
+      }
+      Object.values(nodeLabelRefs.current).forEach((label) => {
+        if (label) {
+          label.style.transform = `translateX(-50%) rotate(${-rotationDeg}deg)`;
+        }
+      });
       rotationFrame.current = requestAnimationFrame(tick);
     };
     rotationFrame.current = requestAnimationFrame(tick);
@@ -269,13 +282,14 @@ export default function MindMap() {
             }}
           >
             <div
-              className="absolute"
+              ref={orbitLayerRef}
+              className="absolute will-change-transform"
               style={{
                 top: center.y,
                 left: center.x,
                 width: 0,
                 height: 0,
-                transform: `rotate(${rotationDeg}deg)`,
+                transform: 'rotate(0deg)',
                 transformOrigin: 'center center',
               }}
             >
@@ -323,8 +337,9 @@ export default function MindMap() {
                   <span className="text-lg font-black text-white tracking-wide">H</span>
                 </div>
                 <div
-                  className="absolute left-1/2 top-full mt-3 -translate-x-1/2 text-center whitespace-nowrap"
-                  style={{ transform: `translateX(-50%) rotate(${-rotationDeg}deg)` }}
+                  ref={hubLabelRef}
+                  className="absolute left-1/2 top-full mt-3 -translate-x-1/2 text-center whitespace-nowrap will-change-transform"
+                  style={{ transform: 'translateX(-50%) rotate(0deg)' }}
                 >
                   <div className="text-xs font-bold text-primary-fixed-dim">Core Intelligence</div>
                   <div className="text-[10px] text-muted-foreground">Central note constellation</div>
@@ -373,8 +388,11 @@ export default function MindMap() {
                         {node.initial}
                       </div>
                       <div
-                        className="absolute left-1/2 top-full mt-2 whitespace-nowrap text-center pointer-events-none"
-                        style={{ transform: `translateX(-50%) rotate(${-rotationDeg}deg)` }}
+                        ref={(el) => {
+                          nodeLabelRefs.current[node.id] = el;
+                        }}
+                        className="absolute left-1/2 top-full mt-2 whitespace-nowrap text-center pointer-events-none will-change-transform"
+                        style={{ transform: 'translateX(-50%) rotate(0deg)' }}
                       >
                         <div className={`text-[11px] font-semibold ${hovered ? 'text-white' : 'text-slate-200/90'}`}>
                           {clampTitle(node.title)}
