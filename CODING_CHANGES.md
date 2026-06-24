@@ -1,3 +1,82 @@
+# WSH v4.4.11 — Coding Changes
+
+## Overview
+v4.4.11 extends the recent note-performance work with mind map correctness, smoother animation behavior, safer deployment documentation, and a Next.js runtime convention update.
+
+## 1. MindMap.tsx — line anchoring corrected
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The desktop mind map drew SVG lines in a different coordinate space from the rendered note nodes. Once transforms/rotation were applied, edges could drift away from the nodes they were supposed to connect.
+
+### Fix
+- moved SVG edge rendering into the same transformed local layer as the nodes
+- introduced a local hub node model at origin coordinates
+- made edge endpoints use the same node offsets that drive note button placement
+- preserved click-to-open behavior and the existing modal shell
+
+### Effect
+Connection lines now stay visually attached to the moving nodes instead of lagging behind or pointing at stale positions.
+
+## 2. MindMap.tsx — animation stutter reduced
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The rotating mind map view updated React state on every animation frame, forcing the whole component tree to rerender continuously. That is expensive for a dense node/edge overlay and causes lag or visible stutter.
+
+### Fix
+- removed per-frame React state updates for rotation
+- updated the orbit layer transform directly through refs
+- updated hub/node label counter-rotation through direct DOM style writes
+- added `will-change: transform` hints on animated elements
+
+### Effect
+The ambient rotation path should feel noticeably smoother because animation no longer depends on full React rerenders every frame.
+
+## 3. Runtime convention update — middleware to proxy
+
+**File:** `src/proxy.ts` (renamed from `src/middleware.ts`)
+
+### Changed
+- migrated the app from deprecated Next.js `middleware` naming to the newer `proxy` convention
+- preserved the same API auth enforcement behavior
+- removed the build-time deprecation warning under Next.js 16
+
+## 4. Deployment/runbook updates
+
+**Files:**
+- `docs/WSH_UPDATE_RUNBOOK.md`
+- `RELEASE-NOTES-4.4.11.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- added a concrete preflight → update → verify checklist for the Windows Docker host
+- documented the safe app-only upgrade path for `10.30.1.15`
+- recorded the mind map anchoring and animation fixes in the release trail
+
+## 5. Validation
+
+### Verified
+- `npm run build` passed after the anchoring fix
+- `npm run build` passed again after the animation/stutter fix
+- live Docker deployment on `10.30.1.15` reports healthy on `4.4.11`
+- database connectivity remained intact after app-only redeploy
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/MindMap.tsx` | Fixed edge/node anchoring and reduced animation rerender stutter |
+| 2 | `src/proxy.ts` | Replaced deprecated middleware convention |
+| 3 | `docs/WSH_UPDATE_RUNBOOK.md` | Added preflight/update/verify checklist |
+| 4 | `RELEASE-NOTES-4.4.11.md` | Expanded 4.4.11 release notes |
+| 5 | `CHANGELOG.md` | Added 4.4.11 deployment and mind map notes |
+| 6 | `CODING_CHANGES.md` | Added this technical record |
+
+---
+
 # WSH v4.4.10 — Coding Changes
 
 ## Overview

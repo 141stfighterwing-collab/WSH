@@ -8,12 +8,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.5.4 |
-| **Release Date** | 2026-05-19 |
-| **Previous Version** | 4.5.3 |
-| **Release Type** | Quick References insertion, editor draft autosave, Docker version bump |
+| **Version** | 4.4.11 |
+| **Release Date** | 2026-06-24 |
+| **Previous Version** | 4.4.10 |
+| **Release Type** | Mind map anchoring fix, animation smoothing, deployment/runbook updates |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
-| **Branch** | `TST-DEV` |
+| **Branch** | `main` |
 
 ---
 
@@ -23,36 +23,18 @@
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 1 | `src/components/wsh/NoteEditor.tsx` | ~120 | **Change** | Added Quick Reference insertion listener and draft autosave/restore |
-| 2 | `src/components/wsh/QuickReferences.tsx` | Existing | **Verify** | Add/edit/delete localStorage template behavior preserved |
+| 1 | `src/components/wsh/MindMap.tsx` | ~120 | **Change** | Fixed line/node anchoring and reduced per-frame animation rerender stutter |
+| 2 | `src/proxy.ts` | Rename/new | **Runtime** | Replaced deprecated Next.js middleware convention with proxy |
 
-### Version Bump
-
-| # | File | Lines Changed | Change Type | Description |
-|---|------|---------------|-------------|-------------|
-| 3 | `package.json` | 1 | **Version** | `4.5.3` -> `4.5.4` |
-| 4 | `package-lock.json` | 2 | **Version** | Root package metadata updated to `4.5.4` |
-| 5 | `Dockerfile` | 3 | **Version** | Build args and header updated to `4.5.4` |
-| 6 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag updated to `weavenote:4.5.4` |
-| 7 | `docker-entrypoint.sh` | 2 | **Version** | Entrypoint banner fallback updated |
-| 8 | `install.sh` | ~4 | **Version** | Banner, manifest, and image tags updated |
-| 9 | `install.ps1` | ~4 | **Version** | Banner, manifest, and image tags updated |
-| 10 | `update.sh` | 2 | **Version** | Script header + banner updated |
-| 11 | `update.ps1` | ~18 | **Version** | Script version, current version, fallback, and patch registry updated |
-| 12 | `test-env.sh` | 2 | **Version** | Script header + banner updated |
-| 13 | `test-env.ps1` | 2 | **Version** | Script header + banner updated |
-| 14 | `src/app/api/health/route.ts` | 1 | **Version** | fallback version updated to `4.5.4` |
-| 15 | `src/app/api/admin/system/route.ts` | 1 | **Version** | fallback version updated to `4.5.4` |
-
-### Documentation
+### Documentation / Release Trail
 
 | # | File | Lines Changed | Change Type | Description |
 |---|------|---------------|-------------|-------------|
-| 16 | `README.md` | ~12 | **Docs** | Added Quick References and draft safety docs |
-| 17 | `CHANGELOG.md` | +18 | **Prepend** | Added v4.5.4 release entry |
-| 18 | `CODING_CHANGES.md` | +35 | **Prepend** | Added implementation notes for v4.5.4 |
-| 19 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated file inventory for v4.5.4 |
-| 20 | `worklog.md` | +1 section | **Append** | Added task log for Quick References and draft autosave |
+| 3 | `docs/WSH_UPDATE_RUNBOOK.md` | +61 | **Docs** | Added preflight/update/verify checklist for Windows Docker host updates |
+| 4 | `RELEASE-NOTES-4.4.11.md` | Expanded | **Docs** | Added mind map, deployment, and proxy convention notes |
+| 5 | `CHANGELOG.md` | Expanded | **Release** | Added 4.4.11 mind map/deployment validation notes |
+| 6 | `CODING_CHANGES.md` | Prepend | **Release** | Added technical record for anchoring/stutter/proxy work |
+| 7 | `FILE_TRACKER.md` | Rewrite | **Release** | Updated file inventory for 4.4.11 |
 
 ---
 
@@ -60,19 +42,20 @@
 
 | # | File | Purpose |
 |---|------|---------|
-| None | N/A | No new files created in v4.5.4 |
+| 1 | `src/proxy.ts` | Next.js 16 replacement for deprecated middleware naming |
+| 2 | `RELEASE-NOTES-4.4.11.md` | Release summary and operator notes for 4.4.11 |
 
 ---
 
 ## Verification Checklist
 
-- [x] Quick References add/edit/delete behavior remains wired
-- [x] Quick Reference Use inserts into the editor and starts a draft
-- [x] Editor draft autosaves every five seconds and restores after reload
-- [x] README current header updated to `v4.5.4`
-- [x] Docker image tag updated to `weavenote:4.5.4`
-- [x] Health/system fallback versions updated to `4.5.4`
-- [x] CHANGELOG.md follows Keep a Changelog format
+- [x] Mind map connections remain anchored to moving nodes in the shared transform layer
+- [x] Mind map animation path no longer depends on per-frame React state rerenders
+- [x] Next.js build no longer emits the middleware deprecation warning
+- [x] `npm run build` passes after anchoring fix
+- [x] `npm run build` passes after animation smoothing fix
+- [x] Remote Docker deployment on `10.30.1.15` reports healthy on `4.4.11`
+- [x] Database connectivity survived remote app-only redeploy
 
 ---
 
@@ -80,6 +63,7 @@
 
 | Iteration | Result | Time | Notes |
 |-----------|--------|------|-------|
-| 1 | PASS | ~11s | Targeted ESLint passed for `NoteEditor` and `QuickReferences` |
-| 2 | PASS | Static | Verified README has no stale `4.5.0` current-version reference |
-| 3 | BLOCKED | Existing repo issue | Full production build compiles frontend, then fails in existing `/api/admin/users/extract-text` due missing native `DOMMatrix`/canvas binding on local Windows |
+| 1 | PASS | ~43s | Local production build passed after middleware → proxy fix |
+| 2 | PASS | ~35s | Local production build passed after mind map anchoring fix |
+| 3 | PASS | ~33s | Local production build passed after animation smoothing fix |
+| 4 | PASS | Remote | `10.30.1.15` healthy on `4.4.11` with DB connected after app-only redeploy |

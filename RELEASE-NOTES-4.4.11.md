@@ -13,6 +13,9 @@ This release focuses on release hardening, deployment safety, and startup/runtim
 - Clean handling when document search tables are not present yet
 - Improved login error reporting for missing JWT secret conditions
 - Release checklist added for 4.4.11 validation and rollout tracking
+- Desktop mind map line anchoring corrected so nodes and SVG connections stay aligned
+- Mind map animation path smoothed by removing per-frame React rerenders during rotation
+- Next.js 16 middleware deprecation resolved by renaming runtime middleware to `proxy`
 
 ## Validation Summary
 - Docker production build passed

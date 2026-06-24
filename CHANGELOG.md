@@ -19,10 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Notes grid performance path** — The main notes grid now prefetches additional pages on scroll, uses lightweight preview-first list rows, virtualizes rendering, and persists recent pages for faster warm reloads.
 - **Notebook/detail rendering behavior** — Notebook and detail surfaces now use lazy/full fetch patterns instead of assuming the full note corpus is already resident in client state.
 - **Editor hydration path** — Sidebar, detail, and mind-map entry points now load full notes into the editor through a centralized fetch-and-hydrate action.
+- **Desktop mind map anchoring fixed** — SVG connections now render inside the same transformed coordinate space as the nodes, keeping lines attached to moving notes instead of drifting off-target.
+- **Desktop mind map animation smoothed** — Rotation no longer triggers a full React rerender on every animation frame; the orbit layer and counter-rotating labels now update through direct transform writes for reduced lag/stutter.
+- **Next.js runtime convention updated** — Deprecated `middleware` usage was migrated to the newer `proxy` convention to remove the Next.js 16 warning during builds.
 - **Version bumped to 4.4.11** in package metadata and changelog to roll up the recent performance/caching series on top of the newer upstream release line.
 
 ### Validation
-- **Production build passed** — `npm run build` completed successfully after each major performance refactor and again at release prep on the final 4.4.11 tree.
+- **Production build passed** — `npm run build` completed successfully after each major performance refactor and again after the mind map anchoring/stutter fixes on the final 4.4.11 tree.
+- **Live deployment verified on 10.30.1.15** — `/api/health` returned healthy on `4.4.11` with database connectivity preserved after app-only redeploy.
 - **Lint status** — `eslint` did not return cleanly in this environment during release prep, so this release is validated primarily by repeated successful production builds rather than a completed lint run.
 
 ## [4.4.10] - 2026-06-15
