@@ -27,6 +27,19 @@ interface OrbitNode {
   linkedToHub: boolean;
 }
 
+interface HubNode {
+  id: 'hub';
+  title: string;
+  type: 'hub';
+  tags: string[];
+  x: number;
+  y: number;
+  radius: number;
+  ring: number;
+  initial: string;
+  linkedToHub: false;
+}
+
 const clampTitle = (title: string, max = 22) =>
   title.length > max ? `${title.slice(0, max)}…` : title;
 
@@ -124,10 +137,23 @@ export default function MindMap() {
     return built;
   }, [activeNotes, center]);
 
+  const hubNode = useMemo<HubNode>(() => ({
+    id: 'hub',
+    title: 'Core Intelligence',
+    type: 'hub',
+    tags: [],
+    x: 0,
+    y: 0,
+    radius: 34,
+    ring: -1,
+    initial: 'H',
+    linkedToHub: false,
+  }), []);
+
   const edges = useMemo(() => {
     const byId = new Map(orbitNodes.map((n) => [n.id, n]));
     const results: Array<{
-      source: OrbitNode;
+      source: OrbitNode | HubNode;
       target: OrbitNode;
       strength: number;
       secondary?: boolean;
@@ -135,18 +161,7 @@ export default function MindMap() {
 
     for (const node of orbitNodes) {
       results.push({
-        source: {
-          id: 'hub',
-          title: 'Core Intelligence',
-          type: 'hub',
-          tags: [],
-          x: center.x,
-          y: center.y,
-          radius: 34,
-          ring: -1,
-          initial: 'H',
-          linkedToHub: false,
-        },
+        source: hubNode,
         target: node,
         strength: 1,
       });
@@ -171,7 +186,7 @@ export default function MindMap() {
     }
 
     return results;
-  }, [orbitNodes, activeNotes, center]);
+  }, [orbitNodes, activeNotes, hubNode]);
 
   const handleNodeClick = useCallback(
     async (nodeId: string) => {
@@ -253,45 +268,6 @@ export default function MindMap() {
               transition: 'transform 240ms ease',
             }}
           >
-            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-              <defs>
-                <filter id="galaxy-glow">
-                  <feGaussianBlur result="coloredBlur" stdDeviation="1.5" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              {edges.map((edge, idx) => {
-                const isHub = edge.source.id === 'hub';
-                return (
-                  <g key={`${edge.source.id}-${edge.target.id}-${idx}`}>
-                    <line
-                      x1={edge.source.x}
-                      y1={edge.source.y}
-                      x2={edge.target.x}
-                      y2={edge.target.y}
-                      stroke={isHub ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.14)'}
-                      strokeWidth={isHub ? 0.9 : Math.min(0.6 + edge.strength * 0.22, 1.5)}
-                      strokeDasharray={edge.secondary ? '3 4' : undefined}
-                      filter={isHub ? 'url(#galaxy-glow)' : undefined}
-                    />
-                    {!isHub && (
-                      <circle
-                        cx={edge.target.x}
-                        cy={edge.target.y}
-                        r={edge.target.radius + 7}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.08)"
-                        strokeWidth="1"
-                      />
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-
             <div
               className="absolute"
               style={{
@@ -303,6 +279,44 @@ export default function MindMap() {
                 transformOrigin: 'center center',
               }}
             >
+              <svg className="absolute inset-0 overflow-visible pointer-events-none">
+                <defs>
+                  <filter id="galaxy-glow">
+                    <feGaussianBlur result="coloredBlur" stdDeviation="1.5" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                {edges.map((edge, idx) => {
+                  const isHub = edge.source.id === 'hub';
+                  return (
+                    <g key={`${edge.source.id}-${edge.target.id}-${idx}`}>
+                      <line
+                        x1={edge.source.x}
+                        y1={edge.source.y}
+                        x2={edge.target.x - center.x}
+                        y2={edge.target.y - center.y}
+                        stroke={isHub ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.14)'}
+                        strokeWidth={isHub ? 0.9 : Math.min(0.6 + edge.strength * 0.22, 1.5)}
+                        strokeDasharray={edge.secondary ? '3 4' : undefined}
+                        filter={isHub ? 'url(#galaxy-glow)' : undefined}
+                      />
+                      {!isHub && (
+                        <circle
+                          cx={edge.target.x - center.x}
+                          cy={edge.target.y - center.y}
+                          r={edge.target.radius + 7}
+                          fill="none"
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeWidth="1"
+                        />
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
               <div className="absolute -translate-x-1/2 -translate-y-1/2">
                 <div className="absolute inset-[-18px] rounded-full bg-purple-500/25 blur-2xl" />
                 <div className="relative w-20 h-20 rounded-full border border-purple-200/30 bg-gradient-to-br from-purple-700/70 via-indigo-700/60 to-slate-900 shadow-[0_0_40px_rgba(168,85,247,0.35)] flex items-center justify-center">
