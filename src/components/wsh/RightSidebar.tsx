@@ -321,7 +321,7 @@ function TodoChecklist() {
 
 // ── Projects Section ───────────────────────────────────────────────────────
 function ProjectsSection() {
-  const { notes, loadNoteIntoEditor } = useWSHStore();
+  const { notes, loadNoteIntoEditor, deleteNote } = useWSHStore();
 
   const projects = useMemo(() => {
     return notes
@@ -390,7 +390,7 @@ function ProjectsSection() {
 
 // ── Today Section (Notes filtered for today) ───────────────────────────────
 function TodaySection() {
-  const { notes, loadNoteIntoEditor } = useWSHStore();
+  const { notes, loadNoteIntoEditor, deleteNote } = useWSHStore();
 
   const now = new Date();
   const y = now.getFullYear();
@@ -444,6 +444,11 @@ function TodaySection() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleTrashNote = async (event: React.MouseEvent<HTMLButtonElement>, note: Note) => {
+    event.stopPropagation();
+    await deleteNote(note.id);
+  };
+
   const typeColors: Record<string, string> = {
     quick: 'text-blue-400',
     notebook: 'text-green-400',
@@ -474,27 +479,40 @@ function TodaySection() {
           </p>
         ) : (
           allTodayItems.map((item) => (
-            <button
+            <div
               key={item.id}
-              onClick={() => handleNoteClick(item)}
-              className="w-full text-left flex items-start gap-2 p-2.5 rounded-lg hover:bg-secondary/50 transition-colors group active:scale-[0.99]"
+              className="w-full flex items-start gap-2 p-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
             >
-              <Zap className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${typeColors[item.type] || 'text-muted-foreground'}`} />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-foreground leading-relaxed block truncate group-hover:text-cyan-400 transition-colors">
-                  {item.title || 'Untitled'}
-                </span>
-                {item.tags.length > 0 && (
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {item.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="text-[8px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/20 font-bold">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </button>
+              <button
+                onClick={() => handleNoteClick(item)}
+                className="flex-1 min-w-0 text-left flex items-start gap-2 active:scale-[0.99]"
+              >
+                <Zap className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${typeColors[item.type] || 'text-muted-foreground'}`} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-foreground leading-relaxed block truncate group-hover:text-cyan-400 transition-colors">
+                    {item.title || 'Untitled'}
+                  </span>
+                  {item.tags.length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {item.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="text-[8px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/20 font-bold">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={(event) => void handleTrashNote(event, item)}
+                className="shrink-0 mt-0.5 p-1 rounded-md text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                aria-label={`Send ${item.title || 'note'} to trash`}
+                title="Send to trash"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))
         )}
       </div>
