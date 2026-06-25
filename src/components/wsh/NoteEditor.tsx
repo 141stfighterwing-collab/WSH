@@ -9,6 +9,7 @@ import {
   Strikethrough,
   List,
   ListOrdered,
+  CheckSquare,
   Subscript,
   Superscript,
   Paperclip,
@@ -57,6 +58,25 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 function countImagesInEditor(editor: HTMLDivElement | null): number {
   if (!editor) return 0;
   return editor.querySelectorAll('img[data-wsh-image="true"], img').length;
+}
+
+function normalizeEditorLists(editor: HTMLDivElement | null) {
+  if (!editor) return;
+
+  editor.querySelectorAll('ul, ol').forEach((list) => {
+    list.classList.add('pl-6', 'my-2');
+    if (list.tagName === 'UL') list.classList.add('list-disc');
+    if (list.tagName === 'OL') list.classList.add('list-decimal');
+  });
+
+  editor.querySelectorAll('li').forEach((item) => {
+    item.classList.add('my-1');
+  });
+
+  editor.querySelectorAll('input[data-wsh-checkbox="true"]').forEach((checkbox) => {
+    const element = checkbox as HTMLInputElement;
+    element.classList.add('mr-2', 'align-middle');
+  });
 }
 
 const synthesisModes: { mode: SynthesisMode; label: string; icon: React.ReactNode }[] = [
@@ -157,6 +177,7 @@ export default function NoteEditor() {
 
   const handleContentInput = useCallback(() => {
     if (editorRef.current) {
+      normalizeEditorLists(editorRef.current);
       const html = editorRef.current.innerHTML;
       setEditorContent(html);
       setEditorRawContent(editorRef.current.innerText);
@@ -166,6 +187,16 @@ export default function NoteEditor() {
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
+    handleContentInput();
+  };
+
+  const insertChecklistItem = () => {
+    editorRef.current?.focus();
+    document.execCommand(
+      'insertHTML',
+      false,
+      '<div data-wsh-checklist-item="true" style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;"><input type="checkbox" data-wsh-checkbox="true" /> <span>Checklist item</span></div>'
+    );
     handleContentInput();
   };
 
@@ -612,6 +643,13 @@ export default function NoteEditor() {
         >
           <ListOrdered className="w-3.5 h-3.5" />
         </button>
+        <button
+          onClick={insertChecklistItem}
+          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+          title="Checklist"
+        >
+          <CheckSquare className="w-3.5 h-3.5" />
+        </button>
 
         <div className="w-px h-4 bg-border/50 mx-1" />
 
@@ -874,7 +912,7 @@ export default function NoteEditor() {
             contentEditable
             onInput={handleContentInput}
             data-placeholder="Start writing your thoughts..."
-            className="min-h-[450px] h-[450px] max-h-[600px] overflow-y-auto bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 text-sm text-foreground leading-relaxed editor-inner focus:ring-2 focus:ring-pri-500/20 transition-all duration-200 resize-y"
+            className="min-h-[450px] h-[450px] max-h-[600px] overflow-y-auto bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 text-sm text-foreground leading-relaxed editor-inner focus:ring-2 focus:ring-pri-500/20 transition-all duration-200 resize-y [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1"
             style={{ minHeight: '300px' }}
           />
         </div>

@@ -1,3 +1,82 @@
+# WSH v4.4.13 — Coding Changes
+
+## Overview
+v4.4.13 focuses on interaction quality: smoother mind map rendering and more natural note-editing behavior for bullets, numbering, and checklists.
+
+## 1. MindMap.tsx — smoother animation path
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The hybrid galaxy map looked good, but it was still doing more per-frame DOM work than necessary, especially while rotating labels and moving orbiting nodes.
+
+### Fix
+- shifted moving note updates toward transform-based writes instead of repeated left/top layout changes
+- throttled counter-rotation label updates so labels are not rewritten every frame unnecessarily
+- kept the existing orbit/rotation behavior while reducing animation churn
+
+### Effect
+The map should feel smoother and less jittery, especially on dense note sets or when orbit and rotation are both active.
+
+## 2. NoteEditor.tsx — checklist + cleaner list behavior
+
+**Files:**
+- `src/components/wsh/NoteEditor.tsx`
+
+### Problem
+The editor relied on raw browser execCommand behavior for lists, which can make bullets and numbering feel inconsistent compared with a modern notes app. It also lacked a dedicated checklist tool.
+
+### Fix
+- added a dedicated checklist toolbar button
+- added post-input list normalization for bullet and numbered lists
+- reinforced list spacing and indentation styling so rendered note content behaves more predictably
+
+### Effect
+Bullets, numbering, and checklists now behave more like expected note-taking primitives instead of fragile rich-text artifacts.
+
+## 3. Versioning / release metadata — patch bump to 4.4.13
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+### Changed
+- bumped release metadata from `4.4.12` to `4.4.13`
+- aligned Docker build args, image tags, runtime version fallbacks, and README references
+
+## 4. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.13.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/MindMap.tsx` | Smoothed the hybrid galaxy animation path by reducing DOM churn during orbit/rotation updates |
+| 2 | `src/components/wsh/NoteEditor.tsx` | Added checklist insertion and normalized bullet/numbered list behavior |
+| 3 | `package.json` | Version bump to 4.4.13 |
+| 4 | `Dockerfile` | Build version bump to 4.4.13 |
+| 5 | `docker-compose.yml` | Build arg and image tag bump to 4.4.13 |
+| 6 | `docker-entrypoint.sh` | Entrypoint version banner bump to 4.4.13 |
+| 7 | `src/app/api/health/route.ts` | Runtime version fallback bump to 4.4.13 |
+| 8 | `src/app/api/admin/system/route.ts` | System route version fallback bump to 4.4.13 |
+| 9 | `README.md` | Updated user-facing version references to 4.4.13 |
+| 10 | `RELEASE-NOTES-4.4.13.md` | Added patch notes for interaction polish release |
+| 11 | `CHANGELOG.md` | Added 4.4.13 entry |
+| 12 | `FILE_TRACKER.md` | Updated release inventory |
+| 13 | `RELEASE-CHECKLIST.md` | Updated target release line |
+
+---
+
 # WSH v4.4.12 — Coding Changes
 
 ## Overview

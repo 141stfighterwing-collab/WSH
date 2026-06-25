@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.13] - 2026-06-25
+
+### Added
+- **Editor checklist button** — Added a dedicated checklist insertion control so users can create checkbox-style note items directly from the toolbar.
+- **Release notes for interaction polish** — Added `RELEASE-NOTES-4.4.13.md` documenting the mind map smoothness and note-list behavior improvements.
+
+### Changed
+- **Mind map animation path smoothed further** — Reduced per-frame DOM churn by moving orbit node updates to transform writes and throttling label counter-rotation updates.
+- **Editor list behavior improved** — Bullet lists and numbered lists are now normalized after edits so spacing, indentation, and list rendering behave more like a conventional notes app.
+- **Version metadata bumped to 4.4.13** — Updated package metadata for the next patch release focused on interaction quality.
+
+### Validation
+- **Production build passed** — `npm run build` completed successfully on the 4.4.13 tree after the editor and mind map interaction changes.
+
 ## [4.4.12] - 2026-06-25
 
 ### Added

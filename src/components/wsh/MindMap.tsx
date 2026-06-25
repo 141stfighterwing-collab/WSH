@@ -61,6 +61,7 @@ export default function MindMap() {
   const [dimensions, setDimensions] = useState({ width: 1440, height: 900 });
   const [zoom, setZoom] = useState(1);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const lastLabelRotationRef = useRef<number>(0);
   const [orbiting, setOrbiting] = useState(true);
   const [rotating, setRotating] = useState(false);
   const [centerNodeId, setCenterNodeId] = useState<string | null>(null);
@@ -305,15 +306,19 @@ export default function MindMap() {
         }
       }
 
-      if (hubLabelRef.current) {
-        hubLabelRef.current.style.transform = `translateX(-50%) rotate(${rotating ? -globalRotation : 0}deg)`;
-      }
-
-      Object.values(nodeLabelRefs.current).forEach((label) => {
-        if (label) {
-          label.style.transform = `translateX(-50%) rotate(${rotating ? -globalRotation : 0}deg)`;
+      const labelRotation = rotating ? -globalRotation : 0;
+      if (Math.abs(labelRotation - lastLabelRotationRef.current) > 0.12) {
+        if (hubLabelRef.current) {
+          hubLabelRef.current.style.transform = `translateX(-50%) rotate(${labelRotation}deg)`;
         }
-      });
+
+        Object.values(nodeLabelRefs.current).forEach((label) => {
+          if (label) {
+            label.style.transform = `translateX(-50%) rotate(${labelRotation}deg)`;
+          }
+        });
+        lastLabelRotationRef.current = labelRotation;
+      }
 
       if (orbiting) {
         graph.nodes.forEach((node) => {
@@ -333,8 +338,7 @@ export default function MindMap() {
         const liveNode = nodePositionMapRef.current.get(node.id);
         const element = document.getElementById(`mind-node-${node.id}`);
         if (element && liveNode) {
-          element.style.left = `${liveNode.x - center.x}px`;
-          element.style.top = `${liveNode.y - center.y}px`;
+          element.style.transform = `translate(-50%, -50%) translate(${liveNode.x - center.x}px, ${liveNode.y - center.y}px) scale(${hoveredNodeId === node.id ? 1.08 : 1})`;
         }
       });
 
@@ -543,10 +547,10 @@ export default function MindMap() {
                       onDoubleClick={() => handleNodeDoubleClick(node.id)}
                       className="absolute -translate-x-1/2 -translate-y-1/2"
                       style={{
-                        left: node.x - center.x,
-                        top: node.y - center.y,
-                        transform: `translate(-50%, -50%) scale(${hovered ? 1.08 : 1})`,
-                        transition: 'transform 180ms ease',
+                        left: 0,
+                        top: 0,
+                        transform: `translate(-50%, -50%) translate(${node.x - center.x}px, ${node.y - center.y}px) scale(${hovered ? 1.08 : 1})`,
+                        transition: 'transform 140ms linear',
                       }}
                     >
                       <div className="relative flex items-center justify-center">
