@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.15] - 2026-06-25
+
+### Added
+- **Expanded intelligence-board graph set** — Added Creation Rhythm and Type Signal Radar chart surfaces to the Full Intelligence Board dashboard.
+- **Release notes for chart/motion expansion** — Added `RELEASE-NOTES-4.4.15.md` documenting the intelligence-board animation and graph enhancements.
+
+### Changed
+- **Dashboard chart animations smoothed** — Tuned chart motion across area, line, pie, bar, and radar visualizations for a more fluid experience.
+- **Version metadata bumped to 4.4.15** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+
+### Validation
+- **Production build passed** — `npm run build` completed successfully on the 4.4.15 tree after the chart expansion and animation updates.
+
 ## [4.4.14] - 2026-06-25
 
 ### Added

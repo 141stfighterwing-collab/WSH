@@ -1,3 +1,45 @@
+# WSH v4.4.15 — Coding Changes
+
+## Overview
+v4.4.15 extends the Full Intelligence Board with additional chart surfaces and smoother chart animation behavior.
+
+## 1. WSHKeepsDashboard.tsx — chart expansion + smoother motion
+
+**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
+
+### Problem
+The new intelligence board was stronger conceptually, but it still needed more pattern-oriented graphing and more fluid animation to feel like a polished command center.
+
+### Fix
+- added a Creation Rhythm chart for hour-of-day note creation patterns
+- added a Type Signal Radar chart for comparing note-type count and word-weight intensity
+- tuned animation settings across area, line, pie, bar, and radar charts
+
+### Effect
+The intelligence board should now feel more visually expressive, more fluid, and better suited for scanning patterns at a glance.
+
+## 2. Versioning / release metadata — patch bump to 4.4.15
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.15.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+---
+
 # WSH v4.4.14 — Coding Changes
 
 ## Overview

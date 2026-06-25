@@ -1,5 +1,5 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.4.14
+# WSH Docker Entrypoint v4.4.15
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 #
@@ -60,7 +60,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.4.14}"
+echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.4.15}"
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 

@@ -31,6 +31,11 @@ import {
   Area,
   AreaChart,
   Bar,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   BarChart,
   CartesianGrid,
   Cell,
@@ -194,6 +199,22 @@ function buildWeekdaySeries(notes: Note[]): { day: string; keeps: number }[] {
   return counts;
 }
 
+function buildHourSeries(notes: Note[]): { hour: string; keeps: number }[] {
+  const counts = Array.from({ length: 24 }, (_, hour) => ({ hour: `${hour}:00`, keeps: 0 }));
+  notes.forEach((note) => {
+    counts[new Date(note.createdAt).getHours()].keeps += 1;
+  });
+  return counts;
+}
+
+function buildRadarSeries(typeSeries: TypePoint[]) {
+  return typeSeries.slice(0, 6).map((item) => ({
+    type: item.name,
+    keeps: item.count,
+    words: Math.max(1, Math.round(item.words / 100)),
+  }));
+}
+
 function MetricCard({
   label,
   value,
@@ -291,6 +312,8 @@ export default function WSHKeepsDashboard() {
   const reviewBuckets = useMemo(() => buildReviewBuckets(activeNotes), [activeNotes]);
   const topTags = useMemo(() => getTopTags(activeNotes), [activeNotes]);
   const weekdaySeries = useMemo(() => buildWeekdaySeries(activeNotes), [activeNotes]);
+  const hourSeries = useMemo(() => buildHourSeries(activeNotes), [activeNotes]);
+  const radarSeries = useMemo(() => buildRadarSeries(typeSeries), [typeSeries]);
 
   const recentlyUpdated = useMemo(
     () =>
@@ -553,9 +576,9 @@ export default function WSHKeepsDashboard() {
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={18} />
                   <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <ChartTooltip />
-                  <Area type="monotone" dataKey="created" stroke="#60a5fa" fill="url(#createdGradient)" strokeWidth={2.5} />
-                  <Line type="monotone" dataKey="updated" stroke="#f59e0b" strokeWidth={2.25} dot={false} />
-                  <Area type="monotone" dataKey="words" stroke="#34d399" fill="url(#wordsGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="created" stroke="#60a5fa" fill="url(#createdGradient)" strokeWidth={2.5} isAnimationActive animationDuration={900} animationEasing="ease-out" />
+                  <Line type="monotone" dataKey="updated" stroke="#f59e0b" strokeWidth={2.25} dot={false} isAnimationActive animationDuration={950} animationEasing="ease-out" />
+                  <Area type="monotone" dataKey="words" stroke="#34d399" fill="url(#wordsGradient)" strokeWidth={2} isAnimationActive animationDuration={1050} animationEasing="ease-out" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -603,7 +626,7 @@ export default function WSHKeepsDashboard() {
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={typeSeries} dataKey="count" nameKey="name" innerRadius={48} outerRadius={86} paddingAngle={3}>
+                    <Pie data={typeSeries} dataKey="count" nameKey="name" innerRadius={48} outerRadius={86} paddingAngle={3} isAnimationActive animationDuration={950} animationEasing="ease-out">
                       {typeSeries.map((item) => (
                         <Cell key={item.name} fill={TYPE_COLORS[item.name] || '#818cf8'} />
                       ))}
@@ -671,6 +694,50 @@ export default function WSHKeepsDashboard() {
         </Panel>
       </div>
 
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Panel
+          title="Creation Rhythm"
+          subtitle="Hour-of-day creation pattern across the workspace"
+          icon={<Timer className="h-4 w-4" />}
+        >
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourSeries} margin={{ top: 6, right: 12, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
+                <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
+                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <ChartTooltip />
+                <Bar dataKey="keeps" fill="#38bdf8" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={1000} animationEasing="ease-out" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+
+        <Panel
+          title="Type Signal Radar"
+          subtitle="Comparative note-type intensity across count and word weight"
+          icon={<Gauge className="h-4 w-4" />}
+        >
+          {radarSeries.length > 0 ? (
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarSeries}>
+                  <PolarGrid stroke="rgba(148, 163, 184, 0.18)" />
+                  <PolarAngleAxis dataKey="type" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
+                  <PolarRadiusAxis tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} />
+                  <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--foreground)' }} />
+                  <Radar name="Keeps" dataKey="keeps" stroke="#a78bfa" fill="#a78bfa" fillOpacity={0.28} isAnimationActive animationDuration={1100} animationEasing="ease-out" />
+                  <Radar name="Word Weight (/100)" dataKey="words" stroke="#34d399" fill="#34d399" fillOpacity={0.14} isAnimationActive animationDuration={1250} animationEasing="ease-out" />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyChart label="No type signal data yet" />
+          )}
+        </Panel>
+      </div>
+
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr_1fr]">
         <Panel
           title="Review Age"
@@ -684,7 +751,7 @@ export default function WSHKeepsDashboard() {
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <ChartTooltip />
-                <Bar dataKey="keeps" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="keeps" fill="#f59e0b" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={850} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -702,7 +769,7 @@ export default function WSHKeepsDashboard() {
                 <XAxis dataKey="day" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <ChartTooltip />
-                <Bar dataKey="keeps" fill="#a78bfa" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="keeps" fill="#a78bfa" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={850} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -721,7 +788,7 @@ export default function WSHKeepsDashboard() {
                   <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={86} />
                   <ChartTooltip />
-                  <Bar dataKey="keeps" fill="#22d3ee" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="keeps" fill="#22d3ee" radius={[0, 6, 6, 0]} isAnimationActive animationDuration={900} animationEasing="ease-out" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
