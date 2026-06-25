@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.14] - 2026-06-25
+
+### Added
+- **Full Intelligence Board dashboard** — Reworked the WSH dashboard into a command-center surface with new sections for What Matters Now, Operational Signals, Active Work Queue, and Recent Intelligence.
+- **Release notes for the dashboard upgrade** — Added `RELEASE-NOTES-4.4.14.md` documenting the Full Intelligence Board release.
+
+### Changed
+- **Dashboard UX upgraded from passive analytics to actionable intelligence** — Existing activity, type, folder, tag, and review-age analytics were reorganized into a more tactical executive layout that highlights urgent/stale notes and higher-signal workspace content.
+- **Version metadata bumped to 4.4.14** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+
+### Validation
+- **Production build passed** — `npm run build` completed successfully on the 4.4.14 tree after the Full Intelligence Board redesign.
+
 ## [4.4.13] - 2026-06-25
 
 ### Added

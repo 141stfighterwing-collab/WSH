@@ -1,6 +1,6 @@
 # WSH Release Checklist
 
-Target release line: `4.4.13`
+Target release line: `4.4.14`
 
 This checklist is split into:
 - **MUST fixes** — blockers for calling a release ready
@@ -77,7 +77,7 @@ Notes:
 - [ ] Triage variable-order / import-style issues that affect maintainability
 
 ### 3) Release hygiene / docs polish
-- [x] Add/update release notes for `4.4.13`
+- [x] Add/update release notes for `4.4.14`
 - [ ] Summarize hardening changes in changelog/release notes
 - [ ] Confirm README deployment/security wording matches current behavior
 - [ ] Confirm first-run bootstrap instructions match hardened defaults

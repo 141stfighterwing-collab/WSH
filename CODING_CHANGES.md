@@ -1,3 +1,48 @@
+# WSH v4.4.14 — Coding Changes
+
+## Overview
+v4.4.14 upgrades the dashboard into a Full Intelligence Board that emphasizes actionable workspace insight over passive chart review.
+
+## 1. WSHKeepsDashboard.tsx — command-center intelligence board
+
+**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
+
+### Problem
+The prior dashboard was strong on analytics but weak on prioritization. It showed charts and totals well, but it did not guide the user toward what actually mattered now.
+
+### Fix
+- redesigned the dashboard as a command-center style intelligence board
+- added a new What Matters Now section
+- added an Operational Signals section
+- added an Active Work Queue for likely next-action notes
+- added a Recent Intelligence section for higher-signal notes
+- preserved and reorganized existing chart surfaces so the board still carries analytical depth
+
+### Effect
+The dashboard now behaves more like an executive/operational intelligence surface instead of a passive analytics page.
+
+## 2. Versioning / release metadata — patch bump to 4.4.14
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.14.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+---
+
 # WSH v4.4.13 — Coding Changes
 
 ## Overview
