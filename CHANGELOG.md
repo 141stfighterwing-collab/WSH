@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.17] - 2026-06-25
+
+### Fixed
+- **Things to do Today mount/save race** — Added a load-complete guard so the Today checklist no longer overwrites saved items with an empty array during initial component mount.
+
+### Added
+- **Release notes for the Today checklist race-condition fix** — Added `RELEASE-NOTES-4.4.17.md` documenting the stronger persistence fix.
+
+### Changed
+- **Version metadata bumped to 4.4.17** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+
+### Validation
+- **Production build passed** — `npm run build` completed successfully on the 4.4.17 tree after the Today checklist race-condition fix.
+
 ## [4.4.16] - 2026-06-25
 
 ### Fixed

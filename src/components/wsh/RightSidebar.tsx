@@ -133,16 +133,21 @@ function TodoChecklist() {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isInputVisible, setIsInputVisible] = useState(false);
+  const [hasLoadedTodos, setHasLoadedTodos] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load todos from localStorage on mount
   useEffect(() => {
-    queueMicrotask(() => setTodos(loadTodos()));
+    queueMicrotask(() => {
+      setTodos(loadTodos());
+      setHasLoadedTodos(true);
+    });
   }, []);
-  // Persist on change
+  // Persist on change only after initial load completes
   useEffect(() => {
+    if (!hasLoadedTodos) return;
     saveTodos(todos);
-  }, [todos]);
+  }, [todos, hasLoadedTodos]);
 
   // Auto-focus input when it becomes visible
   useEffect(() => {

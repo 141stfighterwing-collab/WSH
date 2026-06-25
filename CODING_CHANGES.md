@@ -1,3 +1,45 @@
+# WSH v4.4.17 — Coding Changes
+
+## Overview
+v4.4.17 fixes a mount/save race in the Today checklist that could erase saved items by persisting an empty array before the initial load completed.
+
+## 1. RightSidebar.tsx — initial-load persistence guard
+
+**File:** `src/components/wsh/RightSidebar.tsx`
+
+### Problem
+Even after moving Today checklist storage to date-keyed buckets, the component could still mount with `todos = []` and immediately persist that empty state before loading the saved list. That race could wipe the current day's tasks on refresh.
+
+### Fix
+- added an explicit `hasLoadedTodos` guard
+- initial load now completes before any save effect is allowed to write
+- persistence only runs after the component has hydrated from storage
+
+### Effect
+Saved Today checklist items should no longer disappear due to first-render overwrite behavior.
+
+## 2. Versioning / release metadata — patch bump to 4.4.17
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.17.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+---
+
 # WSH v4.4.16 — Coding Changes
 
 ## Overview
