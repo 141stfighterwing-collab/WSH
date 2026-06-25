@@ -1,3 +1,79 @@
+# WSH v4.4.12 — Coding Changes
+
+## Overview
+v4.4.12 upgrades the WSH galaxy map into a hybrid graph + orbital interface inspired by the cloud Weavenote mind map model, while keeping the self-hosted implementation native to WSH and adding a full patch-release trail for deployment.
+
+## 1. MindMap.tsx — hybrid graph + orbital galaxy UI
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The previous WSH mind map was a clean ambient galaxy view, but it still treated the whole note set as a mostly uniform hub-and-spoke orbit. That made dense note collections feel flatter than the newer Weavenote relationship model and gave users limited control over motion.
+
+### Fix
+- replaced the single-style hub-spoke layout with a hybrid note graph model
+- score note relationships using shared tags and lightweight text similarity
+- select a center-star note automatically, with double-click recentering for any note
+- assign notes into roles:
+  - `center`
+  - `orbiter-major`
+  - `orbiter-minor`
+  - `static`
+- animate only the orbital roles while leaving less-connected notes calmer
+- added direct UI controls for orbit pause/resume, galaxy rotation toggle, zoom in, zoom out, and reset
+
+### Effect
+The mind map is now more readable, more expressive, and closer to the cloud Weavenote relationship feel without forcing unrelated notes into constant motion.
+
+## 2. Versioning / release metadata — patch bump to 4.4.12
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+### Changed
+- bumped release metadata from `4.4.11` to `4.4.12`
+- aligned Docker build args and image tags with the new patch version
+- aligned health/system endpoint fallback versions
+- aligned user-facing README release references
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.12.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+### Changed
+- added dedicated release notes for the hybrid orbital mind map upgrade
+- documented the new patch release in the changelog
+- updated file inventory and release-checklist target line to the new version
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/MindMap.tsx` | Reworked the WSH galaxy map into a hybrid orbital/graph layout with pause, rotation, zoom, reset, and recenter controls |
+| 2 | `package.json` | Version bump to 4.4.12 |
+| 3 | `Dockerfile` | Build version bump to 4.4.12 |
+| 4 | `docker-compose.yml` | Build arg and image tag bump to 4.4.12 |
+| 5 | `docker-entrypoint.sh` | Entrypoint version banner bump to 4.4.12 |
+| 6 | `src/app/api/health/route.ts` | Runtime version fallback bump to 4.4.12 |
+| 7 | `src/app/api/admin/system/route.ts` | System route version fallback bump to 4.4.12 |
+| 8 | `README.md` | Updated user-facing version references to 4.4.12 |
+| 9 | `RELEASE-NOTES-4.4.12.md` | Added patch notes for the hybrid mind map upgrade |
+| 10 | `CHANGELOG.md` | Added 4.4.12 entry |
+| 11 | `FILE_TRACKER.md` | Updated release inventory |
+| 12 | `RELEASE-CHECKLIST.md` | Updated release target line and release-hygiene note |
+
+---
+
 # WSH v4.4.11 — Coding Changes
 
 ## Overview

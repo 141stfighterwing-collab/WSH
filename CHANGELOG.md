@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.12] - 2026-06-25
+
+### Added
+- **Hybrid galaxy mind map controls** — Added explicit orbit pause/resume, galaxy rotation toggle, zoom controls, reset behavior, and double-click recentering for the WSH mind map overlay.
+- **Hybrid relationship model for note constellations** — Added a graph-to-orbit layout that promotes multi-connected notes into orbital bands while leaving weaker/unconnected notes calmer and easier to read.
+- **Standalone release notes for the hybrid mind map upgrade** — Added `RELEASE-NOTES-4.4.12.md` to document the WSH-specific galaxy-map upgrade and version rollout.
+
+### Changed
+- **WSH mind map experience upgraded** — Reworked `src/components/wsh/MindMap.tsx` from a simple rotating hub-spoke layout into a hybrid self-hosted galaxy view that uses shared tags, lightweight text similarity, center-star selection, major/minor orbit roles, and calmer static clusters.
+- **Version metadata bumped to 4.4.12** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+
+### Validation
+- **Release metadata aligned** — WSH version strings now report `4.4.12` across package, Docker, runtime API, and documentation touchpoints.
+- **Mind map release trail updated** — Changelog, coding notes, file tracker, and dedicated release notes now reflect the hybrid orbital WSH upgrade.
+
 ## [4.4.11] - 2026-06-22
 
 ### Added
