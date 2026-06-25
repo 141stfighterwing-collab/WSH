@@ -1,3 +1,46 @@
+# WSH v4.4.16 — Coding Changes
+
+## Overview
+v4.4.16 fixes Today checklist persistence so "Things to do Today" behaves like a reliable date-scoped daily list instead of a fragile transient blob.
+
+## 1. RightSidebar.tsx — date-scoped Today checklist persistence
+
+**File:** `src/components/wsh/RightSidebar.tsx`
+
+### Problem
+The Today checklist stored its data in a single localStorage blob plus a single date key. That made it easy for the current-day list to feel unreliable and created rollover behavior that was more destructive than necessary.
+
+### Fix
+- replaced the single-blob storage pattern with a date-keyed todo map
+- load today's checklist bucket explicitly
+- mirror current-day data back to legacy keys for compatibility
+- keep a short retention window for recent day buckets while isolating the current day properly
+
+### Effect
+"Things to do Today" should now persist much more reliably through refreshes and remain available throughout the current day.
+
+## 2. Versioning / release metadata — patch bump to 4.4.16
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.16.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+---
+
 # WSH v4.4.15 — Coding Changes
 
 ## Overview

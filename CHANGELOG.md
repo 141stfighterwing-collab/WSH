@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.16] - 2026-06-25
+
+### Fixed
+- **Things to do Today persistence** — Reworked the Today checklist storage path so items are persisted by date bucket and remain available throughout the current day instead of relying on a fragile single-blob rollover behavior.
+
+### Added
+- **Release notes for the Today checklist persistence fix** — Added `RELEASE-NOTES-4.4.16.md` documenting the date-scoped storage update.
+
+### Changed
+- **Version metadata bumped to 4.4.16** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+
+### Validation
+- **Production build passed** — `npm run build` completed successfully on the 4.4.16 tree after the Today checklist persistence update.
+
 ## [4.4.15] - 2026-06-25
 
 ### Added

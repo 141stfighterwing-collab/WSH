@@ -15,6 +15,7 @@ interface TodoItem {
 
 const TODO_STORAGE_KEY = 'wsh-todo-today';
 const TODO_DATE_KEY = 'wsh-todo-date';
+const TODO_MAP_KEY = 'wsh-todo-by-date';
 
 function generateTodoId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -34,16 +35,18 @@ function getTodayDateStr(): string {
 function loadTodos(): TodoItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const savedDate = localStorage.getItem(TODO_DATE_KEY);
     const today = getTodayDateStr();
-    // Auto-clear if it's a new day
-    if (savedDate && savedDate !== today) {
-      localStorage.removeItem(TODO_STORAGE_KEY);
-      localStorage.setItem(TODO_DATE_KEY, today);
-      return [];
+    const rawMap = localStorage.getItem(TODO_MAP_KEY);
+    if (rawMap) {
+      const parsedMap = JSON.parse(rawMap) as Record<string, TodoItem[]>;
+      const todaysItems = Array.isArray(parsedMap?.[today]) ? parsedMap[today] : [];
+      return todaysItems.filter((item: TodoItem) => item.id && typeof item.text === 'string');
     }
+
     const raw = localStorage.getItem(TODO_STORAGE_KEY);
+    const savedDate = localStorage.getItem(TODO_DATE_KEY);
     if (!raw) return [];
+    if (savedDate && savedDate !== today) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((item: TodoItem) => item.id && typeof item.text === 'string');
@@ -55,8 +58,29 @@ function loadTodos(): TodoItem[] {
 function saveTodos(todos: TodoItem[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos));
-    localStorage.setItem(TODO_DATE_KEY, getTodayDateStr());
+    const today = getTodayDateStr();
+    let todoMap: Record<string, TodoItem[]> = {};
+    const rawMap = localStorage.getItem(TODO_MAP_KEY);
+    if (rawMap) {
+      try {
+        todoMap = JSON.parse(rawMap) || {};
+      } catch {
+        todoMap = {};
+      }
+    }
+
+    todoMap[today] = todos.map((todo) => ({ ...todo, date: today }));
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 14);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    Object.keys(todoMap).forEach((dateKey) => {
+      if (dateKey < cutoffStr) delete todoMap[dateKey];
+    });
+
+    localStorage.setItem(TODO_MAP_KEY, JSON.stringify(todoMap));
+    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todoMap[today]));
+    localStorage.setItem(TODO_DATE_KEY, today);
   } catch {
     // Storage full or disabled
   }
