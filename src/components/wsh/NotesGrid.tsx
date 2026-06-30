@@ -200,18 +200,12 @@ export default function NotesGrid() {
       filtered = filtered.filter((n) => n.folderId === activeFolderId);
     }
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (n) =>
-          n.title.toLowerCase().includes(q) ||
-          n.rawContent?.toLowerCase().includes(q) ||
-          n.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-
+    // Text search is performed server-side via /api/notes.
+    // Do not re-filter here against list-safe note payloads, because
+    // paginated results intentionally omit full rawContent/content and
+    // client-side filtering can incorrectly hide valid DB matches.
     return filtered;
-  }, [notes, activeNoteType, calendarDateFilter, activeFolderId, searchQuery]);
+  }, [notes, activeNoteType, calendarDateFilter, activeFolderId]);
 
   const handleNoteClick = (note: Note) => {
     setNoteDetailId(note.id);
