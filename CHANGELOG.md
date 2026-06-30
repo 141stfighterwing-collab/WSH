@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.18] - 2026-06-30
+
+### Fixed
+- **Main note search completeness** — Removed duplicate client-side note filtering in `src/components/wsh/NotesGrid.tsx` so valid database matches returned by `/api/notes` are no longer hidden by stripped list payloads.
+- **Document search reliability** — Reworked `src/app/api/documents/search/route.ts` to use reliable substring-based database matching across document chunks instead of fragile Prisma full-text behavior that could miss expected results.
+
+### Added
+- **Release notes for search hardening** — Added `RELEASE-NOTES-4.4.18.md` documenting the search fixes and validation guidance.
+
+### Changed
+- **Version metadata bumped to 4.4.18** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+
+### Validation
+- **GitHub release patch updated** — Search fixes were committed and pushed to the repository on the 4.4.18 line.
+- **Manual code-path verification completed** — Note search and document search paths were reviewed directly to confirm the previous incomplete-search behavior was removed.
+
 ## [4.4.17] - 2026-06-25
 
 ### Fixed
