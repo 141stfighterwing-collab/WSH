@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Plus, Trash2, Target, Package, Calendar, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 
@@ -30,6 +31,33 @@ interface ProjectEditorProps {
   setTitle: (v: string) => void;
   content: string;
   setContent: (v: string) => void;
+}
+
+interface SectionHeaderProps {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  count?: number;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+}
+
+function SectionHeader({ id, label, icon, count, expanded, onToggle }: SectionHeaderProps) {
+  return (
+    <button
+      onClick={() => onToggle(id)}
+      className="flex items-center gap-2 w-full py-2 text-left group transition-colors"
+    >
+      <span className="text-muted-foreground group-hover:text-foreground transition-colors">{icon}</span>
+      <span className="micro-label flex-1">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          {count}
+        </span>
+      )}
+      {expanded ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+    </button>
+  );
 }
 
 function parseProject(content: string): ProjectData {
@@ -107,27 +135,11 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
   const displayProgress = data.progress || autoProgress;
   const progressColor = displayProgress >= 80 ? 'bg-green-500' : displayProgress >= 50 ? 'bg-pri-500' : displayProgress >= 25 ? 'bg-yellow-500' : 'bg-red-500';
 
-  const SectionHeader = ({ id, label, icon, count }: { id: string; label: string; icon: React.ReactNode; count?: number }) => (
-    <button
-      onClick={() => toggleSection(id)}
-      className="flex items-center gap-2 w-full py-2 text-left group transition-colors"
-    >
-      <span className="text-muted-foreground group-hover:text-foreground transition-colors">{icon}</span>
-      <span className="micro-label flex-1">{label}</span>
-      {count !== undefined && count > 0 && (
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
-          {count}
-        </span>
-      )}
-      {expandedSections[id] ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-    </button>
-  );
-
   return (
     <div className="space-y-1 px-3 py-2 animate-fadeIn">
       {/* Objectives */}
       <div className="border-b border-border/30 pb-2">
-        <SectionHeader id="objectives" label="Primary Objectives / Goals" icon={<Target className="w-3.5 h-3.5" />} />
+        <SectionHeader id="objectives" label="Primary Objectives / Goals" icon={<Target className="w-3.5 h-3.5" />} expanded={expandedSections.objectives} onToggle={toggleSection} />
         {expandedSections.objectives && (
           <textarea
             value={data.objectives}
@@ -141,7 +153,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
 
       {/* Milestones */}
       <div className="border-b border-border/30 pb-2">
-        <SectionHeader id="milestones" label="Milestones" icon={<GripVertical className="w-3.5 h-3.5" />} count={data.milestones.length} />
+        <SectionHeader id="milestones" label="Milestones" icon={<GripVertical className="w-3.5 h-3.5" />} count={data.milestones.length} expanded={expandedSections.milestones} onToggle={toggleSection} />
         {expandedSections.milestones && (
           <div className="space-y-1.5 mt-1">
             {data.milestones.map((ms, idx) => (
@@ -187,7 +199,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
 
       {/* Deliverables */}
       <div className="border-b border-border/30 pb-2">
-        <SectionHeader id="deliverables" label="Key Deliverables" icon={<Package className="w-3.5 h-3.5" />} count={data.deliverables.length} />
+        <SectionHeader id="deliverables" label="Key Deliverables" icon={<Package className="w-3.5 h-3.5" />} count={data.deliverables.length} expanded={expandedSections.deliverables} onToggle={toggleSection} />
         {expandedSections.deliverables && (
           <div className="space-y-1.5 mt-1">
             {data.deliverables.map((dl, idx) => (
@@ -233,7 +245,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
 
       {/* Timeline */}
       <div className="border-b border-border/30 pb-2">
-        <SectionHeader id="timeline" label="Timeline" icon={<Calendar className="w-3.5 h-3.5" />} />
+        <SectionHeader id="timeline" label="Timeline" icon={<Calendar className="w-3.5 h-3.5" />} expanded={expandedSections.timeline} onToggle={toggleSection} />
         {expandedSections.timeline && (
           <div className="flex items-center gap-3 mt-1">
             <div className="flex-1">
@@ -261,7 +273,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
 
       {/* Progress Bar */}
       <div className="border-b border-border/30 pb-2">
-        <SectionHeader id="progress" label="Progress Monitor" icon={<Target className="w-3.5 h-3.5" />} />
+        <SectionHeader id="progress" label="Progress Monitor" icon={<Target className="w-3.5 h-3.5" />} expanded={expandedSections.progress} onToggle={toggleSection} />
         {expandedSections.progress && (
           <div className="mt-1 space-y-2">
             <div className="flex items-center gap-3">
@@ -295,7 +307,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
 
       {/* Notes */}
       <div>
-        <SectionHeader id="notes" label="Additional Notes" icon={<Package className="w-3.5 h-3.5" />} />
+        <SectionHeader id="notes" label="Additional Notes" icon={<Package className="w-3.5 h-3.5" />} expanded={expandedSections.notes} onToggle={toggleSection} />
         {expandedSections.notes && (
           <textarea
             value={data.notes}

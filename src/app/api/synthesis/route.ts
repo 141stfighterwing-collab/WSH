@@ -30,8 +30,151 @@ const SYSTEM_PROMPTS: Record<string, string> = {
   outline: 'Generate a structured outline based on the following note content.',
 };
 
+const STOP_WORDS = new Set([
+  'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'in', 'it', 'to', 'for', 'of', 'with', 'as', 'by', 'from', 'that', 'but', 'or', 'not', 'are', 'be', 'this', 'will', 'can', 'if', 'has', 'have', 'had', 'was', 'were', 'been', 'you', 'your', 'they', 'their', 'them', 'our', 'ours', 'about', 'into', 'over', 'under', 'than', 'then', 'there', 'here', 'also', 'just', 'more', 'most', 'some', 'such', 'very', 'much', 'many', 'when', 'where', 'what', 'who', 'why', 'how'
+]);
+
 let aiUsageCount = 0;
 let lastResetDate = new Date().toDateString();
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s#/-]/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+}
+
+function extractKeywords(text: string): Array<{ term: string; count: number }> {
+  const freq = new Map<string, number>();
+  for (const token of tokenize(text)) {
+    if (/^\d+$/.test(token)) continue;
+    freq.set(token, (freq.get(token) || 0) + 1);
+  }
+  return [...freq.entries()]
+    .map(([term, count]) => ({ term, count }))
+    .sort((a, b) => b.count - a.count || a.term.localeCompare(b.term));
+}
+
+function titleCase(term: string): string {
+  return term
+    .split(/[-/]/)
+    .map(part => part ? part.charAt(0).toUpperCase() + part.slice(1) : part)
+    .join(' ');
+}
+
+function summarizeLocally(content: string): string {
+  const plain = stripHtml(content);
+  const sentences = splitSentences(plain);
+  if (sentences.length === 0) return 'No content available to summarize.';
+  if (sentences.length <= 3) return sentences.join(' ');
+
+  const keywords = new Set(extractKeywords(plain).slice(0, 12).map((k) => k.term));
+  const scored = sentences.map((sentence, index) => {
+    const words = tokenize(sentence);
+    let score = 0;
+    for (const word of words) {
+      if (keywords.has(word)) score += 2;
+      if (/^[A-Z0-9_-]{2,}$/.test(word)) score += 1;
+    }
+    if (index === 0) score += 1.5;
+    if (sentence.length > 60 && sentence.length < 260) score += 1;
+    return { sentence, index, score };
+  });
+
+  const selected = scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, Math.min(4, Math.max(2, Math.ceil(sentences.length / 4))))
+    .sort((a, b) => a.index - b.index)
+    .map((item) => item.sentence);
+
+  return selected.join(' ');
+}
+
+function generateTagsLocally(content: string): string[] {
+  const plain = stripHtml(content);
+  const keywords = extractKeywords(plain);
+  const tags: string[] = [];
+  const seen = new Set<string>();
+
+  const addTag = (raw: string) => {
+    const cleaned = raw
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (!cleaned || cleaned.length < 3 || seen.has(cleaned)) return;
+    seen.add(cleaned);
+    tags.push(cleaned);
+  };
+
+  const acronymMatches = plain.match(/\b[A-Z]{2,}(?:[-_][A-Z0-9]+)?\b/g) || [];
+  acronymMatches.forEach(addTag);
+
+  const hashtagMatches = plain.match(/#([A-Za-z0-9_-]{3,})/g) || [];
+  hashtagMatches.forEach((tag) => addTag(tag.slice(1)));
+
+  for (const keyword of keywords) {
+    addTag(keyword.term);
+    if (tags.length >= 8) break;
+  }
+
+  return tags.slice(0, Math.max(4, Math.min(tags.length, 8)));
+}
+
+function generateOutlineLocally(content: string): string {
+  const plain = stripHtml(content);
+  const sentences = splitSentences(plain);
+  const keywords = extractKeywords(plain).slice(0, 8);
+
+  if (sentences.length === 0) {
+    return '## Overview\n\n- No content available\n';
+  }
+
+  const overview = summarizeLocally(content);
+  const topicLines = keywords.slice(0, 5).map((k) => `- ${titleCase(k.term)}`);
+
+  const nextStepsCandidates = sentences
+    .filter((s) => /should|need|next|follow up|todo|action|required|plan/i.test(s))
+    .slice(0, 4)
+    .map((s) => `- ${s}`);
+
+  const fallbackSteps = sentences
+    .slice(0, 3)
+    .map((s) => `- Review: ${s}`);
+
+  return [
+    '## Overview',
+    overview,
+    '',
+    '## Key Topics',
+    ...(topicLines.length ? topicLines : ['- General Notes']),
+    '',
+    '## Suggested Next Steps',
+    ...((nextStepsCandidates.length ? nextStepsCandidates : fallbackSteps)),
+  ].join('\n');
+}
 
 // ── Claude (Anthropic) ───────────────────────────────────────────────────
 async function callClaude(systemPrompt: string, content: string, model: string, temperature: number, maxTokens: number) {
@@ -136,24 +279,24 @@ async function callGemini(systemPrompt: string, content: string, model: string, 
   return { result, tokensUsed };
 }
 
+function runLocalAlgorithm(action: string, content: string) {
+  if (action === 'summarize') {
+    return { result: summarizeLocally(content), tokensUsed: 0, provider: 'local-algorithm' };
+  }
+  if (action === 'tags') {
+    return { result: JSON.stringify(generateTagsLocally(content)), tokensUsed: 0, provider: 'local-algorithm' };
+  }
+  if (action === 'outline') {
+    return { result: generateOutlineLocally(content), tokensUsed: 0, provider: 'local-algorithm' };
+  }
+  return null;
+}
+
 // ── Router ────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   let action = 'unknown';
   let provider = '';
   try {
-    // Daily limit reset
-    const today = new Date().toDateString();
-    if (today !== lastResetDate) {
-      aiUsageCount = 0;
-      lastResetDate = today;
-    }
-
-    const dailyLimit = parseInt(process.env.AI_DAILY_LIMIT || '800', 10);
-    if (aiUsageCount >= dailyLimit) {
-      return NextResponse.json({ error: 'Daily AI usage limit reached' }, { status: 429 });
-    }
-
-    // Parse body — accept optional provider/model overrides from client
     const body = await request.json();
     const { content, action: bodyAction, provider: clientProvider, model: clientModel } = body as {
       content: string;
@@ -172,12 +315,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }, { status: 400 });
     }
 
-    const systemPrompt = SYSTEM_PROMPTS[action] || SYSTEM_PROMPTS.summarize;
+    const localResult = runLocalAlgorithm(action, content);
+    if (localResult) {
+      addLog('info', `Local synthesis OK: provider=${localResult.provider}, action=${action}`, 'ai-engine');
+      return NextResponse.json({
+        result: localResult.result,
+        tokensUsed: localResult.tokensUsed,
+        usageCount: aiUsageCount,
+        provider: localResult.provider,
+      });
+    }
 
-    // Determine provider and model:
-    // 1. Client override (from settings) takes priority
-    // 2. Fall back to env var AI_PROVIDER
-    // 3. Fall back to checking which API keys are configured
+    // Daily limit reset for AI-backed actions only
+    const today = new Date().toDateString();
+    if (today !== lastResetDate) {
+      aiUsageCount = 0;
+      lastResetDate = today;
+    }
+
+    const dailyLimit = parseInt(process.env.AI_DAILY_LIMIT || '800', 10);
+    if (aiUsageCount >= dailyLimit) {
+      return NextResponse.json({ error: 'Daily AI usage limit reached' }, { status: 429 });
+    }
+
+    const systemPrompt = SYSTEM_PROMPTS[action] || SYSTEM_PROMPTS.summarize;
     provider = clientProvider || process.env.AI_PROVIDER || detectProvider();
     const temperature = parseFloat(process.env.AI_SYNTHESIS_TEMPERATURE || '0.7');
     const maxTokens = parseInt(process.env.AI_SYNTHESIS_MAX_TOKENS || '4096', 10);
@@ -268,7 +429,6 @@ export async function GET() {
 
   const defaultProvider = process.env.AI_PROVIDER || configured[0] || '';
 
-  // Build models list per provider (only for providers with API keys)
   const models: Record<string, { id: string; label: string }[]> = {};
   for (const [prov, isConfigured] of Object.entries(available)) {
     if (isConfigured && MODEL_CATALOG[prov]) {

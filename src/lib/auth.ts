@@ -19,7 +19,20 @@ export async function comparePassword(
 // ── JWT Session Management (BUG-002 fix) ──────────────────────
 
 function getJWTSecret(): Uint8Array {
-  const secret = process.env.JWT_SECRET || 'change-me-in-production';
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error(
+      'JWT_SECRET is required. Refusing to use an insecure fallback secret in runtime.',
+    );
+  }
+
+  if (secret === 'change-me-in-production') {
+    throw new Error(
+      'JWT_SECRET must not use the default placeholder value `change-me-in-production`.',
+    );
+  }
+
   return new TextEncoder().encode(secret);
 }
 

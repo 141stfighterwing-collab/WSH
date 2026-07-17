@@ -3,10 +3,12 @@
 import { useMemo, type ReactNode } from 'react';
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   BookOpen,
   Brain,
   Briefcase,
+  CheckCircle2,
   Clock3,
   Database,
   FileText,
@@ -17,15 +19,23 @@ import {
   LineChart as LineChartIcon,
   PieChart as PieChartIcon,
   RefreshCw,
+  ShieldCheck,
   Sparkles,
   Tag,
   Timer,
   TrendingUp,
+  Workflow,
+  Zap,
 } from 'lucide-react';
 import {
   Area,
   AreaChart,
   Bar,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   BarChart,
   CartesianGrid,
   Cell,
@@ -189,6 +199,22 @@ function buildWeekdaySeries(notes: Note[]): { day: string; keeps: number }[] {
   return counts;
 }
 
+function buildHourSeries(notes: Note[]): { hour: string; keeps: number }[] {
+  const counts = Array.from({ length: 24 }, (_, hour) => ({ hour: `${hour}:00`, keeps: 0 }));
+  notes.forEach((note) => {
+    counts[new Date(note.createdAt).getHours()].keeps += 1;
+  });
+  return counts;
+}
+
+function buildRadarSeries(typeSeries: TypePoint[]) {
+  return typeSeries.slice(0, 6).map((item) => ({
+    type: item.name,
+    keeps: item.count,
+    words: Math.max(1, Math.round(item.words / 100)),
+  }));
+}
+
 function MetricCard({
   label,
   value,
@@ -268,7 +294,7 @@ function EmptyChart({ label }: { label: string }) {
 }
 
 export default function WSHKeepsDashboard() {
-  const { notes, folders, aiUsageCount, isSyncing } = useWSHStore();
+  const { notes, folders, aiUsageCount, isSyncing, user } = useWSHStore();
 
   const activeNotes = useMemo(() => notes.filter((note) => !note.isDeleted), [notes]);
   const deletedNotes = notes.length - activeNotes.length;
@@ -286,12 +312,41 @@ export default function WSHKeepsDashboard() {
   const reviewBuckets = useMemo(() => buildReviewBuckets(activeNotes), [activeNotes]);
   const topTags = useMemo(() => getTopTags(activeNotes), [activeNotes]);
   const weekdaySeries = useMemo(() => buildWeekdaySeries(activeNotes), [activeNotes]);
+  const hourSeries = useMemo(() => buildHourSeries(activeNotes), [activeNotes]);
+  const radarSeries = useMemo(() => buildRadarSeries(typeSeries), [typeSeries]);
 
   const recentlyUpdated = useMemo(
     () =>
       [...activeNotes]
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 8),
+    [activeNotes]
+  );
+
+  const todayItems = useMemo(
+    () =>
+      [...activeNotes]
+        .filter((note) => {
+          const joined = `${note.title} ${note.rawContent || note.content || ''} ${(note.tags || []).join(' ')}`.toLowerCase();
+          return /today|urgent|asap|follow-up|followup|next step|checklist|todo|to-do/.test(joined);
+        })
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .slice(0, 6),
+    [activeNotes]
+  );
+
+  const highSignalNotes = useMemo(
+    () =>
+      [...activeNotes]
+        .map((note) => ({
+          note,
+          score:
+            (note.tags?.length || 0) * 2 +
+            (note.folderId ? 2 : 0) +
+            Math.min(8, countWords(note.rawContent || note.content) / 120),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5),
     [activeNotes]
   );
 
@@ -299,6 +354,7 @@ export default function WSHKeepsDashboard() {
     const uniqueTags = new Set(activeNotes.flatMap((note) => note.tags)).size;
     const linkedKeeps = activeNotes.filter((note) => note.tags.length > 0 || note.folderId).length;
     const staleKeeps = activeNotes.filter((note) => getAgeDays(note.updatedAt) >= 14).length;
+    const veryStaleKeeps = activeNotes.filter((note) => getAgeDays(note.updatedAt) >= 30).length;
     const lastSevenCreated = dailySeries.slice(-7).reduce((sum, point) => sum + point.created, 0);
     const previousSevenCreated = dailySeries.slice(-14, -7).reduce((sum, point) => sum + point.created, 0);
     const lastSevenUpdates = dailySeries.slice(-7).reduce((sum, point) => sum + point.updated, 0);
@@ -321,9 +377,13 @@ export default function WSHKeepsDashboard() {
         : largest;
     }, null);
 
+    const checklistCandidates = activeNotes.filter((note) => /checkbox|checklist|todo|to-do|\[ \]|\[x\]/i.test(`${note.title} ${note.rawContent || note.content || ''}`)).length;
+    const recentBurst = dailySeries.slice(-3).reduce((sum, point) => sum + point.updated, 0);
+
     return {
       uniqueTags,
       staleKeeps,
+      veryStaleKeeps,
       lastSevenCreated,
       lastSevenUpdates,
       lastSevenWords,
@@ -333,6 +393,8 @@ export default function WSHKeepsDashboard() {
       avgWords,
       readingMinutes,
       largestKeep,
+      checklistCandidates,
+      recentBurst,
       storageEstimate: formatBytes(totalChars * 2),
     };
   }, [activeNotes, dailySeries, totalChars, totalWords]);
@@ -351,33 +413,33 @@ export default function WSHKeepsDashboard() {
   return (
     <div className="space-y-5 pb-6">
       <div className="rounded-lg border border-border/50 bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-pri-400" />
+              <Brain className="h-4 w-4 text-pri-400" />
               <span className="text-[10px] font-black uppercase tracking-widest text-pri-400">
-                WSH Keeps Analytics
+                Full Intelligence Board
               </span>
             </div>
             <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
-              Keeps Dashboard
+              WSH Command Center
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              Stable workspace analytics from notes, folders, tags, updates, content size, and AI usage.
+              A live operational board for knowledge flow, note health, recent movement, and what deserves attention now.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 lg:min-w-[34rem]">
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 xl:min-w-[38rem]">
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Operator</p>
+              <p className="mt-1 font-bold text-foreground truncate">{user.username || 'Guest'}</p>
+            </div>
             <div className="rounded-lg bg-secondary/40 p-3">
               <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Sync</p>
               <p className="mt-1 font-bold text-foreground">{isSyncing ? 'Refreshing' : 'Current'}</p>
             </div>
             <div className="rounded-lg bg-secondary/40 p-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Updated</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Last Updated</p>
               <p className="mt-1 truncate font-bold text-foreground">{lastUpdated}</p>
-            </div>
-            <div className="rounded-lg bg-secondary/40 p-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Window</p>
-              <p className="mt-1 font-bold text-foreground">30 days</p>
             </div>
             <div className="rounded-lg bg-secondary/40 p-3">
               <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Storage</p>
@@ -385,6 +447,78 @@ export default function WSHKeepsDashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
+        <Panel
+          title="What Matters Now"
+          subtitle="Immediate work signals, fresh movement, and notes that deserve attention"
+          icon={<AlertTriangle className="h-4 w-4" />}
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg bg-secondary/30 p-3 border border-border/40">
+              <div className="flex items-center gap-2 text-amber-300 mb-2">
+                <Clock3 className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Needs Review</span>
+              </div>
+              <div className="text-3xl font-black text-foreground">{analytics.staleKeeps}</div>
+              <p className="mt-1 text-xs text-muted-foreground">{analytics.veryStaleKeeps} are older than 30 days without an update.</p>
+            </div>
+            <div className="rounded-lg bg-secondary/30 p-3 border border-border/40">
+              <div className="flex items-center gap-2 text-cyan-300 mb-2">
+                <Workflow className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Action Notes</span>
+              </div>
+              <div className="text-3xl font-black text-foreground">{todayItems.length}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Today/urgent/checklist style notes detected from content and tags.</p>
+            </div>
+            <div className="rounded-lg bg-secondary/30 p-3 border border-border/40">
+              <div className="flex items-center gap-2 text-emerald-300 mb-2">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Recent Burst</span>
+              </div>
+              <div className="text-3xl font-black text-foreground">{analytics.recentBurst}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Updates recorded in the last 3-day activity window.</p>
+            </div>
+            <div className="rounded-lg bg-secondary/30 p-3 border border-border/40">
+              <div className="flex items-center gap-2 text-purple-300 mb-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Checklist Candidates</span>
+              </div>
+              <div className="text-3xl font-black text-foreground">{analytics.checklistCandidates}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Notes that already look task-oriented and checklist friendly.</p>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel
+          title="Operational Signals"
+          subtitle="System, workspace, and content-health indicators"
+          icon={<ShieldCheck className="h-4 w-4" />}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
+              <span className="text-xs font-bold text-foreground">Keep Health</span>
+              <span className="text-xs font-black text-foreground">{analytics.keepHealth}%</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
+              <span className="text-xs font-bold text-foreground">Link Coverage</span>
+              <span className="text-xs font-black text-foreground">{analytics.linkCoverage}%</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
+              <span className="text-xs font-bold text-foreground">AI Usage Units</span>
+              <span className="text-xs font-black text-foreground">{aiUsageCount.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
+              <span className="text-xs font-bold text-foreground">Unique Tags</span>
+              <span className="text-xs font-black text-foreground">{analytics.uniqueTags}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
+              <span className="text-xs font-bold text-foreground">Reading Time</span>
+              <span className="text-xs font-black text-foreground">{analytics.readingMinutes}m</span>
+            </div>
+          </div>
+        </Panel>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -403,23 +537,6 @@ export default function WSHKeepsDashboard() {
           tone="bg-green-500/15 text-green-300"
         />
         <MetricCard
-          label="Link Coverage"
-          value={`${analytics.linkCoverage}%`}
-          detail={`${analytics.uniqueTags} tags across ${folders.length} folders`}
-          icon={<Hash className="h-5 w-5" />}
-          tone="bg-cyan-500/15 text-cyan-300"
-        />
-        <MetricCard
-          label="Keep Health"
-          value={`${analytics.keepHealth}%`}
-          detail={`${analytics.staleKeeps} Keeps need review`}
-          icon={<Gauge className="h-5 w-5" />}
-          tone="bg-amber-500/15 text-amber-300"
-        />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
           label="7-Day Creates"
           value={analytics.lastSevenCreated.toLocaleString()}
           detail={`${analytics.velocityTrend >= 0 ? '+' : ''}${analytics.velocityTrend}% versus prior week`}
@@ -427,29 +544,15 @@ export default function WSHKeepsDashboard() {
           tone="bg-emerald-500/15 text-emerald-300"
         />
         <MetricCard
-          label="7-Day Updates"
-          value={analytics.lastSevenUpdates.toLocaleString()}
-          detail={`${analytics.lastSevenWords.toLocaleString()} new words this week`}
-          icon={<RefreshCw className="h-5 w-5" />}
-          tone="bg-indigo-500/15 text-indigo-300"
-        />
-        <MetricCard
-          label="Reading Time"
-          value={`${analytics.readingMinutes}m`}
-          detail="Estimated at 200 words per minute"
-          icon={<Timer className="h-5 w-5" />}
-          tone="bg-purple-500/15 text-purple-300"
-        />
-        <MetricCard
-          label="AI Usage"
-          value={aiUsageCount.toLocaleString()}
-          detail="Synthesis usage units tracked locally"
+          label="Synthesis Ready"
+          value={Math.max(0, analytics.staleKeeps + todayItems.length).toLocaleString()}
+          detail="Notes likely worth review, summarization, or restructuring"
           icon={<Sparkles className="h-5 w-5" />}
           tone="bg-pink-500/15 text-pink-300"
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
         <Panel
           title="30-Day Activity"
           subtitle="Created Keeps, updated Keeps, and new words by day"
@@ -473,9 +576,9 @@ export default function WSHKeepsDashboard() {
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={18} />
                   <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <ChartTooltip />
-                  <Area type="monotone" dataKey="created" stroke="#60a5fa" fill="url(#createdGradient)" strokeWidth={2.5} />
-                  <Line type="monotone" dataKey="updated" stroke="#f59e0b" strokeWidth={2.25} dot={false} />
-                  <Area type="monotone" dataKey="words" stroke="#34d399" fill="url(#wordsGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="created" stroke="#60a5fa" fill="url(#createdGradient)" strokeWidth={2.5} isAnimationActive animationDuration={900} animationEasing="ease-out" />
+                  <Line type="monotone" dataKey="updated" stroke="#f59e0b" strokeWidth={2.25} dot={false} isAnimationActive animationDuration={950} animationEasing="ease-out" />
+                  <Area type="monotone" dataKey="words" stroke="#34d399" fill="url(#wordsGradient)" strokeWidth={2} isAnimationActive animationDuration={1050} animationEasing="ease-out" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -485,16 +588,45 @@ export default function WSHKeepsDashboard() {
         </Panel>
 
         <Panel
+          title="Active Work Queue"
+          subtitle="Notes likely to matter next"
+          icon={<Zap className="h-4 w-4" />}
+        >
+          <div className="space-y-3">
+            {(todayItems.length ? todayItems : recentlyUpdated.slice(0, 5)).map((note) => (
+              <div key={note.id} className="rounded-lg border border-border/40 bg-secondary/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className="rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
+                    style={{
+                      color: TYPE_COLORS[note.type] || '#818cf8',
+                      backgroundColor: `${TYPE_COLORS[note.type] || '#818cf8'}20`,
+                    }}
+                  >
+                    {note.type}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{getAgeDays(note.updatedAt)}d ago</span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm font-bold text-foreground">{note.title || 'Untitled Keep'}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{(note.preview || note.rawContent || note.content || '').slice(0, 140) || 'No preview yet.'}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-3">
+        <Panel
           title="Type Mix"
           subtitle="Keeps by workspace mode"
           icon={<PieChartIcon className="h-4 w-4" />}
         >
           {typeSeries.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-[1fr_1.1fr] xl:grid-cols-1">
+            <div className="grid gap-4">
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={typeSeries} dataKey="count" nameKey="name" innerRadius={48} outerRadius={86} paddingAngle={3}>
+                    <Pie data={typeSeries} dataKey="count" nameKey="name" innerRadius={48} outerRadius={86} paddingAngle={3} isAnimationActive animationDuration={950} animationEasing="ease-out">
                       {typeSeries.map((item) => (
                         <Cell key={item.name} fill={TYPE_COLORS[item.name] || '#818cf8'} />
                       ))}
@@ -506,10 +638,7 @@ export default function WSHKeepsDashboard() {
               <div className="space-y-2">
                 {typeSeries.map((item) => (
                   <div key={item.name} className="flex items-center gap-3 rounded-lg bg-secondary/30 p-2.5">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: TYPE_COLORS[item.name] || '#818cf8' }}
-                    />
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: TYPE_COLORS[item.name] || '#818cf8' }} />
                     <span className="flex-1 text-xs font-black capitalize text-foreground">{item.name}</span>
                     <span className="text-xs font-bold text-muted-foreground">{item.count}</span>
                   </div>
@@ -520,51 +649,91 @@ export default function WSHKeepsDashboard() {
             <EmptyChart label="No type data yet" />
           )}
         </Panel>
-      </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
         <Panel
-          title="Content Composition"
-          subtitle="Keeps and word volume by type"
-          icon={<Layers className="h-4 w-4" />}
+          title="Knowledge Signals"
+          subtitle="Tag density and relationship coverage"
+          icon={<Hash className="h-4 w-4" />}
         >
-          {typeSeries.length > 0 ? (
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={typeSeries} margin={{ top: 8, right: 14, bottom: 0, left: -18 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <ChartTooltip />
-                  <Bar dataKey="count" fill="#60a5fa" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="words" fill="#34d399" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyChart label="No content composition yet" />
-          )}
+          <div className="space-y-2">
+            {topTags.length === 0 ? (
+              <p className="rounded-lg bg-secondary/20 p-4 text-center text-xs text-muted-foreground">
+                Tags will appear here as Keeps get labeled.
+              </p>
+            ) : (
+              topTags.map(({ tag, count }) => (
+                <div key={tag} className="flex items-center gap-3">
+                  <span className="w-28 truncate text-xs font-bold text-foreground">#{tag}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                    <div className="h-full rounded-full bg-pri-500" style={{ width: `${Math.max(8, (count / topTags[0].count) * 100)}%` }} />
+                  </div>
+                  <span className="w-8 text-right text-xs font-bold text-muted-foreground">{count}</span>
+                </div>
+              ))
+            )}
+          </div>
         </Panel>
 
         <Panel
-          title="Folder Distribution"
-          subtitle="Top folders by Keep count"
-          icon={<FolderOpen className="h-4 w-4" />}
+          title="Recent Intelligence"
+          subtitle="High-signal notes based on size, tags, and structure"
+          icon={<Brain className="h-4 w-4" />}
         >
-          {folderSeries.length > 0 ? (
-            <div className="h-[280px]">
+          <div className="space-y-3">
+            {highSignalNotes.map(({ note, score }) => (
+              <div key={note.id} className="rounded-lg bg-secondary/20 border border-border/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-pri-400">Score {score.toFixed(1)}</span>
+                  <span className="text-[10px] text-muted-foreground">{note.tags.length} tags</span>
+                </div>
+                <p className="mt-2 text-sm font-bold text-foreground line-clamp-2">{note.title || 'Untitled Keep'}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{countWords(note.rawContent || note.content).toLocaleString()} words</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Panel
+          title="Creation Rhythm"
+          subtitle="Hour-of-day creation pattern across the workspace"
+          icon={<Timer className="h-4 w-4" />}
+        >
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourSeries} margin={{ top: 6, right: 12, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
+                <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
+                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <ChartTooltip />
+                <Bar dataKey="keeps" fill="#38bdf8" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={1000} animationEasing="ease-out" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+
+        <Panel
+          title="Type Signal Radar"
+          subtitle="Comparative note-type intensity across count and word weight"
+          icon={<Gauge className="h-4 w-4" />}
+        >
+          {radarSeries.length > 0 ? (
+            <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={folderSeries} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 18 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={86} />
-                  <ChartTooltip />
-                  <Bar dataKey="keeps" fill="#22d3ee" radius={[0, 6, 6, 0]} />
-                </BarChart>
+                <RadarChart data={radarSeries}>
+                  <PolarGrid stroke="rgba(148, 163, 184, 0.18)" />
+                  <PolarAngleAxis dataKey="type" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
+                  <PolarRadiusAxis tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} />
+                  <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--foreground)' }} />
+                  <Radar name="Keeps" dataKey="keeps" stroke="#a78bfa" fill="#a78bfa" fillOpacity={0.28} isAnimationActive animationDuration={1100} animationEasing="ease-out" />
+                  <Radar name="Word Weight (/100)" dataKey="words" stroke="#34d399" fill="#34d399" fillOpacity={0.14} isAnimationActive animationDuration={1250} animationEasing="ease-out" />
+                </RadarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <EmptyChart label="No folder data yet" />
+            <EmptyChart label="No type signal data yet" />
           )}
         </Panel>
       </div>
@@ -582,7 +751,7 @@ export default function WSHKeepsDashboard() {
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <ChartTooltip />
-                <Bar dataKey="keeps" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="keeps" fill="#f59e0b" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={850} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -600,108 +769,32 @@ export default function WSHKeepsDashboard() {
                 <XAxis dataKey="day" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <ChartTooltip />
-                <Bar dataKey="keeps" fill="#a78bfa" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="keeps" fill="#a78bfa" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={850} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Panel>
 
         <Panel
-          title="Top Tags"
-          subtitle="Most used organization labels"
-          icon={<Tag className="h-4 w-4" />}
+          title="Folder Distribution"
+          subtitle="Top folders by Keep count"
+          icon={<FolderOpen className="h-4 w-4" />}
         >
-          <div className="space-y-2">
-            {topTags.length === 0 ? (
-              <p className="rounded-lg bg-secondary/20 p-4 text-center text-xs text-muted-foreground">
-                Tags will appear here as Keeps get labeled.
-              </p>
-            ) : (
-              topTags.map(({ tag, count }) => (
-                <div key={tag} className="flex items-center gap-3">
-                  <span className="w-28 truncate text-xs font-bold text-foreground">#{tag}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-pri-500"
-                      style={{ width: `${Math.max(8, (count / topTags[0].count) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="w-8 text-right text-xs font-bold text-muted-foreground">{count}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </Panel>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.2fr]">
-        <Panel
-          title="Notable Keeps"
-          subtitle="Largest and most recently updated"
-          icon={<Brain className="h-4 w-4" />}
-        >
-          <div className="space-y-3">
-            <div className="rounded-lg bg-secondary/30 p-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Largest Keep</p>
-              <p className="mt-2 line-clamp-2 text-sm font-bold text-foreground">
-                {analytics.largestKeep?.title || 'No Keeps yet'}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {analytics.largestKeep
-                  ? `${countWords(analytics.largestKeep.rawContent || analytics.largestKeep.content).toLocaleString()} words`
-                  : 'Create a Keep to begin tracking content size'}
-              </p>
+          {folderSeries.length > 0 ? (
+            <div className="h-[230px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={folderSeries} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 18 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={86} />
+                  <ChartTooltip />
+                  <Bar dataKey="keeps" fill="#22d3ee" radius={[0, 6, 6, 0]} isAnimationActive animationDuration={900} animationEasing="ease-out" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-secondary/30 p-3">
-                <FileText className="mb-2 h-4 w-4 text-cyan-300" />
-                <p className="text-xl font-black text-foreground">{(typeSeries.find((type) => type.name === 'document')?.count || 0).toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground">documents</p>
-              </div>
-              <div className="rounded-lg bg-secondary/30 p-3">
-                <Briefcase className="mb-2 h-4 w-4 text-pink-300" />
-                <p className="text-xl font-black text-foreground">{(typeSeries.find((type) => type.name === 'project')?.count || 0).toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground">projects</p>
-              </div>
-            </div>
-          </div>
-        </Panel>
-
-        <Panel
-          title="Recent Updates"
-          subtitle="Latest Keeps touched in the workspace"
-          icon={<RefreshCw className="h-4 w-4" />}
-        >
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {recentlyUpdated.length === 0 ? (
-              <p className="rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">
-                No recent Keeps are available yet.
-              </p>
-            ) : (
-              recentlyUpdated.map((note) => (
-                <div key={note.id} className="rounded-lg border border-border/40 bg-secondary/20 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
-                      style={{
-                        color: TYPE_COLORS[note.type] || '#818cf8',
-                        backgroundColor: `${TYPE_COLORS[note.type] || '#818cf8'}20`,
-                      }}
-                    >
-                      {note.type}
-                    </span>
-                    <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                  <p className="mt-3 line-clamp-2 min-h-9 text-sm font-bold text-foreground">
-                    {note.title || 'Untitled Keep'}
-                  </p>
-                  <p className="mt-2 text-[10px] text-muted-foreground">
-                    Updated {new Date(note.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
+          ) : (
+            <EmptyChart label="No folder data yet" />
+          )}
         </Panel>
       </div>
     </div>

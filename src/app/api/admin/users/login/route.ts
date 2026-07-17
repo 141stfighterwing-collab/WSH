@@ -124,8 +124,15 @@ export async function POST(request: NextRequest) {
           },
         },
       );
-    } catch {
-      addLog('error', 'Login failed — database unavailable', 'auth');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Login failed';
+      addLog('error', `Login failed: ${message}`, 'auth');
+      if (message.includes('JWT_SECRET')) {
+        return NextResponse.json(
+          { error: message },
+          { status: 500 },
+        );
+      }
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 503 },

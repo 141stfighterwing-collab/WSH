@@ -3,9 +3,11 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 export default function Calendar() {
-  const { notes, calendarDateFilter, setCalendarDateFilter } = useWSHStore();
+  const { calendarDateFilter, setCalendarDateFilter } = useWSHStore();
+  const { notes } = useVisibleNotes();
   const [currentDate, setCurrentDate] = useState(new Date());
   const today = new Date();
 
@@ -29,14 +31,15 @@ export default function Calendar() {
     return map;
   }, [notes]);
 
-  const { days, monthName } = useMemo(() => {
+  const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const days = useMemo(() => {
     const dim = new Date(year, month + 1, 0).getDate();
     const fdm = new Date(year, month, 1).getDay();
-    const mn = new Date(year, month, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
     const result: (number | null)[] = [];
     for (let i = 0; i < fdm; i++) result.push(null);
     for (let i = 1; i <= dim; i++) result.push(i);
-    return { monthName: mn, days: result };
+    return result;
   }, [year, month]);
 
   const isToday = (day: number) =>

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Tag, Search } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useVisibleNotes } from '@/hooks/useVisibleNotes';
 
 const NEON_COLORS = [
   { bg: 'bg-cyan-500/20', text: 'text-cyan-300', border: 'border-cyan-400/50', glow: 'shadow-[0_0_6px_rgba(34,211,238,0.3)]' },
@@ -27,7 +28,8 @@ function getTagColor(tag: string) {
 }
 
 export default function Tags() {
-  const { notes, searchQuery, setSearchQuery } = useWSHStore();
+  const { searchQuery, setSearchQuery } = useWSHStore();
+  const { notes } = useVisibleNotes();
 
   const tagCounts = useMemo(() => {
     const counts: Record<string, number> = {};

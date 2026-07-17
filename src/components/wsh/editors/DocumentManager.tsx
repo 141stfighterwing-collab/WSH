@@ -385,6 +385,19 @@ export default function DocumentManager() {
 
   // ── Upload ──────────────────────────────────────────────────
 
+  const loadDocuments = useCallback(async () => {
+    if (!token) return;
+    setLoadingDocs(true);
+    try {
+      const url = activeFolderId
+        ? `/api/documents?folderId=${activeFolderId}`
+        : '/api/documents';
+      const res = await fetch(url, { headers: getAuth() });
+      if (res.ok) { const data = await res.json(); setDocuments(data.documents || []); }
+    } catch { /* silent */ }
+    setLoadingDocs(false);
+  }, [token, activeFolderId]);
+
   const processFile = useCallback(async (file: File) => {
     if (!token) { setUploadError('Login required to upload.'); setTimeout(() => setUploadError(''), 4000); return; }
     if (file.size > 50 * 1024 * 1024) { setUploadError('File too large. Max 50MB.'); setTimeout(() => setUploadError(''), 5000); return; }
@@ -420,18 +433,7 @@ export default function DocumentManager() {
 
   // ── Library ─────────────────────────────────────────────────
 
-  const loadDocuments = useCallback(async () => {
-    if (!token) return;
-    setLoadingDocs(true);
-    try {
-      const url = activeFolderId
-        ? `/api/documents?folderId=${activeFolderId}`
-        : '/api/documents';
-      const res = await fetch(url, { headers: getAuth() });
-      if (res.ok) { const data = await res.json(); setDocuments(data.documents || []); }
-    } catch { /* silent */ }
-    setLoadingDocs(false);
-  }, [token, activeFolderId]);
+
 
   // Load folders on mount, reload docs when folder changes
   useEffect(() => {

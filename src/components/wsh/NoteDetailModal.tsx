@@ -2,6 +2,7 @@
 
 import { X, Pencil, Trash2, Tag, Calendar, Clock, FileText, BookOpen, Brain, Code, Briefcase } from 'lucide-react';
 import { useWSHStore } from '@/store/wshStore';
+import { useNoteDetail } from '@/hooks/useNoteDetail';
 
 const typeColors: Record<string, string> = {
   quick: 'bg-blue-500/15 text-blue-400',
@@ -43,19 +44,13 @@ export default function NoteDetailModal() {
   const {
     noteDetailId,
     setNoteDetailId,
-    notes,
     deleteNote,
-    setActiveNoteId,
-    setEditorTitle,
-    setEditorContent,
-    setEditorRawContent,
-    setActiveNoteType,
-    setEditorTags,
+    loadNoteIntoEditor,
   } = useWSHStore();
+  const { data: note, isLoading } = useNoteDetail(noteDetailId);
 
-  const note = noteDetailId ? notes.find((n) => n.id === noteDetailId) : null;
-
-  if (!noteDetailId || !note) return null;
+  if (!noteDetailId) return null;
+  if (isLoading || !note) return null;
 
   const safeNoteTags = safeTags(note.tags);
   const safeContent = safeString(note.content);
@@ -110,13 +105,8 @@ export default function NoteDetailModal() {
     }
   };
 
-  const handleEdit = () => {
-    setActiveNoteId(note.id);
-    setEditorTitle(note.title);
-    setEditorContent(note.content);
-    setEditorRawContent(note.rawContent || '');
-    setActiveNoteType(note.type);
-    setEditorTags(note.tags);
+  const handleEdit = async () => {
+    await loadNoteIntoEditor(note.id);
     setNoteDetailId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

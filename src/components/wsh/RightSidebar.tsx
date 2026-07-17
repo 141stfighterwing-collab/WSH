@@ -15,6 +15,7 @@ interface TodoItem {
 
 const TODO_STORAGE_KEY = 'wsh-todo-today';
 const TODO_DATE_KEY = 'wsh-todo-date';
+const TODO_MAP_KEY = 'wsh-todo-by-date';
 
 function generateTodoId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -34,16 +35,18 @@ function getTodayDateStr(): string {
 function loadTodos(): TodoItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const savedDate = localStorage.getItem(TODO_DATE_KEY);
     const today = getTodayDateStr();
-    // Auto-clear if it's a new day
-    if (savedDate && savedDate !== today) {
-      localStorage.removeItem(TODO_STORAGE_KEY);
-      localStorage.setItem(TODO_DATE_KEY, today);
-      return [];
+    const rawMap = localStorage.getItem(TODO_MAP_KEY);
+    if (rawMap) {
+      const parsedMap = JSON.parse(rawMap) as Record<string, TodoItem[]>;
+      const todaysItems = Array.isArray(parsedMap?.[today]) ? parsedMap[today] : [];
+      return todaysItems.filter((item: TodoItem) => item.id && typeof item.text === 'string');
     }
+
     const raw = localStorage.getItem(TODO_STORAGE_KEY);
+    const savedDate = localStorage.getItem(TODO_DATE_KEY);
     if (!raw) return [];
+    if (savedDate && savedDate !== today) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((item: TodoItem) => item.id && typeof item.text === 'string');
@@ -55,8 +58,29 @@ function loadTodos(): TodoItem[] {
 function saveTodos(todos: TodoItem[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos));
-    localStorage.setItem(TODO_DATE_KEY, getTodayDateStr());
+    const today = getTodayDateStr();
+    let todoMap: Record<string, TodoItem[]> = {};
+    const rawMap = localStorage.getItem(TODO_MAP_KEY);
+    if (rawMap) {
+      try {
+        todoMap = JSON.parse(rawMap) || {};
+      } catch {
+        todoMap = {};
+      }
+    }
+
+    todoMap[today] = todos.map((todo) => ({ ...todo, date: today }));
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 14);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    Object.keys(todoMap).forEach((dateKey) => {
+      if (dateKey < cutoffStr) delete todoMap[dateKey];
+    });
+
+    localStorage.setItem(TODO_MAP_KEY, JSON.stringify(todoMap));
+    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todoMap[today]));
+    localStorage.setItem(TODO_DATE_KEY, today);
   } catch {
     // Storage full or disabled
   }
@@ -109,16 +133,21 @@ function TodoChecklist() {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isInputVisible, setIsInputVisible] = useState(false);
+  const [hasLoadedTodos, setHasLoadedTodos] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load todos from localStorage on mount
   useEffect(() => {
-    queueMicrotask(() => setTodos(loadTodos()));
+    queueMicrotask(() => {
+      setTodos(loadTodos());
+      setHasLoadedTodos(true);
+    });
   }, []);
-  // Persist on change
+  // Persist on change only after initial load completes
   useEffect(() => {
+    if (!hasLoadedTodos) return;
     saveTodos(todos);
-  }, [todos]);
+  }, [todos, hasLoadedTodos]);
 
   // Auto-focus input when it becomes visible
   useEffect(() => {
@@ -322,7 +351,7 @@ function TodoChecklist() {
 
 // ── Projects Section ───────────────────────────────────────────────────────
 function ProjectsSection() {
-  const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+  const { notes, loadNoteIntoEditor, deleteNote } = useWSHStore();
 
   const projects = useMemo(() => {
     return notes
@@ -330,13 +359,8 @@ function ProjectsSection() {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [notes]);
 
-  const handleProjectClick = (project: Note) => {
-    setActiveNoteId(project.id);
-    setEditorTitle(project.title);
-    setEditorContent(project.content);
-    setEditorRawContent(project.rawContent || '');
-    setActiveNoteType('project');
-    setEditorTags(project.tags);
+  const handleProjectClick = async (project: Note) => {
+    await loadNoteIntoEditor(project.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -396,7 +420,7 @@ function ProjectsSection() {
 
 // ── Today Section (Notes filtered for today) ───────────────────────────────
 function TodaySection() {
-  const { notes, setActiveNoteId, setEditorTitle, setEditorContent, setEditorRawContent, setActiveNoteType, setEditorTags } = useWSHStore();
+  const { notes, loadNoteIntoEditor, deleteNote } = useWSHStore();
 
   const now = new Date();
   const y = now.getFullYear();
@@ -445,14 +469,14 @@ function TodaySection() {
     return [...todayNotes, ...todayTags].slice(0, 10);
   }, [todayNotes, todayTags]);
 
-  const handleNoteClick = (note: Note) => {
-    setActiveNoteId(note.id);
-    setEditorTitle(note.title);
-    setEditorContent(note.content);
-    setEditorRawContent(note.rawContent || '');
-    setActiveNoteType(note.type);
-    setEditorTags(note.tags);
+  const handleNoteClick = async (note: Note) => {
+    await loadNoteIntoEditor(note.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleTrashNote = async (event: React.MouseEvent<HTMLButtonElement>, note: Note) => {
+    event.stopPropagation();
+    await deleteNote(note.id);
   };
 
   const typeColors: Record<string, string> = {
@@ -485,27 +509,40 @@ function TodaySection() {
           </p>
         ) : (
           allTodayItems.map((item) => (
-            <button
+            <div
               key={item.id}
-              onClick={() => handleNoteClick(item)}
-              className="w-full text-left flex items-start gap-2 p-2.5 rounded-lg hover:bg-secondary/50 transition-colors group active:scale-[0.99]"
+              className="w-full flex items-start gap-2 p-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
             >
-              <Zap className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${typeColors[item.type] || 'text-muted-foreground'}`} />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-foreground leading-relaxed block truncate group-hover:text-cyan-400 transition-colors">
-                  {item.title || 'Untitled'}
-                </span>
-                {item.tags.length > 0 && (
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {item.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="text-[8px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/20 font-bold">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </button>
+              <button
+                onClick={() => handleNoteClick(item)}
+                className="flex-1 min-w-0 text-left flex items-start gap-2 active:scale-[0.99]"
+              >
+                <Zap className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${typeColors[item.type] || 'text-muted-foreground'}`} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-foreground leading-relaxed block truncate group-hover:text-cyan-400 transition-colors">
+                    {item.title || 'Untitled'}
+                  </span>
+                  {item.tags.length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {item.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="text-[8px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/20 font-bold">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={(event) => void handleTrashNote(event, item)}
+                className="shrink-0 mt-0.5 p-1 rounded-md text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                aria-label={`Send ${item.title || 'note'} to trash`}
+                title="Send to trash"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))
         )}
       </div>

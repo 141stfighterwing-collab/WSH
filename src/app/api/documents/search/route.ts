@@ -17,12 +17,41 @@ function parseParams(body: Record<string, unknown>): SearchParams {
   };
 }
 
-function escapeTsQuery(query: string): string {
-  return query.replace(/[&|!():*<>'"\\]/g, ' ').split(/\s+/).filter(Boolean).join(' & ');
+function normalizeTerms(query: string): string[] {
+  return query
+    .replace(/[&|!():*<>'"\\]/g, ' ')
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter((term) => term.length >= 2);
 }
 
-function parseBooleanQuery(query: string): string {
-  return query.replace(/AND/gi, '&').replace(/OR/gi, '|').replace(/NOT/gi, '!');
+function parseBooleanQuery(query: string): { include: string[]; optional: string[]; exclude: string[] } {
+  const tokens = query.split(/\s+/).filter(Boolean);
+  const include: string[] = [];
+  const optional: string[] = [];
+  const exclude: string[] = [];
+
+  let operator: 'AND' | 'OR' | 'NOT' = 'AND';
+  for (const rawToken of tokens) {
+    const token = rawToken.trim();
+    const upper = token.toUpperCase();
+
+    if (upper === 'AND' || upper === 'OR' || upper === 'NOT') {
+      operator = upper;
+      continue;
+    }
+
+    const cleaned = token.replace(/[&|!():*<>'"\\]/g, '').trim();
+    if (cleaned.length < 2) continue;
+
+    if (operator === 'NOT') exclude.push(cleaned);
+    else if (operator === 'OR') optional.push(cleaned);
+    else include.push(cleaned);
+
+    operator = 'AND';
+  }
+
+  return { include, optional, exclude };
 }
 
 // POST /api/documents/search — Full-text search across all documents
@@ -44,16 +73,32 @@ export async function POST(request: NextRequest) {
       case 'phrase':
         where = { ...documentFilter, content: { contains: query, mode: 'insensitive' } };
         break;
-      case 'boolean':
-        where = { ...documentFilter, content: { search: parseBooleanQuery(query), mode: 'insensitive' } };
+      case 'boolean': {
+        const { include, optional, exclude } = parseBooleanQuery(query);
+        where = {
+          ...documentFilter,
+          AND: [
+            ...include.map((term) => ({ content: { contains: term, mode: 'insensitive' } })),
+            ...exclude.map((term) => ({ NOT: { content: { contains: term, mode: 'insensitive' } } })),
+            ...(optional.length > 0
+              ? [{ OR: optional.map((term) => ({ content: { contains: term, mode: 'insensitive' } })) }]
+              : []),
+          ],
+        };
         break;
+      }
       case 'fuzzy': {
-        const terms = query.split(/\s+/).filter(Boolean).map((t) => t.endsWith('*') ? t.slice(0, -1) : t);
+        const terms = query.split(/\s+/).filter(Boolean).map((t) => t.endsWith('*') ? t.slice(0, -1) : t).filter((t) => t.length >= 2);
         where = { ...documentFilter, OR: terms.map((term) => ({ content: { contains: term, mode: 'insensitive' } })) };
         break;
       }
-      default:
-        where = { ...documentFilter, content: { search: escapeTsQuery(query), mode: 'insensitive' } };
+      default: {
+        const terms = normalizeTerms(query);
+        where = {
+          ...documentFilter,
+          AND: terms.map((term) => ({ content: { contains: term, mode: 'insensitive' } })),
+        };
+      }
     }
 
     const chunks = await db.documentChunk.findMany({
@@ -62,7 +107,11 @@ export async function POST(request: NextRequest) {
         id: true, pageNumber: true, chunkIndex: true, content: true, charCount: true,
         document: { select: { id: true, title: true, fileName: true, createdAt: true } },
       },
-      orderBy: { pageNumber: 'asc' },
+      orderBy: [
+        { document: { createdAt: 'desc' } },
+        { pageNumber: 'asc' },
+        { chunkIndex: 'asc' },
+      ],
       take: limit,
     });
 

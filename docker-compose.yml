@@ -25,9 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_VERSION: "4.5.6"
+        BUILD_VERSION: "4.4.18"
     container_name: weavenote-app
-    image: weavenote:4.5.6
+    image: weavenote:4.4.18
     ports:
       - "${WSH_PORT:-8883}:3000"
     environment:
@@ -41,10 +41,10 @@ services:
       - AI_SYNTHESIS_TEMPERATURE=${AI_SYNTHESIS_TEMPERATURE:-0.7}
       - AI_SYNTHESIS_MAX_TOKENS=${AI_SYNTHESIS_MAX_TOKENS:-4096}
       - AI_DAILY_LIMIT=${AI_DAILY_LIMIT:-800}
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - ADMIN_DEFAULT_USERNAME=${ADMIN_DEFAULT_USERNAME:-admin}
-      - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-admin@example.com}
-      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-admin123}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - ADMIN_DEFAULT_USERNAME=${ADMIN_DEFAULT_USERNAME:-}
+      - ADMIN_DEFAULT_EMAIL=${ADMIN_DEFAULT_EMAIL:-}
+      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
       postgres:
@@ -69,7 +69,7 @@ services:
     container_name: wsh-dbviewer
     restart: unless-stopped
     ports:
-      - "${DB_VIEWER_PORT:-5682}:8080"
+      - "127.0.0.1:5682:8080"
     environment:
       ADMINER_DEFAULT_SERVER: postgres
       ADMINER_DESIGN: pepa-linhac

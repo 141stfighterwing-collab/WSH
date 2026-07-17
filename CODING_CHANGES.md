@@ -1,331 +1,653 @@
-# WSH v4.5.6 — Coding Changes
+# WSH v4.4.17 — Coding Changes
 
 ## Overview
-v4.5.6 makes the WSH workspace usable across phone and tablet layouts while retaining the full desktop experience.
+v4.4.17 fixes a mount/save race in the Today checklist that could erase saved items by persisting an empty array before the initial load completed.
 
-## 1. Responsive Application Shell
+## 1. RightSidebar.tsx — initial-load persistence guard
 
-**Files:** `src/app/globals.css`, `src/app/page.tsx`, `src/components/wsh/MobileNavigation.tsx`, `src/components/wsh/Header.tsx`, `src/components/wsh/LeftSidebar.tsx`, `src/components/wsh/RightSidebar.tsx`, `src/components/wsh/Footer.tsx`
+**File:** `src/components/wsh/RightSidebar.tsx`
 
-### What Changed
-- Desktop sidebars become off-canvas drawers below `1280px`, with backdrop, close, and Escape-key behavior.
-- Added a persistent compact-screen dock for Workspace, Grid, Dashboard, Focus, Activity, and Tools.
-- Added a tools sheet for Mind Map, Notebook, Analytics, Settings, Database, and Admin access.
-- Reflowed the phone header into two rows with full-width search and compact account/system actions.
-- Switched the application shell to dynamic viewport height for mobile browser chrome and safe-area behavior.
+### Problem
+Even after moving Today checklist storage to date-keyed buckets, the component could still mount with `todos = []` and immediately persist that empty state before loading the saved list. That race could wipe the current day's tasks on refresh.
 
-## 2. Touch and Secondary Views
+### Fix
+- added an explicit `hasLoadedTodos` guard
+- initial load now completes before any save effect is allowed to write
+- persistence only runs after the component has hydrated from storage
 
-**Files:** `src/components/wsh/NoteEditor.tsx`, `src/components/wsh/NotesGrid.tsx`, `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/LoginWidget.tsx`, `src/components/wsh/SettingsPanel.tsx`, `src/components/wsh/NotebookView.tsx`, `src/components/wsh/DBViewer.tsx`, `src/components/wsh/MindMap.tsx`, `src/components/wsh/editors/ProjectEditor.tsx`
+### Effect
+Saved Today checklist items should no longer disappear due to first-render overwrite behavior.
 
-### What Changed
-- Increased compact-screen editor controls and stacked save/synthesis actions where needed.
-- Made note menus, task deletion, and project item deletion visible without hover.
-- Allowed Quick Reference actions and confirmations to wrap with larger touch targets.
-- Stacked Notebook navigation above content on phones and made Database Viewer controls responsive.
-- Replaced Mind Map mouse-only dragging with pointer events for touch and mouse input.
-- Added accessible names to icon-only buttons and pressed states to view controls.
-- Replaced destructive PowerShell documentation regeneration with current-version validation and explicit missing-file initialization.
+## 2. Versioning / release metadata — patch bump to 4.4.17
 
-## 3. Verification and Release
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
 
-- Targeted ESLint passes for the responsive modules without warnings.
-- `390x844` and `768x1024` browser checks show no document overflow.
-- Version metadata, Docker image, scripts, README, changelog, updater registry, and trackers use `4.5.6`.
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.17.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
 
 ---
 
-# WSH v4.5.5 — Coding Changes
+# WSH v4.4.16 — Coding Changes
 
 ## Overview
-v4.5.5 fixes Quick Reference insertion so Markdown-style templates become structured, readable editor content.
+v4.4.16 fixes Today checklist persistence so "Things to do Today" behaves like a reliable date-scoped daily list instead of a fragile transient blob.
 
-## 1. Quick Reference Formatting
+## 1. RightSidebar.tsx — date-scoped Today checklist persistence
 
-**Files:** `src/lib/quickReferenceFormat.ts`, `src/components/wsh/NoteEditor.tsx`
+**File:** `src/components/wsh/RightSidebar.tsx`
 
-### What Changed
-- Extracted the template conversion into a reusable, directly testable formatter.
-- Replaced blank-block conversion with a line-by-line template parser.
-- `#`, `##`, and `###` template lines become rich-text headings without showing literal marker characters.
-- Blank lines remain editable empty sections.
-- Numbered and bulleted template lines become semantic editor lists.
-- Template text is HTML-escaped before supported bold and inline-code formatting is applied.
-- Added editor-local heading and list styles so inserted structure is visually distinct.
+### Problem
+The Today checklist stored its data in a single localStorage blob plus a single date key. That made it easy for the current-day list to feel unreliable and created rollover behavior that was more destructive than necessary.
 
-## 2. Version and Documentation
+### Fix
+- replaced the single-blob storage pattern with a date-keyed todo map
+- load today's checklist bucket explicitly
+- mirror current-day data back to legacy keys for compatibility
+- keep a short retention window for recent day buckets while isolating the current day properly
 
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
+### Effect
+"Things to do Today" should now persist much more reliably through refreshes and remain available throughout the current day.
 
-### What Changed
-- Version bumped to `4.5.5`.
-- Docker build arg and compose image tag now use `weavenote:4.5.5`.
-- README describes the supported Quick Reference formatting.
-- PowerShell update patch registry includes the v4.5.5 release.
+## 2. Versioning / release metadata — patch bump to 4.4.16
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.16.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
 
 ---
 
-# WSH v4.5.4 — Coding Changes
+# WSH v4.4.15 — Coding Changes
 
 ## Overview
-v4.5.4 completes the Quick References workflow and adds draft autosave protection for unsaved editor work.
+v4.4.15 extends the Full Intelligence Board with additional chart surfaces and smoother chart animation behavior.
 
-## 1. Quick References to Editor
+## 1. WSHKeepsDashboard.tsx — chart expansion + smoother motion
 
-**Files:** `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/NoteEditor.tsx`
+**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
 
-### What Changed
-- `QuickReferences` continues to support add, edit, delete, delete confirmation, and localStorage persistence.
-- `NoteEditor` now listens for the existing `wsh:use-quick-ref` event.
-- Clicking **Use** sets the editor title to the template name, sets the matching note type, converts simple markdown-style template text into editor HTML for rich-text note types, and focuses the writing area.
-- The inserted template is immediately written as an editor draft.
+### Problem
+The new intelligence board was stronger conceptually, but it still needed more pattern-oriented graphing and more fluid animation to feel like a polished command center.
 
-## 2. Draft Autosave
+### Fix
+- added a Creation Rhythm chart for hour-of-day note creation patterns
+- added a Type Signal Radar chart for comparing note-type count and word-weight intensity
+- tuned animation settings across area, line, pie, bar, and radar charts
+
+### Effect
+The intelligence board should now feel more visually expressive, more fluid, and better suited for scanning patterns at a glance.
+
+## 2. Versioning / release metadata — patch bump to 4.4.15
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.15.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+---
+
+# WSH v4.4.14 — Coding Changes
+
+## Overview
+v4.4.14 upgrades the dashboard into a Full Intelligence Board that emphasizes actionable workspace insight over passive chart review.
+
+## 1. WSHKeepsDashboard.tsx — command-center intelligence board
+
+**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
+
+### Problem
+The prior dashboard was strong on analytics but weak on prioritization. It showed charts and totals well, but it did not guide the user toward what actually mattered now.
+
+### Fix
+- redesigned the dashboard as a command-center style intelligence board
+- added a new What Matters Now section
+- added an Operational Signals section
+- added an Active Work Queue for likely next-action notes
+- added a Recent Intelligence section for higher-signal notes
+- preserved and reorganized existing chart surfaces so the board still carries analytical depth
+
+### Effect
+The dashboard now behaves more like an executive/operational intelligence surface instead of a passive analytics page.
+
+## 2. Versioning / release metadata — patch bump to 4.4.14
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.14.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+---
+
+# WSH v4.4.13 — Coding Changes
+
+## Overview
+v4.4.13 focuses on interaction quality: smoother mind map rendering and more natural note-editing behavior for bullets, numbering, and checklists.
+
+## 1. MindMap.tsx — smoother animation path
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The hybrid galaxy map looked good, but it was still doing more per-frame DOM work than necessary, especially while rotating labels and moving orbiting nodes.
+
+### Fix
+- shifted moving note updates toward transform-based writes instead of repeated left/top layout changes
+- throttled counter-rotation label updates so labels are not rewritten every frame unnecessarily
+- kept the existing orbit/rotation behavior while reducing animation churn
+
+### Effect
+The map should feel smoother and less jittery, especially on dense note sets or when orbit and rotation are both active.
+
+## 2. NoteEditor.tsx — checklist + cleaner list behavior
+
+**Files:**
+- `src/components/wsh/NoteEditor.tsx`
+
+### Problem
+The editor relied on raw browser execCommand behavior for lists, which can make bullets and numbering feel inconsistent compared with a modern notes app. It also lacked a dedicated checklist tool.
+
+### Fix
+- added a dedicated checklist toolbar button
+- added post-input list normalization for bullet and numbered lists
+- reinforced list spacing and indentation styling so rendered note content behaves more predictably
+
+### Effect
+Bullets, numbering, and checklists now behave more like expected note-taking primitives instead of fragile rich-text artifacts.
+
+## 3. Versioning / release metadata — patch bump to 4.4.13
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+### Changed
+- bumped release metadata from `4.4.12` to `4.4.13`
+- aligned Docker build args, image tags, runtime version fallbacks, and README references
+
+## 4. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.13.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/MindMap.tsx` | Smoothed the hybrid galaxy animation path by reducing DOM churn during orbit/rotation updates |
+| 2 | `src/components/wsh/NoteEditor.tsx` | Added checklist insertion and normalized bullet/numbered list behavior |
+| 3 | `package.json` | Version bump to 4.4.13 |
+| 4 | `Dockerfile` | Build version bump to 4.4.13 |
+| 5 | `docker-compose.yml` | Build arg and image tag bump to 4.4.13 |
+| 6 | `docker-entrypoint.sh` | Entrypoint version banner bump to 4.4.13 |
+| 7 | `src/app/api/health/route.ts` | Runtime version fallback bump to 4.4.13 |
+| 8 | `src/app/api/admin/system/route.ts` | System route version fallback bump to 4.4.13 |
+| 9 | `README.md` | Updated user-facing version references to 4.4.13 |
+| 10 | `RELEASE-NOTES-4.4.13.md` | Added patch notes for interaction polish release |
+| 11 | `CHANGELOG.md` | Added 4.4.13 entry |
+| 12 | `FILE_TRACKER.md` | Updated release inventory |
+| 13 | `RELEASE-CHECKLIST.md` | Updated target release line |
+
+---
+
+# WSH v4.4.12 — Coding Changes
+
+## Overview
+v4.4.12 upgrades the WSH galaxy map into a hybrid graph + orbital interface inspired by the cloud Weavenote mind map model, while keeping the self-hosted implementation native to WSH and adding a full patch-release trail for deployment.
+
+## 1. MindMap.tsx — hybrid graph + orbital galaxy UI
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The previous WSH mind map was a clean ambient galaxy view, but it still treated the whole note set as a mostly uniform hub-and-spoke orbit. That made dense note collections feel flatter than the newer Weavenote relationship model and gave users limited control over motion.
+
+### Fix
+- replaced the single-style hub-spoke layout with a hybrid note graph model
+- score note relationships using shared tags and lightweight text similarity
+- select a center-star note automatically, with double-click recentering for any note
+- assign notes into roles:
+  - `center`
+  - `orbiter-major`
+  - `orbiter-minor`
+  - `static`
+- animate only the orbital roles while leaving less-connected notes calmer
+- added direct UI controls for orbit pause/resume, galaxy rotation toggle, zoom in, zoom out, and reset
+
+### Effect
+The mind map is now more readable, more expressive, and closer to the cloud Weavenote relationship feel without forcing unrelated notes into constant motion.
+
+## 2. Versioning / release metadata — patch bump to 4.4.12
+
+**Files:**
+- `package.json`
+- `Dockerfile`
+- `docker-compose.yml`
+- `docker-entrypoint.sh`
+- `src/app/api/health/route.ts`
+- `src/app/api/admin/system/route.ts`
+- `README.md`
+
+### Changed
+- bumped release metadata from `4.4.11` to `4.4.12`
+- aligned Docker build args and image tags with the new patch version
+- aligned health/system endpoint fallback versions
+- aligned user-facing README release references
+
+## 3. Release trail updates
+
+**Files:**
+- `RELEASE-NOTES-4.4.12.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+- `FILE_TRACKER.md`
+- `RELEASE-CHECKLIST.md`
+
+### Changed
+- added dedicated release notes for the hybrid orbital mind map upgrade
+- documented the new patch release in the changelog
+- updated file inventory and release-checklist target line to the new version
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/MindMap.tsx` | Reworked the WSH galaxy map into a hybrid orbital/graph layout with pause, rotation, zoom, reset, and recenter controls |
+| 2 | `package.json` | Version bump to 4.4.12 |
+| 3 | `Dockerfile` | Build version bump to 4.4.12 |
+| 4 | `docker-compose.yml` | Build arg and image tag bump to 4.4.12 |
+| 5 | `docker-entrypoint.sh` | Entrypoint version banner bump to 4.4.12 |
+| 6 | `src/app/api/health/route.ts` | Runtime version fallback bump to 4.4.12 |
+| 7 | `src/app/api/admin/system/route.ts` | System route version fallback bump to 4.4.12 |
+| 8 | `README.md` | Updated user-facing version references to 4.4.12 |
+| 9 | `RELEASE-NOTES-4.4.12.md` | Added patch notes for the hybrid mind map upgrade |
+| 10 | `CHANGELOG.md` | Added 4.4.12 entry |
+| 11 | `FILE_TRACKER.md` | Updated release inventory |
+| 12 | `RELEASE-CHECKLIST.md` | Updated release target line and release-hygiene note |
+
+---
+
+# WSH v4.4.11 — Coding Changes
+
+## Overview
+v4.4.11 extends the recent note-performance work with mind map correctness, smoother animation behavior, safer deployment documentation, and a Next.js runtime convention update.
+
+## 1. MindMap.tsx — line anchoring corrected
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The desktop mind map drew SVG lines in a different coordinate space from the rendered note nodes. Once transforms/rotation were applied, edges could drift away from the nodes they were supposed to connect.
+
+### Fix
+- moved SVG edge rendering into the same transformed local layer as the nodes
+- introduced a local hub node model at origin coordinates
+- made edge endpoints use the same node offsets that drive note button placement
+- preserved click-to-open behavior and the existing modal shell
+
+### Effect
+Connection lines now stay visually attached to the moving nodes instead of lagging behind or pointing at stale positions.
+
+## 2. MindMap.tsx — animation stutter reduced
+
+**File:** `src/components/wsh/MindMap.tsx`
+
+### Problem
+The rotating mind map view updated React state on every animation frame, forcing the whole component tree to rerender continuously. That is expensive for a dense node/edge overlay and causes lag or visible stutter.
+
+### Fix
+- removed per-frame React state updates for rotation
+- updated the orbit layer transform directly through refs
+- updated hub/node label counter-rotation through direct DOM style writes
+- added `will-change: transform` hints on animated elements
+
+### Effect
+The ambient rotation path should feel noticeably smoother because animation no longer depends on full React rerenders every frame.
+
+## 3. Runtime convention update — middleware to proxy
+
+**File:** `src/proxy.ts` (renamed from `src/middleware.ts`)
+
+### Changed
+- migrated the app from deprecated Next.js `middleware` naming to the newer `proxy` convention
+- preserved the same API auth enforcement behavior
+- removed the build-time deprecation warning under Next.js 16
+
+## 4. Deployment/runbook updates
+
+**Files:**
+- `docs/WSH_UPDATE_RUNBOOK.md`
+- `RELEASE-NOTES-4.4.11.md`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- added a concrete preflight → update → verify checklist for the Windows Docker host
+- documented the safe app-only upgrade path for `10.30.1.15`
+- recorded the mind map anchoring and animation fixes in the release trail
+
+## 5. Validation
+
+### Verified
+- `npm run build` passed after the anchoring fix
+- `npm run build` passed again after the animation/stutter fix
+- live Docker deployment on `10.30.1.15` reports healthy on `4.4.11`
+- database connectivity remained intact after app-only redeploy
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/MindMap.tsx` | Fixed edge/node anchoring and reduced animation rerender stutter |
+| 2 | `src/proxy.ts` | Replaced deprecated middleware convention |
+| 3 | `docs/WSH_UPDATE_RUNBOOK.md` | Added preflight/update/verify checklist |
+| 4 | `RELEASE-NOTES-4.4.11.md` | Expanded 4.4.11 release notes |
+| 5 | `CHANGELOG.md` | Added 4.4.11 deployment and mind map notes |
+| 6 | `CODING_CHANGES.md` | Added this technical record |
+
+---
+
+# WSH v4.4.10 — Coding Changes
+
+## Overview
+v4.4.10 fixes the Quick References feature path so selecting a quick reference from the sidebar actually populates the note editor.
+
+## 1. NoteEditor.tsx — add Quick Reference event listener
 
 **File:** `src/components/wsh/NoteEditor.tsx`
 
-### What Changed
-- Added a local draft record stored as `wsh-editor-draft`.
-- Drafts autosave every five seconds, when the page is hidden, and before unload.
-- Drafts restore after reload when the editor is otherwise empty.
-- Successful database save and editor clear remove the local draft.
-
-## 3. Version and Documentation
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
-
-### What Changed
-- Version bumped to `4.5.4`.
-- Docker build arg and compose image tag now use `weavenote:4.5.4`.
-- README documents Quick References insertion and draft autosave.
-- Update patch registry now includes the v4.5.4 release.
-
----
-
-# WSH v4.5.3 — Coding Changes
-
-## Overview
-v4.5.3 modernizes the WSH workspace interface while keeping the original behavior intact. The update refreshes the visual shell, navigation, sidebars, note editor, note cards, and documentation/version metadata.
-
-## 1. Workspace Interface Refresh
-
-**Files:** `src/app/globals.css`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`, `src/components/wsh/LeftSidebar.tsx`, `src/components/wsh/RightSidebar.tsx`, `src/components/wsh/Calendar.tsx`, `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/Folders.tsx`, `src/components/wsh/NoteEditor.tsx`, `src/components/wsh/NotesGrid.tsx`
-
-### What Changed
-- Added shared workspace surface classes for the app shell, top bar, panels, and accent buttons.
-- Refreshed the top navigation with labeled Grid, Dashboard, and Focus controls while keeping existing Map, Notebook, Analytics, DB Test, Admin, Search, Login, and Settings actions.
-- Updated sidebar, calendar, quick reference, folder, right-rail, editor, and note-card styling for a cleaner modern layout.
-- Preserved the existing store actions, note editing/saving, search, calendar filtering, drag/drop, todo, project, login, DB test, admin, analytics, dashboard, mind map, and trash behavior.
-
-## 2. Version and Documentation
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
-
-### What Changed
-- Version bumped to `4.5.3`.
-- Docker build arg and compose image tag now use `weavenote:4.5.3`.
-- README now documents the modern workspace interface and current version.
-- Update patch registry now includes the v4.5.3 interface modernization release.
-
----
-
-# WSH v4.5.2 — Coding Changes
-
-## Overview
-v4.5.2 refines the WSH Keeps Dashboard by removing the simulated realtime signal and replacing it with stable analytics, additional stats, and more useful graphs.
-
-## 1. Dashboard Analytics Redesign
-
-**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
-
-### What Changed
-- Removed the interval-driven realtime pulse chart.
-- Added a 30-day activity area chart for created Keeps, updated Keeps, and new word volume.
-- Added a type mix donut chart, content composition bar chart, folder distribution chart, review age chart, and weekday pattern chart.
-- Expanded KPI cards to include total Keeps, total words, link coverage, Keep Health, seven-day creates, seven-day updates, estimated reading time, and AI usage.
-- Added largest Keep, document/project counts, top tags, and recent update panels.
-
-## 2. Version and Docker Metadata
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`
-
-### What Changed
-- Version bumped to `4.5.2`.
-- Docker build arg and compose image tag now use `weavenote:4.5.2`.
-- Health and system endpoints fall back to `4.5.2` when build metadata is unavailable.
-
----
-
-# WSH v4.5.1 — Coding Changes
-
-## Overview
-v4.5.1 adds the WSH Keeps Realtime Dashboard as a native workspace view and updates version metadata for the Docker deployment.
-
-## 1. WSH Keeps Realtime Dashboard
-
-**File:** `src/components/wsh/WSHKeepsDashboard.tsx`
-
-### What Changed
-- Added a full dashboard view with live KPI cards, realtime line graph, 14-day Keeps trend chart, category load analytics, top tags, synthesis usage, and recently updated Keeps.
-- Dashboard metrics are derived from existing Zustand state: `notes`, `folders`, `aiUsageCount`, and `isSyncing`.
-- No database migration or API contract change is required.
-
-## 2. Dashboard View Mode
-
-**Files:** `src/store/wshStore.ts`, `src/app/page.tsx`, `src/components/wsh/Header.tsx`
-
-### What Changed
-- Extended `ViewMode` with `dashboard`.
-- Added a dashboard header toggle using Lucide `LayoutDashboard`.
-- Updated the main page to render the dashboard instead of the editor/grid when dashboard mode is active.
-
-## 3. Version and Docker Metadata
-
-**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`
-
-### What Changed
-- Version bumped to `4.5.1`.
-- Docker build arg and compose image tag now use `weavenote:4.5.1`.
-- Health and system endpoints fall back to `4.5.1` when build metadata is unavailable.
-
----
-
-# WSH v4.5.0 — Coding Changes
-
-## Overview
-v4.5.0 is a security-focused release that addresses two critical issues: a hardcoded API key committed to the repository, and a Gemini API key exposed in URL query parameters. It also adds API key format validation, a model dropdown selector, and auto-provider detection.
-
-## 1. Hardcoded Gemini API Key Removed
-
-**Files:** `.env.example`, `.env`, `docker-compose.yml`
-**Severity:** CRITICAL — Real API key was committed to the git repository
-
 ### Problem
-A real Google Gemini API key (`AIzaSy...`) was found in three files:
-- `.env.example` (committed to the repo, shipped with every clone)
-- `.env` (local development config)
-- `docker-compose.yml` (as the default value for `GEMINI_API_KEY`)
+`QuickReferences.tsx` dispatched a browser event:
+- `wsh:use-quick-ref`
 
-This exposed the key to anyone with repository access and violated the project's own `.gitignore` intent.
+But the note editor was not listening for that event, so clicking **Use** did nothing visible for the user.
 
 ### Fix
-Removed the key from all three files. `.env.example` and `docker-compose.yml` now show `GEMINI_API_KEY=` (empty). `.env` was cleaned to remove the hardcoded value. Users must now configure their own keys at runtime via Settings > AI Engine or environment variables.
+Added a `useEffect` listener in `NoteEditor.tsx` that:
+- listens for `wsh:use-quick-ref`
+- reads the selected reference payload
+- sets the editor title
+- sets the editor content
+- sets raw text content
+- sets the note type
+- clears the active note ID so it behaves like loading a fresh editor draft
+- shows a short status message confirming load
 
-## 2. Gemini API Key URL Leak Fixed
+### Effect
+Quick references now actually flow into the editor as intended.
 
-**File:** `src/app/api/synthesis/route.ts` (line 110)
-**Severity:** CRITICAL — Key exposed in access logs, proxy logs, and browser history
+## 2. QuickReferences.tsx — small cleanup
 
-### Problem
-The `callGemini()` function passed the API key as a URL query parameter:
-```typescript
-`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-```
-This exposed the key in server access logs, proxy logs, CDN logs, load balancer logs, and browser history.
+**File:** `src/components/wsh/QuickReferences.tsx`
 
-### Fix
-Moved the key to the `x-goog-api-key` HTTP header:
-```typescript
-headers: {
-  'Content-Type': 'application/json',
-  'x-goog-api-key': apiKey,
-}
-```
-The URL no longer contains the key:
-```typescript
-`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-```
+### Changed
+- removed unused `isAdding` state path left behind in the component
 
-## 3. API Key Format Validation
+## 3. Versioning / release trail
 
-**File:** `src/components/wsh/SettingsPanel.tsx` (new `KEY_VALIDATORS` object)
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
 
-### What Changed
-Added client-side regex validation for all three API key formats before saving:
-
-| Provider | Pattern | Hint |
-|----------|---------|------|
-| Gemini | `^AIzaSy[A-Za-z0-9_-]{33}$` | 39 chars starting with `AIzaSy` |
-| OpenAI | `^sk-[A-Za-z0-9_-]{20,}$` | 48+ chars starting with `sk-` |
-| Claude | `^sk-ant-api03-[A-Za-z0-9_-]{80,}$` | 95+ chars starting with `sk-ant-api03-` |
-
-- Real-time amber warning appears while typing if the format doesn't match
-- Save is blocked if validation fails, with a clear error message
-- Enter key submits the form (keyboard accessibility)
-
-## 4. Model Dropdown Selector
-
-**File:** `src/components/wsh/SettingsPanel.tsx`
-
-### Before
-Model selection used a list of individual `<button>` elements — one per model. Models were hardcoded in a static `PROVIDERS` array in the component.
-
-### After
-Model selection uses a native `<select>` dropdown:
-- Dynamically populated from the server based on configured API keys
-- Only shows models for providers with active keys
-- Server returns model lists via the enhanced `GET /api/synthesis` endpoint
-- Chevron icon indicates it's a dropdown
-- Selected model ID shown below the dropdown
-
-## 5. Server-Side Model Catalog
-
-**File:** `src/app/api/synthesis/route.ts` (new `MODEL_CATALOG` and enhanced `GET` handler)
-
-### What Changed
-The `GET /api/synthesis` endpoint now returns two new fields:
-- `models`: Record of per-provider model lists (only for providers with API keys configured)
-- `keyPatterns`: Record of format hints per provider (for client-side validation UX)
-
-## 6. Variable Scope Fix
-
-**File:** `src/app/api/synthesis/route.ts` (POST handler)
-
-### Problem
-`action` and `provider` were declared with `const` inside the `try` block but referenced in the `catch` block for error logging, causing TypeScript error TS2304.
-
-### Fix
-Hoisted both variables above the `try` block using `let`, then assigned inside `try`:
-```typescript
-let action = 'unknown';
-let provider = '';
-try {
-  // ... parse body, assign action and provider
-} catch (error: unknown) {
-  // action and provider are now accessible here
-}
-```
-
-## 7. Stale Docker Entrypoint Fallback
-
-**File:** `docker-entrypoint.sh` (line 63)
-
-### Problem
-The fallback version was `${BUILD_VERSION:-4.2.1}` — a version from April 2025, two major versions behind.
-
-### Fix
-Updated to `${BUILD_VERSION:-4.5.0}`.
+### Changed
+- bumped version from `4.4.9` to `4.4.10`
+- added changelog entry for the Quick References fix
+- added this technical patch note entry
 
 ## Files Changed
-| # | File | Lines | Type | Description |
-|---|------|-------|------|-------------|
-| 1 | `.env` | 2 | Security | Removed hardcoded Gemini key, reset AI_PROVIDER |
-| 2 | `.env.example` | 1 | Security | Removed real API key, replaced with empty |
-| 3 | `docker-compose.yml` | 2 | Security | Removed key default, version bump to 4.5.0 |
-| 4 | `Dockerfile` | 4 | Version | BUILD_VERSION 4.4.4 → 4.5.0 |
-| 5 | `docker-entrypoint.sh` | 1 | Fix | Stale fallback 4.2.1 → 4.5.0 |
-| 6 | `install.sh` | 5 | Version | All 4.4.4 → 4.5.0 references |
-| 7 | `install.ps1` | 5 | Version | All 4.4.4 → 4.5.0 references |
-| 8 | `update.sh` | 2 | Version | Header and banner |
-| 9 | `test-env.sh` | 2 | Version | Header and banner |
-| 10 | `test-env.ps1` | 2 | Version | Header and banner |
-| 11 | `src/app/api/synthesis/route.ts` | ~65 | Security+Feature | URL leak fix, model catalog, key patterns, scope fix |
-| 12 | `src/app/api/health/route.ts` | 1 | Version | Fallback version 4.5.0 |
-| 13 | `src/app/api/admin/system/route.ts` | 1 | Version | Fallback version 4.5.0 |
-| 14 | `src/components/wsh/SettingsPanel.tsx` | ~200 | Feature+Security | Key validation, dropdown, dynamic model loading |
-| 15 | `package.json` | 1 | Version | 4.4.4 → 4.5.0 |
-| 16 | `CHANGELOG.md` | ~40 | Docs | New v4.5.0 release entry |
-| 17 | `CODING_CHANGES.md` | ~90 | Docs | This document |
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/NoteEditor.tsx` | Added listener for quick-reference use events and editor population logic |
+| 2 | `src/components/wsh/QuickReferences.tsx` | Removed unused state path during fix |
+| 3 | `package.json` | Version bump to 4.4.10 |
+| 4 | `CHANGELOG.md` | Added 4.4.10 release notes |
+| 5 | `CODING_CHANGES.md` | Added technical record for the fix |
+
+---
+
+# WSH v4.4.9 — Coding Changes
+
+## Overview
+v4.4.9 adds simple but important image guardrails for note content:
+
+1. **Maximum 4 images per note**
+2. **Maximum 5 MB per image attachment**
+
+This keeps image-heavy notes from turning into giant payloads and provides predictable limits for performance.
+
+## 1. NoteEditor.tsx — image count and size enforcement
+
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### Added
+- `MAX_IMAGES_PER_NOTE = 4`
+- `MAX_IMAGE_BYTES = 5 * 1024 * 1024`
+- helper to count images currently embedded in the editor
+
+### Changed
+- attached image files are rejected if they exceed 5 MB
+- attached image files are rejected if the note already contains 4 images
+- URL-based image insertion is also blocked once the note reaches 4 images
+- user gets explicit editor status feedback when either limit is hit
+
+### Effect
+- prevents runaway image stuffing into a single note/post
+- keeps note size and editor responsiveness more predictable
+
+## 2. Versioning / release trail
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- bumped version from `4.4.8` to `4.4.9`
+- added changelog entry for image limits
+- added this coding change record
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/components/wsh/NoteEditor.tsx` | Enforced max-image count and per-image file-size guardrails |
+| 2 | `package.json` | Version bump to 4.4.9 |
+| 3 | `CHANGELOG.md` | Added 4.4.9 release notes |
+| 4 | `CODING_CHANGES.md` | Added technical record for the image-limit patch |
+
+---
+
+# WSH v4.4.8 — Coding Changes
+
+## Overview
+v4.4.8 improves image handling in the note editor so image-heavy notes feel lighter and more practical:
+
+1. **Client-side image compression for note attachments** reduces embedded payload size before images are inserted into note HTML.
+2. **Resizable note images / initial width controls** let users tune image size more naturally inside notes instead of being stuck with full-width inserts.
+
+## 1. New helper: src/lib/imageUtils.ts
+
+**File:** `src/lib/imageUtils.ts`
+
+### Added
+- browser-side image loading helper
+- client-side resize + re-encode flow for note images
+- HTML builder for resizable note-image markup
+
+### Effect
+This keeps large pasted/attached images from bloating the saved note content as badly as before.
+
+## 2. NoteEditor.tsx — smarter image insertion
+
+**File:** `src/components/wsh/NoteEditor.tsx`
+
+### Changed
+- attached image files now go through optimization before insertion
+- inserted images use resizable-friendly markup and width styling
+- URL-based image inserts now allow the user to choose an initial width percentage
+- editor status briefly reports compression savings after optimization succeeds
+
+### Effect
+- faster note save/load on image-heavy notes
+- better visual control over image size directly in the note flow
+
+## 3. Versioning / release trail
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changed
+- bumped version from `4.4.7` to `4.4.8`
+- added changelog entry for image compression/resizing improvements
+- added this technical patch note entry
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/lib/imageUtils.ts` | New note-image optimization helpers |
+| 2 | `src/components/wsh/NoteEditor.tsx` | Client-side image compression + resizable image insertion |
+| 3 | `package.json` | Version bump to 4.4.8 |
+| 4 | `CHANGELOG.md` | Added 4.4.8 release notes |
+| 5 | `CODING_CHANGES.md` | Added technical record for the image-handling patch |
+
+---
+
+# WSH v4.4.7 — Coding Changes
+
+## Overview
+v4.4.7 addresses the top two publicly exposed security risks identified in the first WeaveNote security audit:
+
+1. **Insecure JWT fallback secret** — `src/lib/auth.ts` previously allowed runtime operation with the known placeholder `change-me-in-production`, making session/token integrity dependent on a public default.
+2. **Insecure admin bootstrap fallback** — `docker-entrypoint.sh` previously seeded a super-admin using hardcoded defaults (`admin` / `admin@example.com` / `admin123`) whenever no matching user existed.
+
+This patch intentionally hardens only those two items first so the deployment can move in controlled security increments.
+
+## 1. src/lib/auth.ts — Fail closed on JWT secret configuration
+
+**File:** `src/lib/auth.ts`
+
+### Problem
+The JWT helper used:
+```ts
+const secret = process.env.JWT_SECRET || 'change-me-in-production';
+```
+That meant a public deployment could continue running with a known fallback secret if configuration drift or a missing env variable occurred.
+
+### Fix
+`getJWTSecret()` now:
+- requires `process.env.JWT_SECRET` to exist
+- rejects the placeholder value `change-me-in-production`
+- throws immediately instead of silently accepting an insecure fallback
+
+### Security effect
+- removes token-signing with a public/default secret
+- forces deployment correctness instead of tolerating insecure runtime state
+
+## 2. docker-entrypoint.sh — Remove default admin bootstrap credentials
+
+**File:** `docker-entrypoint.sh`
+
+### Problem
+The admin seeding logic previously used:
+```js
+const username = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
+const email = process.env.ADMIN_DEFAULT_EMAIL || 'admin@example.com';
+const password = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+```
+This allowed default bootstrap credentials to remain latent in a public deployment.
+
+### Fix
+The seeding logic now:
+- first checks whether any `admin` or `super-admin` user already exists
+- skips bootstrap seeding if one exists
+- requires explicit `ADMIN_DEFAULT_USERNAME`, `ADMIN_DEFAULT_EMAIL`, and `ADMIN_DEFAULT_PASSWORD` only when no admin exists yet
+- refuses to seed an insecure default account when those values are missing
+- logs a clear operator-facing message explaining why seeding was skipped
+
+### Security effect
+- removes hardcoded fallback admin credentials from bootstrap behavior
+- preserves first-run bootstrap capability without accepting unsafe defaults
+- keeps startup idempotent while failing safer
+
+## 3. Versioning and release notes
+
+**Files:**
+- `package.json`
+- `CHANGELOG.md`
+- `CODING_CHANGES.md`
+
+### Changes
+- bumped version from `4.4.6` to `4.4.7`
+- added a security-focused changelog entry documenting the two critical fixes
+- added this coding changes entry so the remediation history is explicit and auditable
+
+## Files Changed
+| # | File | Description |
+|---|------|-------------|
+| 1 | `src/lib/auth.ts` | Removed insecure JWT fallback and enforced fail-closed secret checks |
+| 2 | `docker-entrypoint.sh` | Removed default bootstrap admin fallbacks and required explicit bootstrap config |
+| 3 | `package.json` | Version bump to 4.4.7 |
+| 4 | `CHANGELOG.md` | Added 4.4.7 security release notes |
+| 5 | `CODING_CHANGES.md` | Added technical record for the security patch |
 
 ---
 

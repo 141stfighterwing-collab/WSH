@@ -1,5 +1,5 @@
 #!/bin/sh
-# WSH Docker Entrypoint v4.5.6
+# WSH Docker Entrypoint v4.4.18
 # Handles PostgreSQL connectivity check, first-run DB init, admin seeding, and server startup.
 # Uses direct node path for Prisma CLI (never npx — prevents v7.x download).
 #
@@ -60,7 +60,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "======================================================="
-echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.5.6}"
+echo "  WSH (WeaveNote Self-Hosted) v${BUILD_VERSION:-4.4.18}"
 echo "======================================================="
 $PRISMA_CLI --version 2>&1 | head -1 | sed 's/^/[+] /'
 
@@ -143,36 +143,45 @@ mkdir -p /app/tmp /app/upload
 
 # ── Enable PostgreSQL extensions for full-text search ──────────
 echo "[*] Setting up PostgreSQL full-text search extensions..."
-node -e "
-  const { PrismaClient } = require('@prisma/client');
+node -e '
+  const { PrismaClient } = require("@prisma/client");
   const prisma = new PrismaClient({ log: [] });
-  prisma.\\\$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pg_trgm;')
-    .then(function() { console.log('[+] pg_trgm extension enabled'); })
-    .catch(function(e) { console.log('[!] pg_trgm: ' + e.message); })
-    .finally(function() { return prisma.\\\$disconnect(); });
-" 2>&1
+  prisma.$executeRawUnsafe("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+    .then(function() { console.log("[+] pg_trgm extension enabled"); })
+    .catch(function(e) { console.log("[!] pg_trgm: " + e.message); })
+    .finally(function() { return prisma.$disconnect(); });
+' 2>&1
 
 # Build GIN indexes for document search (idempotent — IF NOT EXISTS)
 echo "[*] Building document search indexes..."
-node -e "
-  const { PrismaClient } = require('@prisma/client');
+node -e '
+  const { PrismaClient } = require("@prisma/client");
   const prisma = new PrismaClient({ log: [] });
-  prisma.\\\$executeRawUnsafe(\\\"CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('english', content));\\\")
-    .then(function() { console.log('[+] Full-text GIN index created'); })
-    .catch(function(e) { console.log('[!] FTS index: ' + e.message); })
-    .finally(function() { return prisma.\\\$executeRawUnsafe(\\\"CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);\\\"); })
-    .then(function() { console.log('[+] Trigram GIN index created'); })
-    .catch(function(e) { console.log('[!] Trigram index: ' + e.message); })
-    .finally(function() { return prisma.\\\$disconnect(); });
-" 2>&1
+  async function run() {
+    const rows = await prisma.$queryRawUnsafe("SELECT to_regclass('"'"'public.document_chunks'"'"')::text AS regclass;");
+    const exists = Array.isArray(rows) && rows[0] && rows[0].regclass;
+    if (!exists) {
+      console.log("[!] document_chunks table not present yet — skipping search index creation");
+      return;
+    }
+    await prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('"'"'english'"'"', content));");
+    console.log("[+] Full-text GIN index created");
+    await prisma.$executeRawUnsafe("CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING GIN (content gin_trgm_ops);");
+    console.log("[+] Trigram GIN index created");
+  }
+  run()
+    .catch(function(e) { console.log("[!] Search index setup: " + e.message); })
+    .finally(function() { return prisma.$disconnect(); });
+' 2>&1
 
-# ── Seed default admin user (runs on EVERY startup — idempotent) ──
-# This runs outside the first-run guard so that if the seed failed on a
-# previous start (e.g. DB wasn't ready yet), it will self-heal on restart.
-# It checks whether the admin user already exists before attempting creation.
+# ── Seed initial admin user (explicit credentials required) ─────
+# Security hardening v4.4.11:
+# - Refuses to fall back to default bootstrap credentials
+# - Requires explicit ADMIN_DEFAULT_* values on first bootstrap only
+# - Skips seeding safely when a real admin already exists
 mkdir -p /app/upload
 if [ ! -f "$SEED_MARKER" ]; then
-  echo "[*] Seeding default admin user (if not exists)..."
+  echo "[*] Checking whether initial admin seeding is required..."
   SEED_OUTPUT=$(node -e "
     const bcrypt = require('bcryptjs');
     const { PrismaClient } = require('@prisma/client');
@@ -180,32 +189,45 @@ if [ ! -f "$SEED_MARKER" ]; then
     async function seed() {
       const prisma = new PrismaClient();
       try {
-        const username = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
-        const email = process.env.ADMIN_DEFAULT_EMAIL || 'admin@example.com';
-        const password = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+        const existingAdmin = await prisma.user.findFirst({
+          where: { role: { in: ['admin', 'super-admin'] } },
+          select: { username: true, email: true, role: true },
+        });
 
-        // Check if admin user already exists (by username)
-        const existing = await prisma.user.findUnique({ where: { username } });
-        if (existing) {
-          console.log('[seed] Admin user already exists (' + existing.username + ', role=' + existing.role + ') — skipping.');
+        if (existingAdmin) {
+          console.log('[seed] Existing admin found (' + existingAdmin.username + ', role=' + existingAdmin.role + ') — skipping bootstrap seeding.');
           return 'exists';
         }
 
-        // Check if admin email is already taken by a different user
+        const username = process.env.ADMIN_DEFAULT_USERNAME;
+        const email = process.env.ADMIN_DEFAULT_EMAIL;
+        const password = process.env.ADMIN_DEFAULT_PASSWORD;
+
+        if (!username || !email || !password) {
+          console.log('[seed] No existing admin found, but ADMIN_DEFAULT_USERNAME / ADMIN_DEFAULT_EMAIL / ADMIN_DEFAULT_PASSWORD are not fully set.');
+          console.log('[seed] Refusing to seed an insecure default admin account.');
+          return 'missing-config';
+        }
+
+        const existingUsername = await prisma.user.findUnique({ where: { username } });
+        if (existingUsername) {
+          console.log('[seed] Requested bootstrap username already exists (' + existingUsername.username + ') — skipping.');
+          return 'exists';
+        }
+
         const existingEmail = await prisma.user.findUnique({ where: { email } });
         if (existingEmail) {
-          console.log('[seed] Admin email already in use by user ' + existingEmail.username + ' — skipping.');
+          console.log('[seed] Requested bootstrap email already exists (' + existingEmail.email + ') — skipping.');
           return 'exists';
         }
 
-        // Hash password using bcryptjs directly (no src/lib/auth.js needed in Docker)
         const saltRounds = 12;
         const hashed = await bcrypt.hash(password, saltRounds);
 
         const admin = await prisma.user.create({
           data: {
-            username: username,
-            email: email,
+            username,
+            email,
             password: hashed,
             role: 'super-admin',
             status: 'active'
@@ -213,13 +235,13 @@ if [ ! -f "$SEED_MARKER" ]; then
           select: { id: true, username: true, email: true, role: true, status: true }
         });
 
-        console.log('[seed] Default admin user CREATED:');
+        console.log('[seed] Initial admin user CREATED:');
         console.log('[seed]   Username: ' + admin.username);
         console.log('[seed]   Email: ' + admin.email);
         console.log('[seed]   Role: ' + admin.role);
         console.log('[seed]   Status: ' + admin.status);
         console.log('[seed]   ID: ' + admin.id);
-        console.log('[seed] WARNING: Change the default admin password immediately!');
+        console.log('[seed] IMPORTANT: Remove bootstrap admin env vars after first successful deploy.');
         return 'created';
       } catch(e) {
         console.error('[seed] ERROR: ' + e.message);
@@ -240,9 +262,9 @@ if [ ! -f "$SEED_MARKER" ]; then
   if [ $SEED_EXIT -eq 0 ]; then
     # Check if user was created or already existed
     if echo "$SEED_OUTPUT" | grep -q "CREATED"; then
-      echo "[+] Default admin user seeded successfully"
+      echo "[+] Initial admin user seeded successfully"
     else
-      echo "[+] Admin seed check complete (user already exists or no action needed)"
+      echo "[+] Admin seed check complete (existing admin present or explicit bootstrap config not provided)"
     fi
     # Mark as seeded so we don't re-run on every restart (only needed once)
     mkdir -p /app/tmp /app/upload
@@ -254,20 +276,20 @@ if [ ! -f "$SEED_MARKER" ]; then
 else
   echo "[+] Admin seed already completed (marker: $SEED_MARKER) — skipping"
   # Still verify the admin user exists
-  node -e "
-    const { PrismaClient } = require('@prisma/client');
+  node -e '
+    const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
-    prisma.user.findFirst({ where: { role: { in: ['admin', 'super-admin'] } }, select: { username: true, role: true } })
+    prisma.user.findFirst({ where: { role: { in: ["admin", "super-admin"] } }, select: { username: true, role: true } })
       .then(function(admin) {
         if (admin) {
-          console.log('[+] Admin user verified: ' + admin.username + ' (role=' + admin.role + ')');
+          console.log("[+] Admin user verified: " + admin.username + " (role=" + admin.role + ")");
         } else {
-          console.log('[!] WARNING: No admin user found in database!');
-          console.log('[!] Remove /app/tmp/.admin-seeded and restart to re-seed.');
+          console.log("[!] WARNING: No admin user found in database!");
+          console.log("[!] Remove /app/tmp/.admin-seeded and restart to re-seed.");
         }
-        return prisma.\$disconnect();
+        return prisma.$disconnect();
       });
-  " 2>&1
+  ' 2>&1
 fi
 
 # ── Verify Prisma client ───────────────────────────────────────

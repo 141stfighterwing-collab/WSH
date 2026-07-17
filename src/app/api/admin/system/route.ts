@@ -100,16 +100,8 @@ export async function GET() {
   const uptime = Date.now() - startTime;
   const memUsage = process.memoryUsage();
 
-  // Build version from env (set by Dockerfile), fallback to package.json
-  let version = process.env.BUILD_VERSION || '';
-  if (!version) {
-    try {
-      const pkg = require('../../../package.json');
-      version = pkg.version || 'unknown';
-    } catch {
-      version = '4.5.6';
-    }
-  }
+  // Build version from env (set by Dockerfile), fallback to the current release string.
+  const version = process.env.BUILD_VERSION || '4.4.18';
 
   // Disk sizes
   const appSize = dirSize('/app');

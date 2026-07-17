@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addLog } from '@/lib/logger';
 import { db } from '@/lib/db';
+import { extractPreview } from '@/lib/notes';
 
-// GET /api/notes — Fetch all notes for the authenticated user
+// GET /api/notes — Fetch paginated notes for the authenticated user
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
@@ -10,18 +11,79 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (id) {
+      const note = await db.note.findUnique({ where: { id } });
+      if (!note || note.userId !== userId) {
+        return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        note: {
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          rawContent: note.rawContent,
+          preview: extractPreview({ rawContent: note.rawContent, content: note.content }),
+          type: note.type,
+          tags: safeParseTags(note.tags),
+          color: note.color,
+          folderId: note.folderId,
+          userId: note.userId,
+          isDeleted: note.isDeleted,
+          createdAt: note.createdAt.toISOString(),
+          updatedAt: note.updatedAt.toISOString(),
+        },
+      });
+    }
+
+    const limit = Math.min(Math.max(Number(searchParams.get('limit') || '50'), 1), 100);
+    const cursor = searchParams.get('cursor');
+    const type = searchParams.get('type');
+    const folderId = searchParams.get('folderId');
+    const search = searchParams.get('search')?.trim();
+    const date = searchParams.get('date');
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
+
+    const where: Record<string, unknown> = { userId };
+    if (!includeDeleted) where.isDeleted = false;
+    if (type) where.type = type;
+    if (folderId) where.folderId = folderId;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { rawContent: { contains: search, mode: 'insensitive' } },
+        { tags: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (date) {
+      const start = new Date(`${date}T00:00:00.000`);
+      const end = new Date(`${date}T23:59:59.999`);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        where.createdAt = { gte: start, lte: end };
+      }
+    }
+
     const notes = await db.note.findMany({
-      where: { userId },
-      include: { folder: { select: { id: true, name: true } } },
-      orderBy: { updatedAt: 'desc' },
+      where,
+      orderBy: [
+        { updatedAt: 'desc' },
+        { id: 'desc' },
+      ],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
 
-    // Serialize: parse tags from JSON string, convert dates to ISO strings
-    const serialized = notes.map((note) => ({
+    const hasMore = notes.length > limit;
+    const page = hasMore ? notes.slice(0, limit) : notes;
+
+    const serialized = page.map((note) => ({
       id: note.id,
       title: note.title,
-      content: note.content,
-      rawContent: note.rawContent,
+      content: '',
+      rawContent: '',
+      preview: extractPreview({ rawContent: note.rawContent, content: note.content }),
       type: note.type,
       tags: safeParseTags(note.tags),
       color: note.color,
@@ -32,7 +94,11 @@ export async function GET(request: NextRequest) {
       updatedAt: note.updatedAt.toISOString(),
     }));
 
-    return NextResponse.json({ notes: serialized });
+    return NextResponse.json({
+      notes: serialized,
+      nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
+      hasMore,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     addLog('error', `GET /notes failed: ${message}`, 'notes');

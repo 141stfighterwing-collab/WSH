@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useSyncExternalStore, useEffect, useRef } from 'react';
+import { useState, useCallback, useSyncExternalStore, useEffect } from 'react';
 import {
   Search,
   BarChart3,
@@ -12,10 +12,7 @@ import {
   Shield,
   Network,
   BookOpen,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  FlaskConical,
+  Database,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -49,11 +46,7 @@ export default function Header() {
     latencyMs: -1,
     lastChecked: '',
   });
-  const [dbTestResult, setDbTestResult] = useState<{
-    status: 'idle' | 'testing' | 'pass' | 'fail';
-    message: string;
-  }>({ status: 'idle', message: '' });
-  const dbTestTooltipRef = useRef<HTMLDivElement>(null);
+
 
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -96,41 +89,9 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  // Close db test tooltip on outside click
-  useEffect(() => {
-    if (dbTestResult.status === 'idle') return;
-    const handleClick = (e: MouseEvent) => {
-      if (dbTestTooltipRef.current && !dbTestTooltipRef.current.contains(e.target as Node)) {
-        setDbTestResult({ status: 'idle', message: '' });
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [dbTestResult.status]);
 
-  const handleDBTest = async () => {
-    setDbTestResult({ status: 'testing', message: 'Running read/write test...' });
-    try {
-      const res = await fetch('/api/db-test', { method: 'POST' });
-      const data = await res.json();
-      if (data.status === 'ok') {
-        setDbTestResult({
-          status: 'pass',
-          message: `✓ ${data.results.overall} (${data.results.count})`,
-        });
-      } else {
-        setDbTestResult({
-          status: 'fail',
-          message: `✗ ${data.results.overall}`,
-        });
-      }
-    } catch {
-      setDbTestResult({
-        status: 'fail',
-        message: '✗ Could not reach server',
-      });
-    }
-  };
+
+
 
   const viewButtonClass = (active: boolean) =>
     `flex items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-200 active:scale-95 ${
@@ -144,12 +105,12 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 glass wsh-topbar">
-      <div className="grid h-full grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] items-center gap-x-2 gap-y-1 px-3 py-2 md:flex md:gap-3 md:px-4 md:py-0">
+      <div className="flex h-full items-center justify-between gap-3 px-4">
         {/* Logo */}
-        <Logo size={38} showText={true} className="[&>div]:hidden sm:[&>div]:flex" />
+        <Logo size={44} showText={true} />
 
         {/* View Toggles */}
-        <div className="hidden items-center gap-1 rounded-lg border border-border/70 bg-secondary/45 p-1 xl:flex">
+        <div className="hidden items-center gap-1 rounded-lg border border-border/70 bg-secondary/45 p-1 md:flex">
           <button
             onClick={() => setViewMode('grid')}
             className={viewButtonClass(viewMode === 'grid')}
@@ -177,7 +138,7 @@ export default function Header() {
         </div>
 
         {/* Map, Notebook, Analytics */}
-        <div className="hidden items-center gap-1 xl:flex">
+        <div className="hidden lg:flex items-center gap-1">
           <button
             onClick={() => setMindMapOpen(true)}
             className={navButtonClass}
@@ -203,7 +164,7 @@ export default function Header() {
 
         {/* DB Connection Indicator — visible for ALL logged-in users */}
         {mounted && user.isLoggedIn && (
-          <div className="flex min-w-0 items-center justify-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-2">
             <div className="relative group">
               <div
                 className={`w-3 h-3 rounded-full transition-all duration-500 ${
@@ -239,56 +200,25 @@ export default function Header() {
               </div>
             </div>
 
-            {/* DB Test Button — all logged-in users */}
-            {mounted && user.isLoggedIn && (
-              <div className="relative" ref={dbTestTooltipRef}>
-                <button
-                  onClick={handleDBTest}
-                  disabled={dbTestResult.status === 'testing'}
-                className="flex h-10 items-center gap-1.5 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-2 text-[10px] font-black uppercase tracking-widest text-cyan-300 transition-all duration-200 hover:bg-cyan-400/20 active:scale-95 disabled:opacity-50 sm:px-3"
-                  title="Test Database Read/Write"
-                  aria-label="Test database read and write"
-                >
-                  {dbTestResult.status === 'testing' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <FlaskConical className="w-3.5 h-3.5" />
-                  )}
-                  <span className="hidden sm:inline">DB Test</span>
-                </button>
 
-                {/* Test Result Tooltip */}
-                {dbTestResult.status !== 'idle' && (
-                  <div className="absolute top-full right-0 mt-2 w-72 px-3 py-2 rounded-xl bg-card border border-border shadow-xl z-[200] animate-fadeIn">
-                    <div className="flex items-start gap-2">
-                      {dbTestResult.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin mt-0.5 shrink-0" />}
-                      {dbTestResult.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />}
-                      {dbTestResult.status === 'fail' && <XCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />}
-                      <span className={`text-xs font-semibold break-all ${dbTestResult.status === 'pass' ? 'text-green-400' : dbTestResult.status === 'fail' ? 'text-red-400' : 'text-cyan-400'}`}>
-                        {dbTestResult.message}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+
+
 
             {/* Admin Button */}
             {isAdmin && (
               <button
                 onClick={() => setAdminPanelOpen(true)}
-                className="flex h-10 items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/10 px-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition-all duration-200 hover:bg-amber-400/20 active:scale-95 sm:px-3"
-                aria-label="Open admin panel"
+                className="flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition-all duration-200 hover:bg-amber-400/20 active:scale-95"
               >
                 <Shield className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Admin</span>
+                <span>Admin</span>
               </button>
             )}
           </div>
         )}
 
         {/* Search */}
-        <div className="col-span-3 row-start-2 w-full min-w-0 md:mx-2 md:flex-1 md:max-w-sm">
+        <div className="mx-2 flex-1 max-w-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
@@ -301,46 +231,41 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-1">
-          {/* Login */}
-          <button
-            onClick={handleLoginClick}
-            className="flex h-10 items-center gap-1.5 rounded-lg px-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95 sm:px-3"
-            aria-label={mounted && user.isLoggedIn ? `Account: ${user.username}` : 'Login or sign up'}
-          >
-            {mounted && user.isLoggedIn ? (
-              <>
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400 text-[9px] font-bold text-slate-950">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-                <span className="hidden sm:inline">{user.username}</span>
-              </>
-            ) : (
-              <>
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Login / Sign Up</span>
-              </>
-            )}
-          </button>
-
-          {/* Login Popover */}
-          {loginAnchorEl && (
-            <LoginWidget
-              anchorEl={loginAnchorEl}
-              onClose={handleLoginClose}
-            />
+        {/* Login */}
+        <button
+          onClick={handleLoginClick}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95"
+        >
+          {mounted && user.isLoggedIn ? (
+            <>
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-400 text-[9px] font-bold text-slate-950">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <span className="hidden sm:inline">{user.username}</span>
+            </>
+          ) : (
+            <>
+              <LogIn className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Login / Sign Up</span>
+            </>
           )}
+        </button>
 
-          {/* Settings */}
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Login Popover */}
+        {loginAnchorEl && (
+          <LoginWidget
+            anchorEl={loginAnchorEl}
+            onClose={handleLoginClose}
+          />
+        )}
+
+        {/* Settings */}
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="rounded-lg p-2 text-muted-foreground transition-all duration-200 hover:bg-accent/80 hover:text-foreground active:scale-95"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
     </header>
   );

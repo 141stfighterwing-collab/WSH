@@ -1,4 +1,4 @@
-# WSH v4.5.6 — File Tracker
+# WSH v4.4.17 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this release.
 
@@ -8,72 +8,40 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.5.6 |
-| **Release Date** | 2026-07-17 |
-| **Previous Version** | 4.5.5 |
-| **Release Type** | Mobile workspace optimization and touch accessibility |
+| **Version** | 4.4.17 |
+| **Release Date** | 2026-06-25 |
+| **Previous Version** | 4.4.16 |
+| **Release Type** | Today checklist race-condition fix, release metadata alignment |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
-| **Branch** | `TST-DEV` |
+| **Branch** | `main` |
 
 ---
 
-## Application Files
+## Modified Files
 
 | # | File | Change Type | Description |
 |---|------|-------------|-------------|
-| 1 | `src/components/wsh/MobileNavigation.tsx` | **New** | Mobile action dock and complete tools sheet |
-| 2 | `src/app/globals.css` | **Responsive** | Drawer, dock, touch-target, dynamic-height, and breakpoint styles |
-| 3 | `src/app/page.tsx` | **Responsive** | Drawer state, overlay, Escape handling, and mobile navigation integration |
-| 4 | `src/components/wsh/Header.tsx` | **Responsive** | Two-row phone header and compact system/account actions |
-| 5 | `src/components/wsh/LeftSidebar.tsx` | **Responsive** | Workspace drawer mode and close action |
-| 6 | `src/components/wsh/RightSidebar.tsx` | **Responsive** | Activity drawer mode and visible task actions |
-| 7 | `src/components/wsh/Footer.tsx` | **Responsive** | Compact footer and accessible Trash action |
-| 8 | `src/components/wsh/NoteEditor.tsx` | **Responsive** | Touch toolbar, shorter phone canvas, stacked action bar |
-| 9 | `src/components/wsh/NotesGrid.tsx` | **Touch** | Always-visible compact note action menu |
-| 10 | `src/components/wsh/QuickReferences.tsx` | **Touch** | Larger wrapping Use/Edit/Delete controls |
-| 11 | `src/components/wsh/LoginWidget.tsx` | **Responsive/A11y** | Viewport-safe width and labeled close/password actions |
-| 12 | `src/components/wsh/SettingsPanel.tsx` | **A11y** | Labeled tabs, close actions, and pressed states |
-| 13 | `src/components/wsh/NotebookView.tsx` | **Responsive** | Stacked phone navigation and reduced content padding |
-| 14 | `src/components/wsh/DBViewer.tsx` | **Responsive** | Wrapping header, tabs, search, and add controls |
-| 15 | `src/components/wsh/MindMap.tsx` | **Touch/A11y** | Pointer-based pan/drag and labeled controls |
-| 16 | `src/components/wsh/editors/ProjectEditor.tsx` | **Touch** | Visible milestone and deliverable delete actions |
-
-## Version and Documentation Files
-
-| Files | Description |
-|-------|-------------|
-| `package.json`, `package-lock.json` | Root package version updated to `4.5.6` |
-| `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh` | Build metadata and image tag updated to `weavenote:4.5.6` |
-| `install.sh`, `install.ps1`, `update.sh`, `update.ps1` | Installer/updater version, patch registry, and non-destructive doc validation updated |
-| `test-env.sh`, `test-env.ps1` | Environment test banner updated |
-| `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts` | Runtime fallback version updated |
-| `README.md`, `CHANGELOG.md`, `CODING_CHANGES.md`, `worklog.md` | Mobile behavior and release history documented |
-
----
-
-## New Files Created
-
-| # | File | Purpose |
-|---|------|---------|
-| 1 | `src/components/wsh/MobileNavigation.tsx` | Mobile workspace navigation and tools access |
+| 1 | `src/components/wsh/RightSidebar.tsx` | **Fix** | Added a load-complete guard so Today checklist persistence cannot overwrite saved items with an empty state during initial mount |
+| 2 | `package.json` | **Version** | Bumped package version to `4.4.17` |
+| 3 | `Dockerfile` | **Version** | Updated Docker build metadata to `4.4.17` |
+| 4 | `docker-compose.yml` | **Version** | Updated build arg and image tag to `weavenote:4.4.17` |
+| 5 | `docker-entrypoint.sh` | **Version** | Updated entrypoint banner/version fallback to `4.4.17` |
+| 6 | `src/app/api/health/route.ts` | **Version** | Updated runtime version fallback to `4.4.17` |
+| 7 | `src/app/api/admin/system/route.ts` | **Version** | Updated system route version fallback to `4.4.17` |
+| 8 | `README.md` | **Docs** | Updated user-facing version references to `4.4.17` |
+| 9 | `RELEASE-NOTES-4.4.17.md` | **Docs** | Added dedicated release notes for the Today checklist race-condition fix |
+| 10 | `CHANGELOG.md` | **Release** | Added 4.4.17 entry |
+| 11 | `CODING_CHANGES.md` | **Release** | Added technical record for the Today checklist race-condition fix |
+| 12 | `FILE_TRACKER.md` | **Release** | Updated file inventory for 4.4.17 |
+| 13 | `RELEASE-CHECKLIST.md` | **Release** | Updated target release line to 4.4.17 |
 
 ---
 
 ## Verification Checklist
 
-- [x] Phone header and main document fit `390x844` without overflow
-- [x] Tablet header and main document fit `768x1024` without overflow
-- [x] Workspace and Activity content use off-canvas drawers below `1280px`
-- [x] Grid, Dashboard, Focus, Map, Notebook, Analytics, Settings, Database, and Admin remain reachable
-- [x] Note, task, project, Quick Reference, save, and synthesis actions are touch accessible
-- [x] Mind Map supports mouse and touch pointer input
-- [x] Targeted ESLint passes for responsive modules
-- [x] PowerShell updater preserves authored docs and validates current-version coverage
-- [x] Production Docker image `weavenote:4.5.6` is healthy on `10.30.1.15:8883`; the API reports v4.5.6 with the database connected
-
----
-
-## Known Repository-Wide Validation Notes
-
-- Full `tsc --noEmit` remains blocked by existing optional example/skill dependencies (`socket.io`, `z-ai-web-dev-sdk`, `react-hook-form`) and unrelated pre-existing admin typing errors.
-- Existing lint findings in `NotebookView.tsx` and `ProjectEditor.tsx` predate this release; targeted lint for the new responsive shell and interaction modules passes.
+- [x] Today checklist initial-load persistence guard added
+- [x] Runtime version metadata updated to `4.4.17`
+- [x] Docker build/image metadata updated to `4.4.17`
+- [x] Release notes, changelog, coding notes, and tracker updated
+- [x] Local production build passed
+- [ ] Live browser/manual smoke pass still recommended after deployment
