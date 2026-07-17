@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useWSHStore, type NoteType } from '@/store/wshStore';
 import { sanitizeHTML } from '@/lib/sanitize';
+import { quickReferenceToEditorHtml } from '@/lib/quickReferenceFormat';
 import CodeEditor from './editors/CodeEditor';
 import ProjectEditor from './editors/ProjectEditor';
 import DocumentManager from './editors/DocumentManager';
@@ -76,23 +77,6 @@ interface QuickReferenceDetail {
   name?: string;
   content?: string;
   type?: string;
-}
-
-function textToEditorHtml(text: string): string {
-  return sanitizeHTML(
-    text
-      .split(/\n{2,}/)
-      .map((block) => {
-        const lines = block.split('\n').map((line) => line.trimEnd());
-        const joined = lines.join('<br>');
-        if (joined.startsWith('### ')) return `<h3>${joined.slice(4)}</h3>`;
-        if (joined.startsWith('## ')) return `<h2>${joined.slice(3)}</h2>`;
-        if (joined.startsWith('# ')) return `<h1>${joined.slice(2)}</h1>`;
-        return `<p>${joined || '<br>'}</p>`;
-      })
-      .join('')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-  );
 }
 
 export default function NoteEditor() {
@@ -277,7 +261,7 @@ export default function NoteEditor() {
         ? detail.type as NoteType
         : 'quick';
       const html = type === 'quick' || type === 'notebook' || type === 'deep'
-        ? textToEditorHtml(detail.content)
+        ? quickReferenceToEditorHtml(detail.content)
         : detail.content;
 
       setActiveNoteId(null);
@@ -1039,7 +1023,7 @@ export default function NoteEditor() {
             contentEditable
             onInput={handleContentInput}
             data-placeholder="Start writing your thoughts..."
-            className="h-[450px] min-h-[450px] max-h-[600px] resize-y overflow-y-auto rounded-lg border border-border/45 bg-background/35 p-4 text-sm leading-relaxed text-foreground transition-all duration-200 editor-inner focus:ring-2 focus:ring-amber-300/20"
+            className="h-[450px] min-h-[450px] max-h-[600px] resize-y overflow-y-auto rounded-lg border border-border/45 bg-background/35 p-4 text-sm leading-relaxed text-foreground transition-all duration-200 editor-inner focus:ring-2 focus:ring-amber-300/20 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_p]:min-h-[1.5em] [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6"
             style={{ minHeight: '300px' }}
           />
         </div>

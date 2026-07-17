@@ -1,3 +1,33 @@
+# WSH v4.5.5 — Coding Changes
+
+## Overview
+v4.5.5 fixes Quick Reference insertion so Markdown-style templates become structured, readable editor content.
+
+## 1. Quick Reference Formatting
+
+**Files:** `src/lib/quickReferenceFormat.ts`, `src/components/wsh/NoteEditor.tsx`
+
+### What Changed
+- Extracted the template conversion into a reusable, directly testable formatter.
+- Replaced blank-block conversion with a line-by-line template parser.
+- `#`, `##`, and `###` template lines become rich-text headings without showing literal marker characters.
+- Blank lines remain editable empty sections.
+- Numbered and bulleted template lines become semantic editor lists.
+- Template text is HTML-escaped before supported bold and inline-code formatting is applied.
+- Added editor-local heading and list styles so inserted structure is visually distinct.
+
+## 2. Version and Documentation
+
+**Files:** `package.json`, `package-lock.json`, `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `test-env.sh`, `test-env.ps1`, `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts`, `README.md`, `CHANGELOG.md`, `FILE_TRACKER.md`, `worklog.md`
+
+### What Changed
+- Version bumped to `4.5.5`.
+- Docker build arg and compose image tag now use `weavenote:4.5.5`.
+- README describes the supported Quick Reference formatting.
+- PowerShell update patch registry includes the v4.5.5 release.
+
+---
+
 # WSH v4.5.4 — Coding Changes
 
 ## Overview

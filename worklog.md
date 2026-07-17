@@ -1,4 +1,16 @@
 ---
+## Task ID: 8 - Quick Reference Formatting (v4.5.5)
+### Work Task
+Fix Quick References so Markdown-style templates such as Daily Standup insert as readable editor sections instead of a single line containing literal heading markers.
+
+### Work Summary
+- Extracted the converter into `src/lib/quickReferenceFormat.ts` and replaced block-based conversion with safe line-by-line formatting.
+- Converted `#`, `##`, and `###` lines into editor headings and preserved blank fill-in sections.
+- Added ordered-list and bullet-list conversion plus supported bold and inline-code formatting.
+- Added visible heading and list styles inside the rich-text editor.
+- Bumped release metadata, Docker image references, README, changelog, coding notes, file tracker, and PowerShell update registry to v4.5.5.
+
+---
 ## Task ID: 7 - Quick References and Draft Autosave
 ### Work Task
 Ensure Quick References can be added, edited, deleted, and used directly in the editor, and add draft autosave so unsaved note work is protected.

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.5] - 2026-07-17
+
+### Fixed
+
+- **Quick Reference formatting** — Using a reference now converts Markdown-style `#`, `##`, and `###` lines into real editor headings instead of displaying the heading markers inline.
+- Blank sections, ordered lists, and unordered lists are preserved as structured editor content so templates remain easy to fill in.
+
+### Changed
+
+- Added visible heading and list styling to the rich-text editor.
+- Escaped template text before applying supported bold and inline-code formatting.
+- **Version bumped to 4.5.5** across package metadata, Docker build args, compose image tag, entrypoint banner, install/update/test scripts, health endpoint fallback, system endpoint fallback, README, and documentation trackers.
+
+### Technical
+
+- No database migration or API contract change is required.
+
+---
+
 ## [4.5.4] - 2026-05-19
 
 ### Added

@@ -11,7 +11,7 @@ function getVersion(): string {
     const pkg = require('../../../package.json');
     if (pkg.version) return pkg.version;
   } catch { /* ignore */ }
-  return '4.5.4';
+  return '4.5.5';
 }
 
 // GET /api/health — Database connectivity health check
