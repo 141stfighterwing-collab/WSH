@@ -69,7 +69,7 @@
 - [x] Mind Map supports mouse and touch pointer input
 - [x] Targeted ESLint passes for responsive modules
 - [x] PowerShell updater preserves authored docs and validates current-version coverage
-- [ ] Production Docker image and host health verified during deployment
+- [x] Production Docker image `weavenote:4.5.6` is healthy on `10.30.1.15:8883`; the API reports v4.5.6 with the database connected
 
 ---
 
