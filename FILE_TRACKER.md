@@ -84,4 +84,4 @@
 | 1 | PASS | Targeted | ESLint passed for `NoteEditor`, `QuickReferences`, and the formatter utility |
 | 2 | PASS | Direct | Daily Standup input produced three `<h2>` sections separated by editable blank paragraphs |
 | 3 | PASS | Static | Verified package, Docker, scripts, API fallbacks, and README use `4.5.5` |
-| 4 | PENDING | Docker | Production image build and health endpoint verification during deployment |
+| 4 | PASS | Docker | Built `weavenote:4.5.5`; `weavenote-app` is healthy and `/api/health` reports database connected |
