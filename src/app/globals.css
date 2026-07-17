@@ -504,13 +504,14 @@ body.theme-hyperblue {
 }
 
 .wsh-topbar {
-  height: 4.5rem;
+  height: 7rem;
+  flex-shrink: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, #ffbc7c 22%);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.26);
 }
 
 .wsh-main-frame {
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 .wsh-surface {
@@ -534,8 +535,86 @@ body.theme-hyperblue {
   filter: brightness(1.05);
 }
 
-@media (min-width: 1024px) {
+.wsh-left-sidebar,
+.wsh-right-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 80;
+  display: flex;
+  width: min(88vw, 22rem);
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--sidebar);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 200ms ease, visibility 200ms ease;
+}
+
+.wsh-left-sidebar {
+  left: 0;
+  transform: translateX(-105%);
+  border-right: 1px solid color-mix(in srgb, var(--border) 80%, #ffbc7c 20%);
+}
+
+.wsh-right-sidebar {
+  right: 0;
+  gap: 1rem;
+  padding: 1rem;
+  transform: translateX(105%);
+  border-left: 1px solid color-mix(in srgb, var(--border) 80%, #ffbc7c 20%);
+}
+
+.wsh-left-sidebar.is-mobile-open,
+.wsh-right-sidebar.is-mobile-open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.wsh-mobile-dock {
+  display: flex;
+  min-height: 3.75rem;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 94%, transparent 6%);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.wsh-mobile-tool-button {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--secondary) 65%, transparent 35%);
+  padding: 0.75rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.wsh-mobile-tool-button:active {
+  background: var(--secondary);
+}
+
+@media (max-width: 767px) {
+  .wsh-editor-toolbar button {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .wsh-editor-toolbar select {
+    min-height: 2.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
   .wsh-left-sidebar {
+    position: static;
+    z-index: auto;
     display: flex;
     flex-direction: column;
     width: 18.5rem;
@@ -545,8 +624,14 @@ body.theme-hyperblue {
     background: color-mix(in srgb, var(--sidebar) 90%, transparent 10%);
     overflow-y: auto;
     max-height: calc(100vh - 4.5rem - 3rem);
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition: none;
   }
   .wsh-right-sidebar {
+    position: static;
+    z-index: auto;
     display: flex;
     flex-direction: column;
     width: 20rem;
@@ -557,10 +642,22 @@ body.theme-hyperblue {
     max-height: calc(100vh - 4.5rem - 3rem);
     padding: 1rem;
     gap: 1rem;
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition: none;
   }
 }
 
 @media (min-width: 768px) {
+  .wsh-topbar {
+    height: 4.5rem;
+  }
+
+  .wsh-main-frame {
+    padding: 1rem;
+  }
+
   .wsh-main-padding {
     padding-inline: 1rem;
     padding-block: 0.75rem;

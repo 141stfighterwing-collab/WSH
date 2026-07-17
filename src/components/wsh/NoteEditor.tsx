@@ -714,7 +714,7 @@ export default function NoteEditor() {
 
       {/* Toolbar — hidden for AI Prompts tab */}
       {activeNoteType !== 'ai-prompts' && (
-      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/50 overflow-x-auto">
+      <div className="wsh-editor-toolbar flex items-center gap-0.5 overflow-x-auto border-b border-border/50 px-2 py-1.5">
         {/* Font selector */}
         <select
           value="inter"
@@ -997,7 +997,7 @@ export default function NoteEditor() {
 
       {/* Content Editor — Specialized per note type */}
       {activeNoteType === 'ai-prompts' ? (
-        <div className="h-[500px] overflow-hidden">
+        <div className="h-[420px] overflow-hidden sm:h-[500px]">
           <PromptLibrary />
         </div>
       ) : activeNoteType === 'code' ? (
@@ -1023,7 +1023,7 @@ export default function NoteEditor() {
             contentEditable
             onInput={handleContentInput}
             data-placeholder="Start writing your thoughts..."
-            className="h-[450px] min-h-[450px] max-h-[600px] resize-y overflow-y-auto rounded-lg border border-border/45 bg-background/35 p-4 text-sm leading-relaxed text-foreground transition-all duration-200 editor-inner focus:ring-2 focus:ring-amber-300/20 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_p]:min-h-[1.5em] [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6"
+            className="editor-inner h-[360px] min-h-[360px] max-h-[600px] resize-y overflow-y-auto rounded-lg border border-border/45 bg-background/35 p-3 text-sm leading-relaxed text-foreground transition-all duration-200 focus:ring-2 focus:ring-amber-300/20 sm:h-[450px] sm:min-h-[450px] sm:p-4 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_p]:min-h-[1.5em] [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6"
             style={{ minHeight: '300px' }}
           />
         </div>
@@ -1068,8 +1068,8 @@ export default function NoteEditor() {
 
       {/* Status Bar — hidden for AI Prompts tab */}
       {activeNoteType !== 'ai-prompts' && (
-      <div className="flex items-center justify-between border-t border-border/40 bg-secondary/35 px-3 py-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 border-t border-border/40 bg-secondary/35 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-end gap-2">
           <span className="text-[10px] font-bold text-muted-foreground">
             Engine: {engineStatus}
           </span>
@@ -1080,7 +1080,7 @@ export default function NoteEditor() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-secondary transition-all active:scale-95"
+            className="flex min-h-10 items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:bg-secondary active:scale-95"
           >
             <Save className={`w-3 h-3 ${saveStatus === 'Saved ✓' ? 'text-green-400' : ''}`} />
             {saveStatus === 'Saving...' && <span className="text-pri-400">Saving...</span>}
@@ -1093,7 +1093,7 @@ export default function NoteEditor() {
             <button
               onClick={() => setShowSynthesisMenu(!showSynthesisMenu)}
               disabled={synthesisLoading}
-              className="wsh-accent-button flex items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+              className="wsh-accent-button flex min-h-10 items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
             >
               {synthesisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               Synthesis

@@ -168,7 +168,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
                 />
                 <button
                   onClick={() => removeMilestone(ms.id)}
-                  className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition-all hover:text-red-400 xl:opacity-0 xl:group-hover:opacity-100"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -214,7 +214,7 @@ export default function ProjectEditor({ title, setTitle, content, setContent }: 
                 />
                 <button
                   onClick={() => removeDeliverable(dl.id)}
-                  className="p-1 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition-all hover:text-red-400 xl:opacity-0 xl:group-hover:opacity-100"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

@@ -417,7 +417,7 @@ export default function NotebookView() {
   const activeNote = filteredNotes[activeIndex] || null;
 
   return (
-    <div className="fixed inset-0 z-[105] flex animate-fadeIn">
+    <div className="fixed inset-0 z-[105] flex flex-col animate-fadeIn md:flex-row">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-background/98"
@@ -425,7 +425,7 @@ export default function NotebookView() {
       />
 
       {/* Sidebar */}
-      <div className="relative w-72 shrink-0 border-r border-border/50 bg-card/80 backdrop-blur-sm flex flex-col">
+      <div className="relative flex max-h-[42dvh] w-full shrink-0 flex-col border-b border-border/50 bg-card/80 backdrop-blur-sm md:max-h-none md:w-72 md:border-b-0 md:border-r">
         {/* Sidebar Header */}
         <div className="flex items-center justify-between p-4 border-b border-border/50">
           <div className="flex items-center gap-2">
@@ -435,6 +435,7 @@ export default function NotebookView() {
           <button
             onClick={() => setNotebookOpen(false)}
             className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+            aria-label="Close notebook"
           >
             <X className="w-4 h-4" />
           </button>
@@ -504,9 +505,9 @@ export default function NotebookView() {
       </div>
 
       {/* Main Content */}
-      <div className="relative flex-1 flex flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/50 bg-card/50 px-3 py-3 backdrop-blur-sm sm:px-6">
           <div className="flex items-center gap-2 min-w-0">
             <span className="micro-label text-pri-400 shrink-0">Notebook</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
@@ -522,6 +523,7 @@ export default function NotebookView() {
           <button
             onClick={() => setNotebookOpen(false)}
             className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95 shrink-0"
+            aria-label="Close notebook"
           >
             <X className="w-4 h-4" />
           </button>
@@ -536,7 +538,7 @@ export default function NotebookView() {
               <p className="text-xs text-muted-foreground/30 mt-1">Create notes to read them here</p>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-8 py-8">
+            <div className="mx-auto max-w-3xl px-4 py-5 sm:px-8 sm:py-8">
               {filteredNotes.map((note, index) => (
                 <ErrorCatch key={String(note.id)}>
                   <NotebookPage

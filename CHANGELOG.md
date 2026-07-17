@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.5.6] - 2026-07-17
+
+### Added
+
+- **Mobile workspace navigation** — Added a persistent compact-screen dock for Workspace, Grid, Dashboard, Focus, Activity, and the complete tools menu.
+- **Responsive sidebar drawers** — Calendar, Quick References, folders, tags, tasks, today views, and projects now open as off-canvas drawers below the desktop breakpoint.
+- **Mobile tools sheet** — Mind Map, Notebook, Analytics, Settings, Database, and role-appropriate Admin actions remain available on phone and tablet layouts.
+
+### Changed
+
+- Reworked the header into a two-row phone layout with full-width search and compact account, database, and settings actions.
+- Increased touch targets and exposed note, task, project, Quick Reference, save, synthesis, login, and panel controls that previously depended on hover or desktop spacing.
+- Stacked Notebook navigation on phones, wrapped Database Viewer controls, and added pointer/touch pan and drag support to Mind Map.
+- Added accessible names and pressed states to icon-only and mobile navigation actions.
+- Changed PowerShell documentation handling to preserve authored release files and validate current-version coverage instead of regenerating obsolete `4.5.0` content.
+- **Version bumped to 4.5.6** across package metadata, Docker build args, compose image tag, entrypoint banner, install/update/test scripts, API fallbacks, README, and documentation trackers.
+
+### Verification
+
+- Phone viewport `390x844` and tablet viewport `768x1024` render with document width matching viewport width and no page overflow.
+- Targeted ESLint passes for the responsive shell, navigation, editor, note, Quick Reference, login, settings, database, and mind-map modules.
+
+---
+
 ## [4.5.5] - 2026-07-17
 
 ### Fixed

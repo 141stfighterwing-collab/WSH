@@ -306,8 +306,9 @@ function TodoChecklist() {
               {/* Delete button (visible on hover) */}
               <button
                 onClick={() => handleDeleteTodo(todo.id)}
-                className="shrink-0 opacity-0 group-hover:opacity-100 mt-0.5 text-muted-foreground/40 hover:text-red-400 transition-all duration-200"
+                className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground/60 transition-all duration-200 hover:text-red-400 xl:opacity-0 xl:group-hover:opacity-100"
                 title="Delete item"
+                aria-label={`Delete task: ${todo.text}`}
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -513,9 +514,24 @@ function TodaySection() {
 }
 
 // ── Main RightSidebar ─────────────────────────────────────────────────────
-export default function RightSidebar() {
+interface RightSidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function RightSidebar({ mobileOpen = false, onClose }: RightSidebarProps) {
   return (
-    <aside className="wsh-right-sidebar">
+    <aside className={`wsh-right-sidebar ${mobileOpen ? 'is-mobile-open' : ''}`} aria-label="Activity sidebar">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-sidebar pb-3 xl:hidden">
+        <span className="text-xs font-black uppercase text-foreground">Activity</span>
+        <button
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground active:bg-secondary active:text-foreground"
+          aria-label="Close activity sidebar"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
       {/* Live Clock */}
       <LiveClock />
 

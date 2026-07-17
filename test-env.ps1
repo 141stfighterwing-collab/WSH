@@ -1,4 +1,4 @@
-# WSH — ENV Persistence Test Script (PowerShell) v4.5.5
+# WSH — ENV Persistence Test Script (PowerShell) v4.5.6
 #
 # Validates the full lifecycle of environment variable persistence:
 #   1. Health check
@@ -56,7 +56,7 @@ function Write-Section([string]$Title) {
 # ── Pre-flight ──────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "  WSH - ENV Persistence Test v4.5.5" -ForegroundColor Cyan
+Write-Host "  WSH - ENV Persistence Test v4.5.6" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 Info-Test "Base URL:  $BaseUrl"

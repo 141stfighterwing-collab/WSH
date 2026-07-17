@@ -192,11 +192,11 @@ export default function DBViewer() {
       {/* Viewer */}
       <div className="relative w-full h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-card/80 backdrop-blur-sm shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/50 bg-card/80 px-3 py-3 backdrop-blur-sm sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
             <Database className="w-5 h-5 text-cyan-400" />
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="micro-label text-muted-foreground">Database Viewer</span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-bold">
                   Port 5682
@@ -214,6 +214,7 @@ export default function DBViewer() {
             <button
               onClick={() => setDbViewerOpen(false)}
               className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+              aria-label="Close database viewer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -221,8 +222,8 @@ export default function DBViewer() {
         </div>
 
         {/* Table tabs + actions */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border/30 bg-card/30 shrink-0">
-          <div className="flex gap-1">
+        <div className="flex shrink-0 flex-col gap-2 border-b border-border/30 bg-card/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex gap-1 overflow-x-auto">
             {(['notes', 'folders', 'users'] as const).map((table) => {
               const count = tableConfig[table].data.length;
               return (
@@ -248,19 +249,19 @@ export default function DBViewer() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="relative">
+            <div className="relative min-w-0 flex-1 sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Filter..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-7 pr-3 py-1.5 rounded-lg text-[10px] bg-secondary/50 border border-border/50 focus:border-cyan-500/50 focus:outline-none text-foreground w-40"
+                className="w-full rounded-lg border border-border/50 bg-secondary/50 py-2 pl-7 pr-3 text-[10px] text-foreground focus:border-cyan-500/50 focus:outline-none sm:w-40"
               />
             </div>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-600/15 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-600/25 transition-all active:scale-95"
+              className="flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-cyan-500/30 bg-cyan-600/15 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-cyan-400 transition-all hover:bg-cyan-600/25 active:scale-95"
             >
               <Plus className="w-2.5 h-2.5" />
               Add Row

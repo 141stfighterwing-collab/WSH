@@ -1,4 +1,4 @@
-# WSH v4.5.5 — File Tracker
+# WSH v4.5.6 — File Tracker
 
 > Complete inventory of files modified, created, and verified in this release.
 
@@ -8,52 +8,46 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.5.5 |
+| **Version** | 4.5.6 |
 | **Release Date** | 2026-07-17 |
-| **Previous Version** | 4.5.4 |
-| **Release Type** | Quick Reference rich-text formatting and Docker version bump |
+| **Previous Version** | 4.5.5 |
+| **Release Type** | Mobile workspace optimization and touch accessibility |
 | **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
 | **Branch** | `TST-DEV` |
 
 ---
 
-## Modified Files
+## Application Files
 
-### Core Application Code
+| # | File | Change Type | Description |
+|---|------|-------------|-------------|
+| 1 | `src/components/wsh/MobileNavigation.tsx` | **New** | Mobile action dock and complete tools sheet |
+| 2 | `src/app/globals.css` | **Responsive** | Drawer, dock, touch-target, dynamic-height, and breakpoint styles |
+| 3 | `src/app/page.tsx` | **Responsive** | Drawer state, overlay, Escape handling, and mobile navigation integration |
+| 4 | `src/components/wsh/Header.tsx` | **Responsive** | Two-row phone header and compact system/account actions |
+| 5 | `src/components/wsh/LeftSidebar.tsx` | **Responsive** | Workspace drawer mode and close action |
+| 6 | `src/components/wsh/RightSidebar.tsx` | **Responsive** | Activity drawer mode and visible task actions |
+| 7 | `src/components/wsh/Footer.tsx` | **Responsive** | Compact footer and accessible Trash action |
+| 8 | `src/components/wsh/NoteEditor.tsx` | **Responsive** | Touch toolbar, shorter phone canvas, stacked action bar |
+| 9 | `src/components/wsh/NotesGrid.tsx` | **Touch** | Always-visible compact note action menu |
+| 10 | `src/components/wsh/QuickReferences.tsx` | **Touch** | Larger wrapping Use/Edit/Delete controls |
+| 11 | `src/components/wsh/LoginWidget.tsx` | **Responsive/A11y** | Viewport-safe width and labeled close/password actions |
+| 12 | `src/components/wsh/SettingsPanel.tsx` | **A11y** | Labeled tabs, close actions, and pressed states |
+| 13 | `src/components/wsh/NotebookView.tsx` | **Responsive** | Stacked phone navigation and reduced content padding |
+| 14 | `src/components/wsh/DBViewer.tsx` | **Responsive** | Wrapping header, tabs, search, and add controls |
+| 15 | `src/components/wsh/MindMap.tsx` | **Touch/A11y** | Pointer-based pan/drag and labeled controls |
+| 16 | `src/components/wsh/editors/ProjectEditor.tsx` | **Touch** | Visible milestone and deliverable delete actions |
 
-| # | File | Lines Changed | Change Type | Description |
-|---|------|---------------|-------------|-------------|
-| 1 | `src/lib/quickReferenceFormat.ts` | ~60 | **New** | Reusable safe line-by-line Quick Reference formatter |
-| 2 | `src/components/wsh/NoteEditor.tsx` | ~5 | **Fix** | Uses the formatter and adds visible heading/list styles |
-| 3 | `src/components/wsh/QuickReferences.tsx` | Existing | **Verify** | Add/edit/delete/use localStorage template behavior preserved |
+## Version and Documentation Files
 
-### Version Bump
-
-| # | File | Lines Changed | Change Type | Description |
-|---|------|---------------|-------------|-------------|
-| 4 | `package.json` | 1 | **Version** | `4.5.4` -> `4.5.5` |
-| 5 | `package-lock.json` | 2 | **Version** | Root package metadata updated to `4.5.5` |
-| 6 | `Dockerfile` | 3 | **Version** | Build args and header updated to `4.5.5` |
-| 7 | `docker-compose.yml` | 2 | **Version** | Build arg + image tag updated to `weavenote:4.5.5` |
-| 8 | `docker-entrypoint.sh` | 2 | **Version** | Entrypoint banner fallback updated |
-| 9 | `install.sh` | ~4 | **Version** | Banner, manifest, and image tags updated |
-| 10 | `install.ps1` | ~4 | **Version** | Banner, manifest, and image tags updated |
-| 11 | `update.sh` | 2 | **Version** | Script header + banner updated |
-| 12 | `update.ps1` | ~18 | **Version** | Script version, current version, fallback, and patch registry updated |
-| 13 | `test-env.sh` | 2 | **Version** | Script header + banner updated |
-| 14 | `test-env.ps1` | 2 | **Version** | Script header + banner updated |
-| 15 | `src/app/api/health/route.ts` | 1 | **Version** | fallback version updated to `4.5.5` |
-| 16 | `src/app/api/admin/system/route.ts` | 1 | **Version** | fallback version updated to `4.5.5` |
-
-### Documentation
-
-| # | File | Lines Changed | Change Type | Description |
-|---|------|---------------|-------------|-------------|
-| 17 | `README.md` | ~8 | **Docs** | Documented formatted Quick Reference insertion and current version |
-| 18 | `CHANGELOG.md` | +18 | **Prepend** | Added v4.5.5 release entry |
-| 19 | `CODING_CHANGES.md` | +28 | **Prepend** | Added implementation notes for v4.5.5 |
-| 20 | `FILE_TRACKER.md` | Rewrite | **Rewrite** | Updated file inventory for v4.5.5 |
-| 21 | `worklog.md` | +1 section | **Prepend** | Added task log for Quick Reference formatting |
+| Files | Description |
+|-------|-------------|
+| `package.json`, `package-lock.json` | Root package version updated to `4.5.6` |
+| `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh` | Build metadata and image tag updated to `weavenote:4.5.6` |
+| `install.sh`, `install.ps1`, `update.sh`, `update.ps1` | Installer/updater version, patch registry, and non-destructive doc validation updated |
+| `test-env.sh`, `test-env.ps1` | Environment test banner updated |
+| `src/app/api/health/route.ts`, `src/app/api/admin/system/route.ts` | Runtime fallback version updated |
+| `README.md`, `CHANGELOG.md`, `CODING_CHANGES.md`, `worklog.md` | Mobile behavior and release history documented |
 
 ---
 
@@ -61,27 +55,25 @@
 
 | # | File | Purpose |
 |---|------|---------|
-| 1 | `src/lib/quickReferenceFormat.ts` | Safe, reusable Quick Reference-to-editor formatting |
+| 1 | `src/components/wsh/MobileNavigation.tsx` | Mobile workspace navigation and tools access |
 
 ---
 
 ## Verification Checklist
 
-- [x] Quick References add/edit/delete/use behavior remains wired
-- [x] Heading markers become editor headings without visible `##` prefixes
-- [x] Blank sections and ordered/unordered lists remain structured
-- [x] README current header updated to `v4.5.5`
-- [x] Docker image tag updated to `weavenote:4.5.5`
-- [x] Health/system fallback versions updated to `4.5.5`
-- [x] CHANGELOG.md follows Keep a Changelog format
+- [x] Phone header and main document fit `390x844` without overflow
+- [x] Tablet header and main document fit `768x1024` without overflow
+- [x] Workspace and Activity content use off-canvas drawers below `1280px`
+- [x] Grid, Dashboard, Focus, Map, Notebook, Analytics, Settings, Database, and Admin remain reachable
+- [x] Note, task, project, Quick Reference, save, and synthesis actions are touch accessible
+- [x] Mind Map supports mouse and touch pointer input
+- [x] Targeted ESLint passes for responsive modules
+- [x] PowerShell updater preserves authored docs and validates current-version coverage
+- [ ] Production Docker image and host health verified during deployment
 
 ---
 
-## Build Verification
+## Known Repository-Wide Validation Notes
 
-| Iteration | Result | Time | Notes |
-|-----------|--------|------|-------|
-| 1 | PASS | Targeted | ESLint passed for `NoteEditor`, `QuickReferences`, and the formatter utility |
-| 2 | PASS | Direct | Daily Standup input produced three `<h2>` sections separated by editable blank paragraphs |
-| 3 | PASS | Static | Verified package, Docker, scripts, API fallbacks, and README use `4.5.5` |
-| 4 | PASS | Docker | Built `weavenote:4.5.5`; `weavenote-app` is healthy and `/api/health` reports database connected |
+- Full `tsc --noEmit` remains blocked by existing optional example/skill dependencies (`socket.io`, `z-ai-web-dev-sdk`, `react-hook-form`) and unrelated pre-existing admin typing errors.
+- Existing lint findings in `NotebookView.tsx` and `ProjectEditor.tsx` predate this release; targeted lint for the new responsive shell and interaction modules passes.

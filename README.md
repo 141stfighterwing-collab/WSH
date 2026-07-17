@@ -2,7 +2,7 @@
 
 <img src="public/logo.svg" alt="WSH Logo" width="120" height="120" />
 
-# WSH — WeaveNote Self-Hosted v4.5.5
+# WSH — WeaveNote Self-Hosted v4.5.6
 
 **A self-hosted, AI-powered note-taking application with mind mapping, smart synthesis, and a beautiful dark-mode interface.**
 
@@ -71,7 +71,7 @@ WSH now uses a refreshed dark workspace shell while keeping the original workflo
 - **Refined sidebars** — Calendar, quick references, folders, tags, time, todo, today's notes, and projects now use quieter structured panels
 - **Modern editor surface** — The note type tabs, title field, toolbar, writing canvas, tags, save, and synthesis controls have been visually refreshed without changing their behavior
 - **Updated note cards** — Notes retain drag/drop, detail view, trash, folder, type, and tag behavior with a cleaner card treatment
-- **Versioned patch release** — Current docs, scripts, health fallback, Docker metadata, and install/update references are aligned to `4.5.5`
+- **Versioned patch release** — Current docs, scripts, health fallback, Docker metadata, and install/update references are aligned to `4.5.6`
 
 ### Quick References and Draft Safety
 
@@ -82,6 +82,16 @@ Quick References are fully editable local templates for repeat note patterns. Th
 - **Add/Edit/Delete supported** — Template changes persist in localStorage across reloads
 - **Draft autosave** — Unsaved editor work is saved locally every five seconds and restored after a reload
 - **Save clears draft** — Once a note is successfully saved to the database, the local draft is cleared
+
+### Mobile Workspace
+
+WSH adapts the complete workspace to phone and tablet screens without dropping the primary workflows.
+
+- **Mobile action dock** — Grid, Dashboard, Focus, Workspace, Activity, and Tools stay reachable from a persistent bottom dock
+- **Off-canvas sidebars** — Calendar, Quick References, folders, tags, tasks, today views, and projects open as touch-friendly drawers
+- **Complete tools sheet** — Mind Map, Notebook, Analytics, Settings, Database, and role-appropriate Admin controls remain available on compact screens
+- **Touch-ready editing** — Editor tools scroll horizontally, save and synthesis controls stack safely, Quick Reference actions wrap, and note menus stay visible without hover
+- **Responsive secondary views** — Notebook browsing stacks vertically, database actions wrap, and Mind Map pan/drag supports pointer and touch input
 
 ### 📊 WSH Keeps Analytics Dashboard
 
@@ -492,7 +502,7 @@ chmod +x install.sh && ./install.sh                # Standard install
 The install script will:
 1. Stop and remove only WSH's own containers (by exact name: `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin`)
 2. Use `docker compose down -v` for project-scoped volume/network removal
-3. Remove only the locally-built WSH image (`weavenote:4.5.5`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
+3. Remove only the locally-built WSH image (`weavenote:4.5.6`) — shared images like `postgres:16-alpine` and `adminer:latest` are left alone
 4. Clean only WSH's build cache (filtered by project label) — not the system-wide build cache
 5. Build the Docker image with visible progress at each step
 6. Start all services (App + PostgreSQL + DB Viewer)
@@ -509,6 +519,7 @@ cd WSH
 .\update.ps1 -NoCache           # Force full rebuild (no layer caching)
 .\update.ps1 -HealthCheck       # Validate the running app only
 .\update.ps1 -Version           # Show local/latest version info
+.\update.ps1 -DocsOnly          # Validate current release docs without overwriting them
 ```
 
 **Remote Windows Docker host over SSH:**
@@ -521,6 +532,7 @@ powershell -ExecutionPolicy Bypass -File .\update.ps1 -HealthCheck
 ```
 
 Use `update.ps1` for normal app updates on the Windows Docker machine. Use `install.ps1` only for first-time setup or a deliberate WSH reset.
+Documentation validation is non-destructive: normal updates and `-DocsOnly` preserve the authored README, changelog, coding notes, and file tracker.
 
 **Linux / macOS:**
 ```bash
@@ -598,7 +610,7 @@ The `docker-compose.yml` includes:
 - **pgAdmin** — Full PostgreSQL admin UI on port 5050 (optional, enabled via `--profile admin`)
 - **Environment passthrough** — All configuration via environment variables (see `.env.example`)
 - **Auto-restart** — All containers configured with `restart: unless-stopped`
-- **Version-tagged image** — Image tagged as `weavenote:4.5.5` for cache busting
+- **Version-tagged image** — Image tagged as `weavenote:4.5.6` for cache busting
 - **Update scripts** — `update.sh` / `update.ps1` for non-destructive updates (git pull + rebuild without data loss)
 
 ### Docker Safety
@@ -610,7 +622,7 @@ The `docker-compose.yml` includes:
 | Resource | Target | Method |
 |----------|--------|--------|
 | Containers | `wsh-postgres`, `weavenote-app`, `wsh-dbviewer`, `wsh-pgadmin` | Exact name match |
-| Images | `weavenote:4.5.5`, `weavenote:latest` | Exact tag match |
+| Images | `weavenote:4.5.6`, `weavenote:latest` | Exact tag match |
 | Volumes | `postgres-data`, `weavenote-data`, `pgadmin-data` (with project prefix) | Exact name match |
 | Networks | `wsh-net` (with project prefix) | Exact name match |
 | Build cache | Only cache with WSH project label | `--filter` by project |
@@ -813,7 +825,7 @@ wsh/
 Health check endpoint. Returns the application status, version, and current timestamp.
 
 ```json
-{ "status": "healthy", "version": "4.5.5", "timestamp": "2026-07-17T12:00:00.000Z" }
+{ "status": "healthy", "version": "4.5.6", "timestamp": "2026-07-17T12:00:00.000Z" }
 ```
 
 ### `POST /api/synthesis`

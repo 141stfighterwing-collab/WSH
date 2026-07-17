@@ -71,17 +71,18 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
       }`}
     >
       {/* Drag handle */}
-      <GripVertical className="absolute top-2 left-2 w-3 h-3 text-muted-foreground/20 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+      <GripVertical className="absolute top-2 left-2 z-10 hidden h-3 w-3 cursor-grab text-muted-foreground/20 opacity-0 transition-opacity md:block md:group-hover:opacity-100" />
 
       {/* Context menu button */}
       <div
         ref={menuRef}
-        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute right-2 top-2 z-10 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="rounded-lg bg-secondary/80 p-1 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary/80 text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
+          aria-label={`Actions for ${note.title || 'untitled note'}`}
         >
           <MoreVertical className="w-3.5 h-3.5" />
         </button>
@@ -129,7 +130,7 @@ function NoteCard({ note, onClick, onViewDetail, onDelete, onDragStart }: { note
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-sm text-foreground mb-1.5 line-clamp-2 group-hover:text-pri-400 transition-colors pl-4">
+      <h3 className="mb-1.5 line-clamp-2 pr-8 text-sm font-bold text-foreground transition-colors group-hover:text-pri-400 md:pl-4 md:pr-0">
         {note.title || 'Untitled Note'}
       </h3>
 

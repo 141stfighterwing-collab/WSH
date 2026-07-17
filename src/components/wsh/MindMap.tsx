@@ -249,10 +249,11 @@ export default function MindMap() {
     };
   }, [mindMapOpen, dimensions, hoveredNode]);
 
-  // Mouse handlers
-  const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  // Pointer handlers support both mouse and touch navigation.
+  const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
     if (!svg) return;
+    svg.setPointerCapture(e.pointerId);
     const target = (e.target as Element).closest('[data-node-id]');
     if (target) {
       const nodeId = target.getAttribute('data-node-id');
@@ -278,7 +279,7 @@ export default function MindMap() {
     }
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     if (dragRef.current.nodeId) {
       const node = nodesRef.current.find((n) => n.id === dragRef.current.nodeId);
       if (node) {
@@ -293,7 +294,10 @@ export default function MindMap() {
     }
   }, []);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
     dragRef.current = { nodeId: null, offsetX: 0, offsetY: 0 };
     panningRef.current.active = false;
     setIsDragging(false);
@@ -359,6 +363,7 @@ export default function MindMap() {
         <button
           onClick={() => setMindMapOpen(false)}
           className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-800/80 text-muted-foreground hover:text-foreground hover:bg-slate-700 transition-all active:scale-95"
+          aria-label="Close mind map"
         >
           <X className="w-5 h-5" />
         </button>
@@ -368,18 +373,21 @@ export default function MindMap() {
           <button
             onClick={handleZoomIn}
             className="p-2 rounded-xl bg-slate-800/80 text-muted-foreground hover:text-foreground hover:bg-slate-700 transition-all active:scale-95"
+            aria-label="Zoom in"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
             className="p-2 rounded-xl bg-slate-800/80 text-muted-foreground hover:text-foreground hover:bg-slate-700 transition-all active:scale-95"
+            aria-label="Zoom out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={handleReset}
             className="p-2 rounded-xl bg-slate-800/80 text-muted-foreground hover:text-foreground hover:bg-slate-700 transition-all active:scale-95"
+            aria-label="Reset mind map view"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -409,12 +417,12 @@ export default function MindMap() {
           width={dimensions.width}
           height={dimensions.height}
           className="absolute inset-0"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
           onClick={handleClick}
-          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
         >
           <defs>
             <radialGradient id="mindmap-glow">

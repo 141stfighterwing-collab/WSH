@@ -250,7 +250,7 @@ export default function QuickReferences() {
         </span>
         <button
           onClick={(e) => handleAdd(e)}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all active:scale-95"
+          className="flex min-h-9 items-center gap-1 rounded-md px-2 text-[9px] font-bold uppercase tracking-wider text-blue-400 transition-all hover:bg-blue-500/10 hover:text-blue-300 active:scale-95"
           title="Add new reference"
         >
           <Plus className="w-3 h-3" />
@@ -317,14 +317,14 @@ export default function QuickReferences() {
                       <div className="flex gap-2 pt-1">
                         <button
                           onClick={handleEditSave}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 transition-all active:scale-95 shadow-sm"
+                          className="flex min-h-9 items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95"
                         >
                           <Save className="w-2.5 h-2.5" />
                           Save
                         </button>
                         <button
                           onClick={handleEditCancel}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-secondary transition-all active:scale-95"
+                          className="flex min-h-9 items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:bg-secondary active:scale-95"
                         >
                           <X className="w-2.5 h-2.5" />
                           Cancel
@@ -341,7 +341,7 @@ export default function QuickReferences() {
                       {/* ── Delete confirmation bar ──────── */}
                       {isConfirmingDelete ? (
                         <div
-                          className="flex items-center justify-between bg-red-500/10 border border-red-500/30 rounded-lg px-2.5 py-1.5"
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <span className="text-[10px] text-red-400 font-medium">
@@ -350,13 +350,13 @@ export default function QuickReferences() {
                           <div className="flex gap-1.5">
                             <button
                               onClick={handleDeleteConfirm}
-                              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 transition-all active:scale-95"
+                              className="flex min-h-9 items-center gap-1 rounded-lg bg-red-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-red-700 active:scale-95"
                             >
                               Yes, Delete
                             </button>
                             <button
                               onClick={handleDeleteCancel}
-                              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-secondary transition-all active:scale-95"
+                              className="flex min-h-9 items-center gap-1 rounded-lg border border-border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:bg-secondary active:scale-95"
                             >
                               Cancel
                             </button>
@@ -364,24 +364,24 @@ export default function QuickReferences() {
                         </div>
                       ) : (
                         /* ── Action buttons ──────────────── */
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={(e) => handleUse(e, ref)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-pri-600 text-white hover:bg-pri-700 transition-all active:scale-95 shadow-sm"
+                            className="flex min-h-9 items-center gap-1 rounded-lg bg-pri-600 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-pri-700 active:scale-95"
                           >
                             <Zap className="w-2.5 h-2.5" />
                             Use
                           </button>
                           <button
                             onClick={(e) => handleEditStart(e, ref)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/30 transition-all active:scale-95"
+                            className="flex min-h-9 items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-400 active:scale-95"
                           >
                             <Edit3 className="w-2.5 h-2.5" />
                             Edit
                           </button>
                           <button
                             onClick={(e) => handleDeleteRequest(e, ref.id)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-muted-foreground border border-border hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all active:scale-95"
+                            className="flex min-h-9 items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 active:scale-95"
                           >
                             <Trash2 className="w-2.5 h-2.5" />
                             Delete

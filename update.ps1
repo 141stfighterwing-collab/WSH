@@ -1,18 +1,18 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.5
+#  WSH (WeaveNote Self-Hosted) -- Update & Patch Management Script v4.5.6
 # ============================================================================
 #  Maintains: README.md, CHANGELOG.md, CODING_CHANGES.md, FILE_TRACKER.md
 #  Handles:   Patching from v1.0.1+ to current, Docker rebuild, validation
 #  Usage:
 #    .\update.ps1                    # Standard update (git pull + rebuild)
 #    .\update.ps1 -NoCache           # Force full Docker rebuild (no cache)
-#    .\update.ps1 -DocsOnly          # Only refresh documentation files
+#    .\update.ps1 -DocsOnly          # Validate release documentation files
 #    .\update.ps1 -PatchOnly         # Only apply pending patches (no rebuild)
 #    .\update.ps1 -Version           # Show current and latest version info
 #    .\update.ps1 -HealthCheck       # Run health check only
 #    .\update.ps1 -PatchList         # Show all available patches
-#    .\update.ps1 -InitDocs          # Generate initial documentation from repo
+#    .\update.ps1 -InitDocs          # Create missing doc placeholders, then validate
 # ============================================================================
 
 param(
@@ -31,7 +31,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # ============================================================================
 #  CONFIGURATION
 # ============================================================================
-$SCRIPT_VERSION = "4.5.5"
+$SCRIPT_VERSION = "4.5.6"
 $REPO_OWNER    = "141stfighterwing-collab"
 $REPO_NAME     = "WSH"
 $GIT_REMOTE    = "https://github.com/$REPO_OWNER/$REPO_NAME.git"
@@ -40,7 +40,7 @@ $API_BASE      = "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME"
 
 # Version constants -- patching starts at 1.0.1
 $MIN_PATCH_VERSION = [version]"1.0.1"
-$CURRENT_VERSION   = [version]"4.5.5"
+$CURRENT_VERSION   = [version]"4.5.6"
 
 # Core files that get version-bumped (14 files)
 $VERSION_FILES = @(
@@ -78,6 +78,7 @@ $TRACKED_CATEGORIES = @{
     )
     "components" = @(
         "src/components/wsh/Header.tsx",
+        "src/components/wsh/MobileNavigation.tsx",
         "src/components/wsh/LeftSidebar.tsx",
         "src/components/wsh/RightSidebar.tsx",
         "src/components/wsh/FarRightSidebar.tsx",
@@ -289,7 +290,7 @@ function Get-LatestGitHubVersion {
 function Get-PatchRegistry {
     <#
     .SYNOPSIS
-    Returns the complete registry of all patches from v1.0.1 to v4.5.5.
+    Returns the complete registry of all patches from v1.0.1 to v4.5.6.
     Each patch entry contains: version, date, type, description, affectedFiles.
     #>
 
@@ -820,6 +821,23 @@ function Get-PatchRegistry {
                 "Bumped Docker image metadata to weavenote:4.5.5"
             )
         }
+
+        # -- v4.5.6 Series ------------------------------------------------
+        @{
+            Version = "4.5.6"
+            Date    = "2026-07-17"
+            Type    = "Patch"
+            Description = "Mobile workspace optimization and touch accessibility"
+            AffectedFiles = @("src/app/globals.css", "src/app/page.tsx", "src/components/wsh/MobileNavigation.tsx", "src/components/wsh/Header.tsx", "src/components/wsh/LeftSidebar.tsx", "src/components/wsh/RightSidebar.tsx", "src/components/wsh/NoteEditor.tsx", "src/components/wsh/NotesGrid.tsx", "src/components/wsh/QuickReferences.tsx", "src/components/wsh/NotebookView.tsx", "src/components/wsh/DBViewer.tsx", "src/components/wsh/MindMap.tsx", "README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md", "worklog.md", $VERSION_FILES)
+            Changes = @(
+                "Added mobile workspace and activity drawers with a persistent action dock",
+                "Exposed grid, dashboard, focus, mind map, notebook, analytics, settings, database, and admin actions on touch screens",
+                "Made editor, Quick Reference, note card, task, notebook, database, and mind-map controls mobile friendly",
+                "Added accessible names to icon-only actions and verified phone and tablet overflow",
+                "Made PowerShell documentation validation non-destructive for future updates",
+                "Bumped Docker image metadata to weavenote:4.5.6"
+            )
+        }
     )
 
     return $patches
@@ -842,7 +860,7 @@ function New-README {
     #>
 
     $currentVer = Get-CurrentVersion
-    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.5" }
+    $verStr = if ($currentVer) { "$currentVer" } else { "4.5.6" }
 
     $readme = @"
 # WSH - WeaveNote Self Hosted
@@ -1424,6 +1442,48 @@ function New-FILE_TRACKER {
     Write-OK "FILE_TRACKER.md generated ($totalFiles files tracked, $totalSizeKB KB)"
 }
 
+function Sync-DocumentationFiles {
+    <#
+    .SYNOPSIS
+    Preserves authored release documentation and validates current-version coverage.
+    Creates minimal placeholders only when -CreateMissing is explicitly requested.
+    #>
+    param([switch]$CreateMissing)
+
+    $versionText = "$CURRENT_VERSION"
+    $allValid = $true
+    $templates = @{
+        "README.md" = "# WSH - WeaveNote Self-Hosted v$versionText`n`nRelease documentation is pending."
+        "CHANGELOG.md" = "# Changelog`n`n## [$versionText] - $(Get-Date -Format 'yyyy-MM-dd')`n`n- Initial documentation placeholder."
+        "CODING_CHANGES.md" = "# WSH v$versionText - Coding Changes`n`nImplementation notes are pending."
+        "FILE_TRACKER.md" = "# WSH v$versionText - File Tracker`n`nRelease file inventory is pending."
+    }
+
+    foreach ($doc in $DOC_FILES) {
+        $docPath = Join-Path $PSScriptRoot $doc
+        if (-not (Test-Path $docPath)) {
+            if ($CreateMissing) {
+                Set-Content -Path $docPath -Value $templates[$doc] -Encoding UTF8
+                Write-Warn "$doc was missing; created a non-destructive placeholder"
+            } else {
+                Write-Fail "$doc is missing"
+                $allValid = $false
+                continue
+            }
+        }
+
+        $content = Get-Content $docPath -Raw
+        if ($content -notmatch [regex]::Escape($versionText)) {
+            Write-Fail "$doc does not mention current version $versionText"
+            $allValid = $false
+        } else {
+            Write-OK "$doc preserved and version-aligned"
+        }
+    }
+
+    return $allValid
+}
+
 # ============================================================================
 #  PATCH APPLICATION
 # ============================================================================
@@ -1674,28 +1734,20 @@ if ($HealthCheck) {
 
 # -- Mode: Documentation Only ----------------------------------------------
 if ($DocsOnly -or $InitDocs) {
-    Write-DocHeader "Documentation Refresh"
-    Write-Info "Regenerating all documentation files..."
+    Write-DocHeader "Documentation Validation"
+    Write-Info "Preserving authored documentation and checking release alignment..."
     Write-Host ""
 
-    Write-Step "1/4" "Generating README.md..."
-    New-README
-
-    Write-Step "2/4" "Updating CHANGELOG.md..."
-    Update-CHANGELOG
-
-    Write-Step "3/4" "Generating CODING_CHANGES.md..."
-    New-CODING_CHANGES
-
-    Write-Step "4/4" "Generating FILE_TRACKER.md..."
-    New-FILE_TRACKER
+    $docsValid = Sync-DocumentationFiles -CreateMissing:$InitDocs
 
     Write-Host ""
-    Write-Host "========================================" -ForegroundColor Green
-    Write-Host "  DOCUMENTATION REFRESHED" -ForegroundColor Green
-    Write-Host "========================================" -ForegroundColor Green
+    $resultColor = if ($docsValid) { "Green" } else { "Red" }
+    $resultText = if ($docsValid) { "DOCUMENTATION VALID" } else { "DOCUMENTATION NEEDS ATTENTION" }
+    Write-Host "========================================" -ForegroundColor $resultColor
+    Write-Host "  $resultText" -ForegroundColor $resultColor
+    Write-Host "========================================" -ForegroundColor $resultColor
     Write-Host ""
-    Write-Host "  Files updated:" -ForegroundColor Cyan
+    Write-Host "  Files checked:" -ForegroundColor Cyan
     foreach ($doc in $DOC_FILES) {
         $docPath = Join-Path $PSScriptRoot $doc
         if (Test-Path $docPath) {
@@ -1704,7 +1756,7 @@ if ($DocsOnly -or $InitDocs) {
         }
     }
     Write-Host ""
-    exit 0
+    if ($docsValid) { exit 0 } else { exit 1 }
 }
 
 # -- Mode: Patch Only ------------------------------------------------------
@@ -1772,12 +1824,11 @@ Write-OK "Code updated from GitHub"
 
 # Step 2: Refresh documentation
 Write-Host ""
-Write-Step "2/5" "Refreshing documentation files..."
+Write-Step "2/5" "Validating documentation files..."
 Write-Host ""
-New-README
-Update-CHANGELOG
-New-CODING_CHANGES
-New-FILE_TRACKER
+if (-not (Sync-DocumentationFiles)) {
+    Write-Warn "Release documentation is incomplete; continuing without overwriting authored files"
+}
 
 # Step 3: Stop running containers
 Write-Host ""

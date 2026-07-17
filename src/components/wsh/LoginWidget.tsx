@@ -188,11 +188,11 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-[99]" onClick={onClose} />
+      <button className="fixed inset-0 z-[99]" onClick={onClose} aria-label="Close account menu" />
 
       {/* Popover */}
       <div
-        className="fixed z-[100] w-80 bg-card border border-border rounded-2xl shadow-2xl p-4 animate-fadeIn"
+        className="fixed z-[100] w-[calc(100vw-1rem)] max-w-80 rounded-lg border border-border bg-card p-4 shadow-2xl animate-fadeIn"
         style={{
           top: rect.bottom + 8,
           right: window.innerWidth - rect.right,
@@ -205,6 +205,7 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
           <button
             onClick={onClose}
             className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+            aria-label="Close account menu"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -303,6 +304,7 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? (
                         <EyeOff className="w-3.5 h-3.5" />
@@ -381,6 +383,7 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
                       onClick={() => setShowRegPassword(!showRegPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
+                      aria-label={showRegPassword ? 'Hide password' : 'Show password'}
                     >
                       {showRegPassword ? (
                         <EyeOff className="w-3.5 h-3.5" />
@@ -410,6 +413,7 @@ export default function LoginWidget({ anchorEl, onClose }: LoginWidgetProps) {
                       onClick={() => setShowRegConfirm(!showRegConfirm)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
+                      aria-label={showRegConfirm ? 'Hide password confirmation' : 'Show password confirmation'}
                     >
                       {showRegConfirm ? (
                         <EyeOff className="w-3.5 h-3.5" />

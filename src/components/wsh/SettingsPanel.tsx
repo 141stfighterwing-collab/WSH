@@ -77,6 +77,21 @@ const KEY_VALIDATORS: Record<string, { test: (key: string) => boolean; hint: str
   },
 };
 
+function loadStoredAiSettings(): { provider: AIProvider | ''; model: string } {
+  if (typeof window === 'undefined') return { provider: '', model: '' };
+  try {
+    const stored = localStorage.getItem('wsh-ai-settings');
+    if (!stored) return { provider: '', model: '' };
+    const data = JSON.parse(stored);
+    const provider = PROVIDER_INFO.some((item) => item.id === data.provider)
+      ? data.provider as AIProvider
+      : '';
+    return { provider, model: typeof data.model === 'string' ? data.model : '' };
+  } catch {
+    return { provider: '', model: '' };
+  }
+}
+
 export default function SettingsPanel() {
   const { settingsOpen, setSettingsOpen, theme, setTheme, darkMode, toggleDarkMode, saveToLocalStorage, notes, folders } = useWSHStore();
 
@@ -85,8 +100,9 @@ export default function SettingsPanel() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('visuals');
 
   // ── AI State (localStorage-backed) ────────────────────────────────────
-  const [aiProvider, setAiProvider] = useState<AIProvider | ''>('');
-  const [aiModel, setAiModel] = useState('');
+  const [initialAiSettings] = useState(loadStoredAiSettings);
+  const [aiProvider, setAiProvider] = useState<AIProvider | ''>(initialAiSettings.provider);
+  const [aiModel, setAiModel] = useState(initialAiSettings.model);
   const [aiKeyInput, setAiKeyInput] = useState('');
   const [aiKeySaving, setAiKeySaving] = useState(false);
   const [aiKeyMessage, setAiKeyMessage] = useState('');
@@ -136,18 +152,11 @@ export default function SettingsPanel() {
     } catch { /* ignore */ }
   }, []);
 
-  // Load AI settings from localStorage + fetch server status on mount
+  // Fetch server status on mount; stored settings are loaded lazily above.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('wsh-ai-settings');
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.provider) setAiProvider(data.provider);
-        if (data.model) setAiModel(data.model);
-      }
-    } catch { /* ignore */ }
-
-    fetchAiStatus();
+    queueMicrotask(() => {
+      void fetchAiStatus();
+    });
   }, [fetchAiStatus]);
 
   // Save AI settings to localStorage on change
@@ -243,9 +252,10 @@ export default function SettingsPanel() {
   return (
     <>
       {/* Backdrop */}
-      <div
+      <button
         className="fixed inset-0 bg-black/40 z-[90] animate-fadeIn"
         onClick={() => setSettingsOpen(false)}
+        aria-label="Close settings"
       />
 
       {/* Panel */}
@@ -256,6 +266,7 @@ export default function SettingsPanel() {
           <button
             onClick={() => setSettingsOpen(false)}
             className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-95"
+            aria-label="Close settings"
           >
             <X className="w-4 h-4" />
           </button>
@@ -267,6 +278,9 @@ export default function SettingsPanel() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.label}
+              aria-pressed={activeTab === tab.id}
+              title={tab.label}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
                 activeTab === tab.id
                   ? 'bg-pri-600 text-white shadow-sm'

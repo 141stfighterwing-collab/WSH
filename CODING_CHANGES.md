@@ -1,3 +1,40 @@
+# WSH v4.5.6 — Coding Changes
+
+## Overview
+v4.5.6 makes the WSH workspace usable across phone and tablet layouts while retaining the full desktop experience.
+
+## 1. Responsive Application Shell
+
+**Files:** `src/app/globals.css`, `src/app/page.tsx`, `src/components/wsh/MobileNavigation.tsx`, `src/components/wsh/Header.tsx`, `src/components/wsh/LeftSidebar.tsx`, `src/components/wsh/RightSidebar.tsx`, `src/components/wsh/Footer.tsx`
+
+### What Changed
+- Desktop sidebars become off-canvas drawers below `1280px`, with backdrop, close, and Escape-key behavior.
+- Added a persistent compact-screen dock for Workspace, Grid, Dashboard, Focus, Activity, and Tools.
+- Added a tools sheet for Mind Map, Notebook, Analytics, Settings, Database, and Admin access.
+- Reflowed the phone header into two rows with full-width search and compact account/system actions.
+- Switched the application shell to dynamic viewport height for mobile browser chrome and safe-area behavior.
+
+## 2. Touch and Secondary Views
+
+**Files:** `src/components/wsh/NoteEditor.tsx`, `src/components/wsh/NotesGrid.tsx`, `src/components/wsh/QuickReferences.tsx`, `src/components/wsh/LoginWidget.tsx`, `src/components/wsh/SettingsPanel.tsx`, `src/components/wsh/NotebookView.tsx`, `src/components/wsh/DBViewer.tsx`, `src/components/wsh/MindMap.tsx`, `src/components/wsh/editors/ProjectEditor.tsx`
+
+### What Changed
+- Increased compact-screen editor controls and stacked save/synthesis actions where needed.
+- Made note menus, task deletion, and project item deletion visible without hover.
+- Allowed Quick Reference actions and confirmations to wrap with larger touch targets.
+- Stacked Notebook navigation above content on phones and made Database Viewer controls responsive.
+- Replaced Mind Map mouse-only dragging with pointer events for touch and mouse input.
+- Added accessible names to icon-only buttons and pressed states to view controls.
+- Replaced destructive PowerShell documentation regeneration with current-version validation and explicit missing-file initialization.
+
+## 3. Verification and Release
+
+- Targeted ESLint passes for the responsive modules without warnings.
+- `390x844` and `768x1024` browser checks show no document overflow.
+- Version metadata, Docker image, scripts, README, changelog, updater registry, and trackers use `4.5.6`.
+
+---
+
 # WSH v4.5.5 — Coding Changes
 
 ## Overview
