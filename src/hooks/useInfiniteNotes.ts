@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
+import { useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
 import { buildNotesQuery, NOTES_PAGE_SIZE, type NotesPageResponse } from '@/lib/notes';
 import { loadNotesCache, saveNotesCache } from '@/lib/queryCache';
 import { useWSHStore } from '@/store/wshStore';
@@ -9,10 +9,19 @@ import { useWSHStore } from '@/store/wshStore';
 export function useInfiniteNotes() {
   const { user, activeFolderId, searchQuery, activeNoteType, calendarDateFilter } = useWSHStore();
   const token = user.token;
-  const queryKey = ['notes', { activeFolderId, searchQuery, activeNoteType, calendarDateFilter, user: user.username }];
-  const cached = loadNotesCache();
+  const queryKey = useMemo(
+    () => ['notes', { activeFolderId, searchQuery, activeNoteType, calendarDateFilter, user: user.username }] as const,
+    [activeFolderId, activeNoteType, calendarDateFilter, searchQuery, user.username],
+  );
+  const cached = useMemo(() => loadNotesCache(), []);
 
-  const query = useInfiniteQuery<NotesPageResponse>({
+  const query = useInfiniteQuery<
+    NotesPageResponse,
+    Error,
+    InfiniteData<NotesPageResponse, string | null>,
+    typeof queryKey,
+    string | null
+  >({
     queryKey,
     enabled: !!token,
     initialPageParam: null as string | null,

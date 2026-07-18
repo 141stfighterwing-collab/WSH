@@ -7,21 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [4.4.18] - 2026-06-30
-
-### Fixed
-- **Main note search completeness** — Removed duplicate client-side note filtering in `src/components/wsh/NotesGrid.tsx` so valid database matches returned by `/api/notes` are no longer hidden by stripped list payloads.
-- **Document search reliability** — Reworked `src/app/api/documents/search/route.ts` to use reliable substring-based database matching across document chunks instead of fragile Prisma full-text behavior that could miss expected results.
+## [4.4.18] - 2026-07-17 - Complete Feature Restore
 
 ### Added
+- **Unified release line** — Reconciled the complete `main` v4.4.18 feature line with the mobile workspace work that had been developed separately.
+- **Mobile workspace access** — Preserved the compact navigation dock, Workspace and Activity drawers, touch actions, responsive editor, and phone/tablet layouts from v4.5.6.
+- **Draft-safe Quick References** — Preserved formatted template insertion and five-second local draft autosave while adopting the latest editor and image-handling code.
 - **Release notes for search hardening** — Added `RELEASE-NOTES-4.4.18.md` documenting the search fixes and validation guidance.
 
 ### Changed
-- **Version metadata bumped to 4.4.18** — Updated package metadata, Docker build/image tags, entrypoint banner text, README version references, and runtime health/system endpoint fallbacks to the new patch release.
+- **Latest upstream functionality retained** — Includes paginated note loading, reliable note/document search, hybrid galaxy Mind Map, Full Intelligence Board analytics, local synthesis algorithms, and Today checklist persistence hardening from v4.4.11 through v4.4.18.
+- **Branch-aware update scripts** — PowerShell and shell updaters now pull the currently checked-out branch with `--ff-only`, validate the expected runtime version, and support non-destructive documentation validation.
+- **Version metadata aligned to 4.4.18** — Package metadata, Docker image/build args, entrypoint, installer/test banners, runtime fallbacks, README, and release records now share the correct version.
+
+### Fixed
+- **Paginated notes cache integration** — Corrected TanStack Query page-parameter and immutable query-key typing so infinite note loading and cached pages share one valid data contract.
+- **Admin system diagnostics** — Corrected `execSync` to load from `child_process`, restoring system-command diagnostics.
+- **Admin environment requests** — Normalized authenticated request headers to a valid `HeadersInit` shape.
+- **Quick References and Notebook hydration** — Removed synchronous mount-effect state writes that could cause cascading renders and unstable initial state.
+- **Mind Map position lifecycle** — Removed render-time ref mutation and resolved graph edges from stable node data so interaction frames do not depend on stale render refs.
+- **Main note search completeness** — Removed duplicate client-side note filtering so database matches returned by `/api/notes` are no longer hidden by stripped list payloads.
+- **Document search reliability** — Reworked document search to use reliable substring-based database matching across document chunks.
 
 ### Validation
-- **GitHub release patch updated** — Search fixes were committed and pushed to the repository on the 4.4.18 line.
-- **Manual code-path verification completed** — Note search and document search paths were reviewed directly to confirm the previous incomplete-search behavior was removed.
+- Production build, targeted lint, compact viewport checks, updater validation, Docker deployment, and live health results are recorded in `FILE_TRACKER.md`.
 
 ## [4.4.17] - 2026-06-25
 

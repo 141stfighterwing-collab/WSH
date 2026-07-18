@@ -102,7 +102,7 @@ function saveRefs(refs: QuickRef[]): void {
 
 // ── Component ──────────────────────────────────────────────────
 export default function QuickReferences() {
-  const [refs, setRefs] = useState<QuickRef[]>(DEFAULT_REFS);
+  const [refs, setRefs] = useState<QuickRef[]>(loadRefs);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -111,11 +111,6 @@ export default function QuickReferences() {
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editContent, setEditContent] = useState('');
-
-  // ── Load refs from localStorage on mount ───────────────────
-  useEffect(() => {
-    setRefs(loadRefs());
-  }, []);
 
   // ── Persist refs to localStorage whenever they change ─────
   useEffect(() => {

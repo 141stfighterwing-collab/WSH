@@ -61,6 +61,17 @@ Key design principles:
 
 ---
 
+## Current Release: v4.4.18
+
+v4.4.18 is the complete feature build. It includes the Full Intelligence Board, hybrid galaxy Mind Map, reliable note/document search, paginated note loading, daily checklist persistence fixes, Quick Reference formatting, five-second draft autosave, and phone/tablet navigation.
+
+- **Canonical update branch:** `TST-DEV`
+- **Previous deployed build:** `4.5.6` (incorrect release identity)
+- **Canonical release:** `4.4.18`
+- **Docker image:** `weavenote:4.4.18`
+
+---
+
 ## Features
 
 ### 🧠 Mind Map
@@ -475,6 +486,7 @@ When a new version is released, update WSH **without losing any data** using the
 cd WSH
 .\update.ps1                    # Pull latest code + rebuild + restart
 .\update.ps1 -NoCache           # Force full rebuild (no layer caching)
+.\update.ps1 -DocsOnly          # Validate release docs without rewriting them
 ```
 
 **Linux / macOS:**
@@ -482,13 +494,16 @@ cd WSH
 cd WSH
 ./update.sh                    # Pull latest code + rebuild + restart
 ./update.sh --no-cache          # Force full rebuild (no layer caching)
+./update.sh --docs-only         # Validate release docs without rewriting them
 ```
 
 The update script will:
-1. `git pull` the latest code from GitHub
+1. Detect the checked-out branch and run a fast-forward-only pull from the same GitHub branch
 2. Rebuild the Docker image (uses layer caching — only changed layers rebuild)
 3. Restart containers with `--force-recreate` (your PostgreSQL data is preserved)
 4. Validate all services are running and health check passes
+
+The Docker host should remain checked out on `TST-DEV`. The updater no longer assumes `main`, so future updates cannot silently switch release lines.
 
 > **Note:** The install script (`install.sh` / `install.ps1`) is for first-time installs or complete resets. It destroys WSH data only. For ongoing updates, always use the update script.
 
@@ -600,7 +615,7 @@ git : From https://github.com/141stfighterwing-collab/WSH
 **Fix:** This was fixed in **v4.1.2** by adding `$ErrorActionPreference = "SilentlyContinue"` to `update.ps1` (matching the behavior already present in `install.ps1`). To get the fix:
 
 ```powershell
-git pull origin main
+git pull --ff-only origin TST-DEV
 .\update.ps1
 ```
 
@@ -617,7 +632,7 @@ If `git pull` fails because you have local modifications:
 
 ```powershell
 git stash          # Temporarily save your changes
-git pull origin main
+git pull --ff-only origin TST-DEV
 git stash pop      # Restore your changes
 ```
 
@@ -625,7 +640,7 @@ Or if you want to discard local changes and reset to upstream:
 
 ```powershell
 git fetch origin
-git reset --hard origin/main
+git reset --hard origin/TST-DEV
 ```
 
 ### Docker build fails after update

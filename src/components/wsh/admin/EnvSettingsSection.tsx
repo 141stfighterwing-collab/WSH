@@ -62,7 +62,7 @@ export default function EnvSettingsSection() {
   // Load real env values from server on mount
   useEffect(() => {
     const token = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('wsh-auth') || '{}').token : '';
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
     fetch('/api/admin/env', { headers })
       .then((r) => { if (!r.ok) return null; return r.json(); })

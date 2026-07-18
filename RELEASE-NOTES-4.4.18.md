@@ -6,12 +6,17 @@ Date: 2026-06-30
 
 This patch fixes incomplete note search results in the main workspace UI and hardens document search so it reliably scans all stored document chunks without depending on fragile database-specific full-text behavior.
 
+The complete build also restores the mobile workspace, touch-accessible actions, formatted Quick References, draft autosave, and the latest dashboard/editor integrations that had existed on the separate test branch.
+
 ## Included
 - Fixed note search result loss in `src/components/wsh/NotesGrid.tsx`
 - Removed duplicate client-side note text filtering that could hide valid server/database matches
 - Hardened `src/app/api/documents/search/route.ts` to use reliable database substring matching across document chunks
 - Preserved phrase, boolean, fuzzy, and multi-term search behavior with safer query parsing
 - Version bump to `4.4.18`
+- Restored phone/tablet navigation, Workspace and Activity drawers, and compact editor actions
+- Restored formatted Quick Reference insertion and five-second draft autosave
+- Retained Full Intelligence Board analytics, hybrid galaxy Mind Map, query caching, and virtualized note loading
 
 ## Validation Summary
 - Repository patch review completed for both note search and document search paths

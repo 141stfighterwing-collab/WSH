@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LogIn, BookOpen, FileText, Code, Briefcase, Brain } from 'lucide-react';
 import Header from '@/components/wsh/Header';
 import QueryProvider from '@/components/wsh/QueryProvider';
@@ -20,6 +20,7 @@ import NotebookView from '@/components/wsh/NotebookView';
 import NoteDetailModal from '@/components/wsh/NoteDetailModal';
 import DBViewer from '@/components/wsh/DBViewer';
 import LoginWidget from '@/components/wsh/LoginWidget';
+import MobileNavigation from '@/components/wsh/MobileNavigation';
 import { useWSHStore } from '@/store/wshStore';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -98,6 +99,7 @@ export default function Home() {
   const { loadFromLocalStorage, viewMode, user, setUser, logoutUser, syncFromServer, notes } = useWSHStore();
   const sessionVerified = useRef(false);
   const syncDone = useRef(false);
+  const [mobileSidebar, setMobileSidebar] = useState<'workspace' | 'activity' | null>(null);
 
   useEffect(() => {
     loadFromLocalStorage();
@@ -157,14 +159,39 @@ export default function Home() {
     syncFromServer();
   }, [user.isLoggedIn, user.token, notes.length, syncFromServer]);
 
+  useEffect(() => {
+    if (!mobileSidebar) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileSidebar(null);
+    };
+    const closeAfterReferenceUse = () => setMobileSidebar(null);
+    document.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('wsh:use-quick-ref', closeAfterReferenceUse);
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('wsh:use-quick-ref', closeAfterReferenceUse);
+    };
+  }, [mobileSidebar]);
+
   return (
     <QueryProvider>
-      <div className="h-screen flex flex-col bg-background overflow-hidden wsh-app-shell">
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-background wsh-app-shell">
         <Header />
 
         <div className="flex flex-1 min-h-0">
+          {mobileSidebar && user.isLoggedIn && (
+            <button
+              className="fixed inset-0 z-[70] bg-black/60 xl:hidden"
+              onClick={() => setMobileSidebar(null)}
+              aria-label="Close mobile sidebar"
+            />
+          )}
+
           <AuthGate>
-            <LeftSidebar />
+            <LeftSidebar
+              mobileOpen={mobileSidebar === 'workspace'}
+              onClose={() => setMobileSidebar(null)}
+            />
           </AuthGate>
 
           <main className="flex-1 overflow-y-auto min-w-0">
@@ -185,9 +212,17 @@ export default function Home() {
           </main>
 
           <AuthGate>
-            <RightSidebar />
+            <RightSidebar
+              mobileOpen={mobileSidebar === 'activity'}
+              onClose={() => setMobileSidebar(null)}
+            />
           </AuthGate>
         </div>
+
+        <MobileNavigation
+          onOpenWorkspace={() => setMobileSidebar('workspace')}
+          onOpenActivity={() => setMobileSidebar('activity')}
+        />
 
         <Footer />
 

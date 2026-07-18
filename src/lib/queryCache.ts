@@ -6,7 +6,7 @@ const MAX_AGE_MS = 10 * 60_000;
 
 export interface StoredNotesCache {
   updatedAt: number;
-  queryKey: unknown[];
+  queryKey: readonly unknown[];
   data: InfiniteData<NotesPageResponse, string | null>;
 }
 

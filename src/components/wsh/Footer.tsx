@@ -30,18 +30,19 @@ export default function Footer() {
 
   return (
     <>
-      <footer className="h-12 border-t border-border flex items-center justify-between px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
+      <footer className="flex h-10 shrink-0 items-center justify-between border-t border-border px-3 text-[9px] font-bold uppercase text-muted-foreground sm:px-4 sm:text-[10px] sm:tracking-widest xl:h-12">
         {/* Left */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex items-center gap-1.5">
             <Circle className={`w-2 h-2 ${online === null ? 'fill-muted-foreground/40 text-muted-foreground/40' : online ? 'fill-green-400 text-green-400' : 'fill-red-500 text-red-500'}`} />
-            <span>
+            <span className="max-w-24 truncate sm:max-w-none">
               {user.isLoggedIn ? user.username : 'Guest Mode (Local Only)'}
             </span>
           </div>
           <button
             onClick={() => setTrashOpen(true)}
             className="flex items-center gap-1 text-muted-foreground hover:text-destructive transition-colors active:scale-95 relative"
+            aria-label={`Open trash${deletedCount > 0 ? `, ${deletedCount} deleted notes` : ''}`}
           >
             <Trash2 className="w-3 h-3" />
             <span className="hidden sm:inline">Trash</span>

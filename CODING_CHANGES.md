@@ -1,3 +1,45 @@
+# WSH v4.4.18 — Complete Feature Restore
+
+## Overview
+This update resolves the repository's split release history. `main` contained the canonical v4.4.18 release, while `TST-DEV` contained unique mobile, Quick Reference, and autosave work under an incorrect higher version identity. The complete feature set is now consolidated and published as v4.4.18.
+
+## 1. Release-line integration
+
+- Merged `origin/main` into the `TST-DEV` ancestry instead of replacing either branch.
+- Retained upstream query caching, paginated note loading, search hardening, dashboard analytics, hybrid Mind Map, local synthesis, and checklist persistence fixes.
+- Reapplied the responsive mobile shell, touch-accessible actions, Quick Reference formatting, and draft autosave on top of the latest editor and data architecture.
+
+## 2. Version and deployment alignment
+
+- Updated package metadata and lockfile to `4.4.18`.
+- Updated Docker build args and image tag to `weavenote:4.4.18`.
+- Updated installers, environment tests, API fallbacks, README, changelog, release checklist, and release notes.
+- Made `update.ps1` and `update.sh` detect the current branch and use fast-forward-only pulls.
+- Added non-destructive documentation validation to both update scripts.
+
+## 3. Primary integration files
+
+- `src/app/page.tsx`
+- `src/components/wsh/NoteEditor.tsx`
+- `src/components/wsh/Header.tsx`
+- `src/components/wsh/Footer.tsx`
+- `src/components/wsh/NotesGrid.tsx`
+- `src/components/wsh/MobileNavigation.tsx`
+- `src/lib/quickReferenceFormat.ts`
+- `update.ps1`, `update.sh`
+
+## 4. Functional repair pass
+
+- Added complete TanStack Query v5 generic typing and a stable memoized query key in `useInfiniteNotes.ts`.
+- Made cached query keys immutable in `queryCache.ts`.
+- Corrected the admin system route's `execSync` import and admin environment request headers.
+- Converted Quick Reference initialization and Notebook favicon initialization to lazy state.
+- Deferred Notebook filter index synchronization outside the effect body.
+- Reworked Mind Map node-position resolution so refs are synchronized in an effect and never read during render.
+- Passed targeted ESLint with zero findings and completed a full Next.js production build with all 23 routes.
+
+---
+
 # WSH v4.4.17 — Coding Changes
 
 ## Overview

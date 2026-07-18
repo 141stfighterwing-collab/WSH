@@ -1,47 +1,54 @@
-# WSH v4.4.17 — File Tracker
+# WSH v4.4.18 - Complete Feature File Tracker
 
-> Complete inventory of files modified, created, and verified in this release.
-
----
+> Release inventory and validation record for the unified latest build.
 
 ## Patch Information
 
 | Field | Value |
 |-------|-------|
-| **Version** | 4.4.17 |
-| **Release Date** | 2026-06-25 |
-| **Previous Version** | 4.4.16 |
-| **Release Type** | Today checklist race-condition fix, release metadata alignment |
-| **Git Remote** | `github.com/141stfighterwing-collab/WSH.git` |
-| **Branch** | `main` |
+| Version | 4.4.18 |
+| Release Date | 2026-07-17 |
+| Previous Docker Version | 4.5.6 (incorrect identity) |
+| Canonical Release | 4.4.18 |
+| Release Type | Release-line reconciliation and patch update |
+| Branch | `TST-DEV` |
 
----
+## Release Integration
 
-## Modified Files
+| Area | Files | Result |
+|------|-------|--------|
+| Latest upstream data path | `QueryProvider.tsx`, `useInfiniteNotes.ts`, `useNoteDetail.ts`, `useVisibleNotes.ts`, `queryCache.ts`, notes/document APIs | Retained pagination, detail caching, virtualization, and reliable search |
+| Dashboard and intelligence | `WSHKeepsDashboard.tsx`, synthesis API | Retained Full Intelligence Board graphs and local algorithm paths |
+| Mobile workspace | `page.tsx`, `globals.css`, `MobileNavigation.tsx`, sidebars, header, footer | Retained compact dock, drawers, responsive framing, and touch navigation |
+| Editor safety | `NoteEditor.tsx`, `quickReferenceFormat.ts` | Combined latest image/editor behavior with formatted templates and draft autosave |
+| Supporting views | Notebook, DB Viewer, settings, project editor, notes grid | Retained responsive layouts and visible touch actions |
+| Mind Map | `MindMap.tsx` | Retained the newer hybrid galaxy implementation with tap-capable controls |
 
-| # | File | Change Type | Description |
-|---|------|-------------|-------------|
-| 1 | `src/components/wsh/RightSidebar.tsx` | **Fix** | Added a load-complete guard so Today checklist persistence cannot overwrite saved items with an empty state during initial mount |
-| 2 | `package.json` | **Version** | Bumped package version to `4.4.17` |
-| 3 | `Dockerfile` | **Version** | Updated Docker build metadata to `4.4.17` |
-| 4 | `docker-compose.yml` | **Version** | Updated build arg and image tag to `weavenote:4.4.17` |
-| 5 | `docker-entrypoint.sh` | **Version** | Updated entrypoint banner/version fallback to `4.4.17` |
-| 6 | `src/app/api/health/route.ts` | **Version** | Updated runtime version fallback to `4.4.17` |
-| 7 | `src/app/api/admin/system/route.ts` | **Version** | Updated system route version fallback to `4.4.17` |
-| 8 | `README.md` | **Docs** | Updated user-facing version references to `4.4.17` |
-| 9 | `RELEASE-NOTES-4.4.17.md` | **Docs** | Added dedicated release notes for the Today checklist race-condition fix |
-| 10 | `CHANGELOG.md` | **Release** | Added 4.4.17 entry |
-| 11 | `CODING_CHANGES.md` | **Release** | Added technical record for the Today checklist race-condition fix |
-| 12 | `FILE_TRACKER.md` | **Release** | Updated file inventory for 4.4.17 |
-| 13 | `RELEASE-CHECKLIST.md` | **Release** | Updated target release line to 4.4.17 |
+## Version and Deployment Files
 
----
+| Files | Result |
+|-------|--------|
+| `package.json`, `package-lock.json` | Version aligned to `4.4.18` |
+| `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh` | Image and runtime metadata aligned to `weavenote:4.4.18` |
+| `install.ps1`, `install.sh`, `test-env.ps1`, `test-env.sh` | User-facing version references aligned |
+| `update.ps1`, `update.sh` | Current-branch fast-forward pull, runtime-version check, and non-destructive docs validation |
+| Health and system APIs | Fallback version aligned to `4.4.18` |
+| README, changelog, coding notes, worklog, release checklist, release notes | Unified release history documented |
 
 ## Verification Checklist
 
-- [x] Today checklist initial-load persistence guard added
-- [x] Runtime version metadata updated to `4.4.17`
-- [x] Docker build/image metadata updated to `4.4.17`
-- [x] Release notes, changelog, coding notes, and tracker updated
-- [x] Local production build passed
-- [ ] Live browser/manual smoke pass still recommended after deployment
+- [x] GitHub default branch and all remote branch versions inspected
+- [x] `main` v4.4.18 ancestry merged into the v4.5 release line
+- [x] Mobile and Quick Reference features reconciled with upstream application changes
+- [x] Active version references aligned to `4.4.18`
+- [x] Targeted ESLint passes across the release interaction and data surfaces
+- [x] Production Next.js build passes with all 23 routes generated
+- [x] Phone browser smoke test passes at `390x844` with no document overflow; desktop shell also loads cleanly
+- [x] Login and Settings actions open and close correctly in the compact browser layout
+- [x] PowerShell and shell updater syntax/documentation validation passes
+- [ ] Docker host reports healthy `weavenote:4.4.18`
+
+## Known Validation Notes
+
+- Historical changelog and release-note versions intentionally remain unchanged.
+- Application source has zero TypeScript diagnostics. Repository-wide checking still reports missing optional dependencies in standalone `examples/` and `skills/` scripts; production build and release-surface checks are authoritative for this patch.

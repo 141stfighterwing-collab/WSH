@@ -1,11 +1,12 @@
 #!/usr/bin/env pwsh
-# WSH -- Non-destructive Update Script v4.4.7
+# WSH -- Non-destructive Update Script v4.4.18
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
 # Usage:
 #   .\update.ps1
 #   .\update.ps1 -NoCache    # Force full rebuild
+#   .\update.ps1 -DocsOnly   # Validate release documentation without changing it
 #
 # TROUBLESHOOTING:
 #   If you see "NativeCommandError" from git, that is cosmetic only —
@@ -13,8 +14,35 @@
 #   This script suppresses those via $ErrorActionPreference.
 
 param(
-    [switch]$NoCache
+    [switch]$NoCache,
+    [switch]$DocsOnly
 )
+
+$ExpectedVersion = "4.4.18"
+
+function Test-ReleaseDocumentation {
+    $requiredDocs = @("README.md", "CHANGELOG.md", "CODING_CHANGES.md", "FILE_TRACKER.md")
+    $allValid = $true
+
+    Write-Host "Documentation validation for v$ExpectedVersion" -ForegroundColor Cyan
+    foreach ($doc in $requiredDocs) {
+        if (-not (Test-Path -LiteralPath $doc)) {
+            Write-Host "  [FAIL] Missing $doc" -ForegroundColor Red
+            $allValid = $false
+            continue
+        }
+
+        $content = Get-Content -LiteralPath $doc -Raw
+        if ($content -notmatch [regex]::Escape($ExpectedVersion)) {
+            Write-Host "  [FAIL] $doc does not reference v$ExpectedVersion" -ForegroundColor Red
+            $allValid = $false
+        } else {
+            Write-Host "  [OK] $doc preserved and version-aligned" -ForegroundColor Green
+        }
+    }
+
+    return $allValid
+}
 
 # ── CRITICAL: Suppress PowerShell's NativeCommandError for git/docker ──
 # Both git and docker write progress/info to stderr. PowerShell treats all
@@ -27,14 +55,22 @@ $ErrorActionPreference = "SilentlyContinue"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WSH -- Update v4.4.7" -ForegroundColor Cyan
+Write-Host "  WSH -- Update v$ExpectedVersion" -ForegroundColor Cyan
 Write-Host "  (data-preserving update)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+if ($DocsOnly) {
+    if (Test-ReleaseDocumentation) { exit 0 }
+    exit 1
+}
+
 # -- Step 1: Pull latest code ---------------------------------
 Write-Host "[1/5] Pulling latest code from GitHub..." -ForegroundColor Yellow
-$pullOutput = & git pull origin main 2>&1
+$currentBranch = (& git branch --show-current 2>$null).Trim()
+if (-not $currentBranch) { $currentBranch = "TST-DEV" }
+Write-Host "  Branch: $currentBranch" -ForegroundColor DarkGray
+$pullOutput = & git pull --ff-only origin $currentBranch 2>&1
 if ($pullOutput) {
     $pullOutput | ForEach-Object { Write-Host "  $_" }
 }
@@ -44,11 +80,10 @@ if ($pullExit -ne 0) {
     Write-Host "[FAIL] Git pull failed (exit code $pullExit)!" -ForegroundColor Red
     Write-Host "  Possible causes:" -ForegroundColor DarkGray
     Write-Host "    - Local changes conflict with upstream" -ForegroundColor DarkGray
-    Write-Host "    - Not on the 'main' branch" -ForegroundColor DarkGray
+    Write-Host "    - The current branch has diverged from origin/$currentBranch" -ForegroundColor DarkGray
     Write-Host "    - Network connectivity issues" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "  Fix: git stash && git pull origin main && git stash pop" -ForegroundColor Yellow
-    Write-Host "  Or:  git checkout main && git pull origin main" -ForegroundColor Yellow
+    Write-Host "  Fix: git stash && git pull --ff-only origin $currentBranch && git stash pop" -ForegroundColor Yellow
     exit 1
 }
 Write-Host "  [OK] Code updated" -ForegroundColor Green
@@ -116,11 +151,26 @@ $port = if ($env:WSH_PORT) { $env:WSH_PORT } else { 8883 }
 try {
     $health = Invoke-WebRequest -Uri "http://localhost:$port/api/health" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
     if ($health.StatusCode -eq 200) {
-        Write-Host "  [OK] Health check PASSED (HTTP 200)" -ForegroundColor Green
+        $healthJson = $health.Content | ConvertFrom-Json
+        if ($healthJson.version -eq $ExpectedVersion) {
+            Write-Host "  [OK] Health check PASSED (v$($healthJson.version))" -ForegroundColor Green
+        } else {
+            Write-Host "  [FAIL] Health endpoint reports v$($healthJson.version), expected v$ExpectedVersion" -ForegroundColor Red
+            $allOk = $false
+        }
     }
 } catch {
     Write-Host "  [WARN] Health check not ready yet (container may still be initializing)" -ForegroundColor Yellow
     Write-Host "         Check: docker compose logs -f weavenote" -ForegroundColor DarkGray
+}
+
+if (-not (Test-ReleaseDocumentation)) {
+    $allOk = $false
+}
+
+if (-not $allOk) {
+    Write-Host "  Update validation failed. Review the messages above." -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ""

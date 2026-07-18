@@ -1,31 +1,56 @@
 #!/usr/bin/env bash
-# WSH — Non-destructive Update Script v4.4.7
+# WSH — Non-destructive Update Script v4.4.18
 # Pulls latest code, rebuilds image, and restarts containers.
 # Your data (PostgreSQL, volumes) is NEVER destroyed.
 #
 # Usage:
 #   chmod +x update.sh && ./update.sh
 #   ./update.sh --no-cache    # Force full rebuild (no layer caching)
+#   ./update.sh --docs-only   # Validate release documentation without changing it
 
 set -e
 
 NO_CACHE=""
+DOCS_ONLY=false
+EXPECTED_VERSION="4.4.18"
 for arg in "$@"; do
     case "$arg" in
         --no-cache) NO_CACHE="--no-cache" ;;
+        --docs-only) DOCS_ONLY=true ;;
     esac
 done
 
+validate_docs() {
+    local failed=0
+    for doc in README.md CHANGELOG.md CODING_CHANGES.md FILE_TRACKER.md; do
+        if [ ! -f "$doc" ] || ! grep -q "$EXPECTED_VERSION" "$doc"; then
+            echo "  [FAIL] $doc is missing or not aligned to v$EXPECTED_VERSION"
+            failed=1
+        else
+            echo "  [OK] $doc preserved and version-aligned"
+        fi
+    done
+    return "$failed"
+}
+
 echo ""
 echo "========================================"
-echo "  WSH — Update v4.4.7"
+echo "  WSH — Update v4.4.18"
 echo "  (data-preserving update)"
 echo "========================================"
 echo ""
 
+if [ "$DOCS_ONLY" = true ]; then
+    validate_docs
+    exit $?
+fi
+
 # ── Step 1: Pull latest code ─────────────────────────────────
 echo -e "\033[33m[1/5] Pulling latest code from GitHub...\033[0m"
-git pull origin main 2>&1
+CURRENT_BRANCH=$(git branch --show-current)
+CURRENT_BRANCH=${CURRENT_BRANCH:-TST-DEV}
+echo "  Branch: $CURRENT_BRANCH"
+git pull --ff-only origin "$CURRENT_BRANCH" 2>&1
 echo "  \033[32m[OK] Code updated\033[0m"
 
 # ── Step 2: Stop running containers ──────────────────────────
@@ -76,9 +101,21 @@ done
 PORT=${WSH_PORT:-8883}
 if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
     VERSION=$(curl -sf "http://localhost:$PORT/api/health" 2>/dev/null | grep -o '"version":"[^"]*"' | head -1)
-    echo "  \033[32m[OK] Health check PASSED ($VERSION)\033[0m"
+    if echo "$VERSION" | grep -q "$EXPECTED_VERSION"; then
+        echo "  \033[32m[OK] Health check PASSED ($VERSION)\033[0m"
+    else
+        echo "  \033[31m[FAIL] Health endpoint does not report v$EXPECTED_VERSION ($VERSION)\033[0m"
+        ALL_OK=false
+    fi
 else
     echo "  \033[33m[WARN] Health check not ready yet (container may still be initializing)\033[0m"
+fi
+
+validate_docs || ALL_OK=false
+
+if [ "$ALL_OK" != true ]; then
+    echo "  Update validation failed. Review the messages above."
+    exit 1
 fi
 
 echo ""

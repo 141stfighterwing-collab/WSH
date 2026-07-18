@@ -274,22 +274,25 @@ export default function MindMap() {
     };
   }, [activeNotes, center, centerNodeId, dimensions.height, dimensions.width]);
 
-  const positionedNodes = useMemo(() => {
+  const nodePositionMap = useMemo(() => {
     const map = new Map<string, GraphNode>();
     graph.nodes.forEach((node) => map.set(node.id, { ...node }));
-    nodePositionMapRef.current = map;
-    return graph.nodes;
+    return map;
   }, [graph.nodes]);
 
+  const positionedNodes = graph.nodes;
+
+  useEffect(() => {
+    nodePositionMapRef.current = nodePositionMap;
+  }, [nodePositionMap]);
+
   const resolvedEdges = useMemo(() => {
-    return graph.edges
-      .map((edge) => ({
-        ...edge,
-        sourceNode: nodePositionMapRef.current.get(edge.source),
-        targetNode: nodePositionMapRef.current.get(edge.target),
-      }))
-      .filter((edge) => edge.sourceNode && edge.targetNode);
-  }, [graph.edges, positionedNodes]);
+    return graph.edges.flatMap((edge) => {
+      const sourceNode = nodePositionMap.get(edge.source);
+      const targetNode = nodePositionMap.get(edge.target);
+      return sourceNode && targetNode ? [{ ...edge, sourceNode, targetNode }] : [];
+    });
+  }, [graph.edges, nodePositionMap]);
 
   useEffect(() => {
     if (!mindMapOpen) return;
@@ -485,8 +488,8 @@ export default function MindMap() {
                 </defs>
                 {resolvedEdges.map((edge, idx) => {
                   const isHub = edge.type === 'hub';
-                  const source = nodePositionMapRef.current.get(edge.source)!;
-                  const target = nodePositionMapRef.current.get(edge.target)!;
+                  const source = edge.sourceNode;
+                  const target = edge.targetNode;
                   return (
                     <g key={`${edge.source}-${edge.target}-${idx}`}>
                       <line

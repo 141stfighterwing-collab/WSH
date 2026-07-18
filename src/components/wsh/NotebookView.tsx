@@ -379,10 +379,8 @@ export default function NotebookView() {
 
   // Reset active index when filter changes
   useEffect(() => {
-    try {
-      setActiveIndex(filteredNotes.length > 0 ? 0 : -1);
-    } catch { /* ignore */ }
-  }, [filterType]);
+    queueMicrotask(() => setActiveIndex(filteredNotes.length > 0 ? 0 : -1));
+  }, [filterType, filteredNotes.length]);
 
   const scrollToNote = useCallback((index: number) => {
     setActiveIndex(index);
@@ -716,19 +714,18 @@ function QuoteBlock({ text }: { text: string }) {
 // ─── Link Card Component ───────────────────────────────────────
 
 function LinkCard({ url, text }: { url: string; text: string }) {
-  const [favicon, setFavicon] = useState<string | null>(null);
   const safeUrl = safeString(url);
   const safeText = safeString(text);
   const domain = getDomain(safeUrl);
 
-  useEffect(() => {
+  const [favicon, setFavicon] = useState<string | null>(() => {
     try {
       const u = new URL(safeUrl);
-      setFavicon(`https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`);
+      return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
     } catch {
-      setFavicon(null);
+      return null;
     }
-  }, [safeUrl]);
+  });
 
   return (
     <a

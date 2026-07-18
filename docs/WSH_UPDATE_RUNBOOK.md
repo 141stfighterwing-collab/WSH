@@ -59,7 +59,7 @@ docker volume ls | findstr /I "postgres-data upload-data weavenote-data wsh-env"
 
 Expected preflight results:
 
-- branch should be `main` unless intentionally testing another branch
+- branch should be `TST-DEV` for the Docker test/deployment host
 - `git status --short` should ideally be empty
 - health endpoint should return HTTP 200 and show the currently deployed version
 - Docker should show `weavenote-app`, `wsh-postgres`, and `wsh-dbviewer`
@@ -98,6 +98,7 @@ Expected verify results:
 
 - `weavenote-app` should be running again
 - `/api/health` should return HTTP 200
+- `/api/health` should report version `4.4.18`
 - reported version should change from the old release to the new one (for this update: `4.4.10` -> `4.4.11`)
 - database detail/user counts should still be present, indicating DB connectivity survived the update
 

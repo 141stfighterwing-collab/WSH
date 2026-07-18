@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { execSync, existsSync, statSync, readFileSync, readdirSync } from 'fs';
+import { existsSync, statSync, readFileSync, readdirSync } from 'fs';
+import { execSync } from 'child_process';
 import { join } from 'path';
 import { addLog } from '@/lib/logger';
 
