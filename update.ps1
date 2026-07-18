@@ -158,6 +158,12 @@ try {
             Write-Host "  [FAIL] Health endpoint reports v$($healthJson.version), expected v$ExpectedVersion" -ForegroundColor Red
             $allOk = $false
         }
+        if ($healthJson.authentication.status -eq "configured") {
+            Write-Host "  [OK] Authentication secret is configured" -ForegroundColor Green
+        } else {
+            Write-Host "  [FAIL] Authentication secret is not configured" -ForegroundColor Red
+            $allOk = $false
+        }
     }
 } catch {
     Write-Host "  [WARN] Health check not ready yet (container may still be initializing)" -ForegroundColor Yellow

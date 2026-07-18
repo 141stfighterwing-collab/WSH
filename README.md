@@ -529,7 +529,7 @@ The following table lists all default credentials created during a fresh WSH dep
 | **DB Viewer** (Adminer) | http://localhost:5682 | *(see PostgreSQL)* | *(see PostgreSQL)* | `POSTGRES_USER` / `POSTGRES_PASSWORD` |
 | **pgAdmin** *(optional)* | http://localhost:5050 | `admin@example.com` | `admin123` | `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` |
 
-> ⚠️ **Security Warning:** The defaults above are for local development and first-run convenience only. Before deploying to any network-accessible environment, you must change at minimum `POSTGRES_PASSWORD`, `JWT_SECRET`, and `ADMIN_DEFAULT_PASSWORD`. The `JWT_SECRET` defaults to `change-me-in-production` — see the [Environment Variables](#environment-variables) table for the full list of security-critical settings.
+> **Security Warning:** The defaults above are for local development and first-run convenience only. Before exposing WSH to a network, change at minimum `POSTGRES_PASSWORD` and `ADMIN_DEFAULT_PASSWORD`. Set `JWT_SECRET` explicitly when managing secrets externally; otherwise, the container generates a strong value and preserves it in the `wsh-env` volume.
 
 ### Custom Port
 
@@ -902,7 +902,7 @@ Admin endpoint for retrieving application logs (filterable by level and time ran
 | `PORT` | `8883` | Application listening port |
 | `HOSTNAME` | `0.0.0.0` | Application bind address |
 | `DATABASE_URL` | `postgresql://wsh:wsh-secret-pw@postgres:5432/weavenote` | PostgreSQL connection string (set by docker-compose) |
-| `JWT_SECRET` | `change-me-in-production` | Secret key for JWT token signing (**change in production!**) |
+| `JWT_SECRET` | *(securely generated)* | JWT signing key. Set a 32+ character value explicitly, or allow the entrypoint to generate and preserve one in `wsh-env`. Placeholder values are rejected. |
 | `ADMIN_DEFAULT_USERNAME` | `admin` | Default admin username on first run |
 | `ADMIN_DEFAULT_EMAIL` | `admin@example.com` | Default admin email on first run |
 | `ADMIN_DEFAULT_PASSWORD` | `admin123` | Default admin password on first run (**change immediately!**) |

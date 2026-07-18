@@ -93,11 +93,17 @@ else
     warn "Could not parse version from health response"
 fi
 
-DB_STATUS=$(echo "$HEALTH_JSON" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+DB_STATUS=$(echo "$HEALTH_JSON" | grep -o '"database":{"status":"[^"]*"' | head -1 | cut -d'"' -f6)
 if [ "$DB_STATUS" = "connected" ] || [ "$DB_STATUS" = "connected_no_tables" ]; then
     pass "Database: $DB_STATUS"
 else
     warn "Database status: $DB_STATUS"
+fi
+
+if echo "$HEALTH_JSON" | grep -q '"authentication":{"status":"configured"'; then
+    pass "Authentication secret is configured"
+else
+    fail "Authentication secret is not configured"
 fi
 
 # ── Test 2: Login ───────────────────────────────────────────────────────────

@@ -38,6 +38,14 @@ This update resolves the repository's split release history. `main` contained th
 - Reworked Mind Map node-position resolution so refs are synchronized in an effect and never read during render.
 - Passed targeted ESLint with zero findings and completed a full Next.js production build with all 23 routes.
 
+## 5. Authentication deployment hotfix
+
+- Added secure first-run JWT secret generation to `docker-entrypoint.sh` when neither Compose nor persistent settings provide a valid value.
+- Stored generated secrets in the existing `wsh-env` volume so normal rebuilds and container recreations retain active signing configuration.
+- Updated `/api/health` to report `authentication.status` and return an unhealthy response when authentication or the database is not ready.
+- Updated PowerShell and shell update/environment tests to reject deployments with unconfigured authentication.
+- Restored the host login flow without modifying the PostgreSQL data volume or user records.
+
 ---
 
 # WSH v4.4.17 — Coding Changes

@@ -47,14 +47,28 @@ export async function GET() {
   }
   // NOTE: No db.$disconnect() — the singleton persists for the app lifetime
 
-  return NextResponse.json({
-    status: 'healthy',
-    version: getVersion(),
-    timestamp: new Date().toISOString(),
-    database: {
-      status: dbStatus,
-      latencyMs: dbLatencyMs,
-      detail: dbDetail,
+  const jwtSecret = process.env.JWT_SECRET;
+  const authConfigured = Boolean(
+    jwtSecret && jwtSecret !== 'change-me-in-production',
+  );
+  const databaseReady =
+    dbStatus === 'connected' || dbStatus === 'connected_no_tables';
+  const healthy = authConfigured && databaseReady;
+
+  return NextResponse.json(
+    {
+      status: healthy ? 'healthy' : 'unhealthy',
+      version: getVersion(),
+      timestamp: new Date().toISOString(),
+      database: {
+        status: dbStatus,
+        latencyMs: dbLatencyMs,
+        detail: dbDetail,
+      },
+      authentication: {
+        status: authConfigured ? 'configured' : 'misconfigured',
+      },
     },
-  });
+    { status: healthy ? 200 : 503 },
+  );
 }

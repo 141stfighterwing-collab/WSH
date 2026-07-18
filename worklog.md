@@ -1,4 +1,15 @@
 ---
+## Task ID: 11 - Docker Authentication Recovery (v4.4.18)
+### Work Task
+Restore login after the secure JWT implementation exposed a missing Docker runtime secret, then prevent recurrence and verify the authenticated application end to end.
+
+### Work Summary
+- Confirmed the running container had an empty `JWT_SECRET` and the host `.env` had no corresponding entry.
+- Generated a persistent cryptographically random host secret and recreated only the WSH application container.
+- Added entrypoint self-healing, authentication-aware health reporting, and updater/environment validation.
+- Preserved the database volume and all existing user and workspace data.
+
+---
 ## Task ID: 10 - Complete Feature Restore (v4.4.18)
 ### Work Task
 Resolve the version mismatch between GitHub `main`, `TST-DEV`, and the deployed Docker image, then produce one latest build without losing either release line's functionality.

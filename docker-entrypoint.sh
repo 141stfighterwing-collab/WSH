@@ -46,6 +46,25 @@ if [ -f "$PERSISTENT_ENV" ]; then
   echo "[+] Loaded $KEY_COUNT persistent environment variables"
 fi
 
+# Authentication must always have a strong, stable signing secret. If compose
+# did not provide one, generate it once and retain it in the persistent env
+# volume so container recreations do not invalidate active sessions.
+if [ -z "${JWT_SECRET:-}" ] || [ "$JWT_SECRET" = "change-me-in-production" ]; then
+  JWT_SECRET=$(node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64url'))")
+  if [ -z "$JWT_SECRET" ]; then
+    echo "[ERROR] Could not generate JWT_SECRET. Authentication cannot start safely."
+    exit 1
+  fi
+
+  export JWT_SECRET
+  umask 077
+  touch "$PERSISTENT_ENV"
+  sed -i '/^[[:space:]]*JWT_SECRET=/d' "$PERSISTENT_ENV"
+  printf 'JWT_SECRET=%s\n' "$JWT_SECRET" >> "$PERSISTENT_ENV"
+  chown ${WSH_UID}:${WSH_GID} "$PERSISTENT_ENV" 2>/dev/null
+  echo "[+] Generated and persisted a secure JWT signing secret"
+fi
+
 # ── Pre-flight checks ──────────────────────────────────────────
 if [ ! -x "./node_modules/.bin/prisma" ]; then
   echo "[ERROR] Prisma CLI not found at ./node_modules/.bin/prisma"

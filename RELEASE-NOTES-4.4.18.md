@@ -17,12 +17,15 @@ The complete build also restores the mobile workspace, touch-accessible actions,
 - Restored phone/tablet navigation, Workspace and Activity drawers, and compact editor actions
 - Restored formatted Quick Reference insertion and five-second draft autosave
 - Retained Full Intelligence Board analytics, hybrid galaxy Mind Map, query caching, and virtualized note loading
+- Added persistent secure JWT secret generation so Docker updates cannot leave login unable to issue tokens
+- Added authentication readiness to `/api/health` and updater validation
 
 ## Validation Summary
 - Repository patch review completed for both note search and document search paths
 - GitHub repo updated successfully with both search fixes
-- Local build could not be fully executed in this environment because app dependencies were not installed in the clone (`next: not found`)
+- Production application and Docker image builds pass with all 23 routes generated
 - Manual code inspection confirms the previous note-search double-filter bug is removed
+- Live login and authenticated workspace verification pass against the Docker deployment
 
 ## Operator Impact
 - Main note search should now stop dropping valid matches from note bodies

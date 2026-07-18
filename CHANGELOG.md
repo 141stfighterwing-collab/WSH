@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Version metadata aligned to 4.4.18** — Package metadata, Docker image/build args, entrypoint, installer/test banners, runtime fallbacks, README, and release records now share the correct version.
 
 ### Fixed
+- **Docker login configuration** — The entrypoint now generates and persists a cryptographically random JWT signing secret when no secure value is supplied, preventing container updates from leaving login unusable.
+- **Authentication health detection** — The health API and update/environment tests now verify that JWT authentication is configured instead of reporting a healthy deployment that cannot issue login tokens.
 - **Paginated notes cache integration** — Corrected TanStack Query page-parameter and immutable query-key typing so infinite note loading and cached pages share one valid data contract.
 - **Admin system diagnostics** — Corrected `execSync` to load from `child_process`, restoring system-command diagnostics.
 - **Admin environment requests** — Normalized authenticated request headers to a valid `HeadersInit` shape.

@@ -59,6 +59,16 @@
 | Health API | Version `4.4.18`, database `connected`, 2 ms observed latency, 4 users |
 | Browser smoke test | Deployed guest shell, Login, Settings, and compact layout render without console errors |
 
+## Authentication Hotfix
+
+| Check | Result |
+|-------|--------|
+| Root cause | Host `.env` did not contain `JWT_SECRET`; Compose passed an empty value |
+| Immediate repair | Generated a 64-character random host secret and recreated only `weavenote-app` |
+| Prevention | Entrypoint now generates and persists a secure secret in `wsh-env` when required |
+| Detection | Health API, update scripts, and environment tests now require authentication status `configured` |
+| Data safety | PostgreSQL container, volume, users, notes, and documents were not modified |
+
 ## Known Validation Notes
 
 - Historical changelog and release-note versions intentionally remain unchanged.

@@ -107,6 +107,12 @@ if curl -sf "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
         echo "  \033[31m[FAIL] Health endpoint does not report v$EXPECTED_VERSION ($VERSION)\033[0m"
         ALL_OK=false
     fi
+    if curl -sf "http://localhost:$PORT/api/health" 2>/dev/null | grep -q '"authentication":{"status":"configured"'; then
+        echo "  \033[32m[OK] Authentication secret is configured\033[0m"
+    else
+        echo "  \033[31m[FAIL] Authentication secret is not configured\033[0m"
+        ALL_OK=false
+    fi
 else
     echo "  \033[33m[WARN] Health check not ready yet (container may still be initializing)\033[0m"
 fi

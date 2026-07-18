@@ -100,6 +100,12 @@ try {
     } else {
         Warn-Test "Database status: $($healthJson.database.status)"
     }
+
+    if ($healthJson.authentication.status -eq "configured") {
+        Pass-Test "Authentication secret is configured"
+    } else {
+        Fail-Test "Authentication secret is not configured"
+    }
 } catch {
     Fail-Test "Health endpoint unreachable at $BaseUrl/api/health"
     Write-Host "  Run: docker compose up -d; Start-Sleep 15"
