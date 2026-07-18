@@ -8,6 +8,8 @@ Restore login after the secure JWT implementation exposed a missing Docker runti
 - Generated a persistent cryptographically random host secret and recreated only the WSH application container.
 - Added entrypoint self-healing, authentication-aware health reporting, and updater/environment validation.
 - Preserved the database volume and all existing user and workspace data.
+- Verified login, token validation, authenticated notes/folders/graph reads, Dashboard, Map, Notebook, Analytics, refresh persistence, logout, and re-login against `10.30.1.15`.
+- Confirmed zero browser console errors and independently exercised missing-secret recovery in an isolated container.
 
 ---
 ## Task ID: 10 - Complete Feature Restore (v4.4.18)

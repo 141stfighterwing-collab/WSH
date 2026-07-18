@@ -68,6 +68,10 @@
 | Prevention | Entrypoint now generates and persists a secure secret in `wsh-env` when required |
 | Detection | Health API, update scripts, and environment tests now require authentication status `configured` |
 | Data safety | PostgreSQL container, volume, users, notes, and documents were not modified |
+| API E2E | Login, JWT verification, notes, folders, and graph reads passed as `Shootre` / `super-admin` |
+| UI E2E | Login, workspace load, Dashboard, Map, Notebook, Analytics charts, refresh persistence, logout, and re-login passed |
+| Browser diagnostics | Zero console errors during the authenticated lifecycle |
+| Self-healing test | Isolated no-secret container generated and persisted a valid random JWT secret |
 
 ## Known Validation Notes
 
