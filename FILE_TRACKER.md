@@ -46,9 +46,21 @@
 - [x] Phone browser smoke test passes at `390x844` with no document overflow; desktop shell also loads cleanly
 - [x] Login and Settings actions open and close correctly in the compact browser layout
 - [x] PowerShell and shell updater syntax/documentation validation passes
-- [ ] Docker host reports healthy `weavenote:4.4.18`
+- [x] Docker host `10.30.1.15` reports healthy `weavenote:4.4.18`
+
+## Deployment Result
+
+| Check | Result |
+|-------|--------|
+| GitHub `TST-DEV` | Feature restore commit `74ad7e2` pushed successfully |
+| Host checkout | Clean `TST-DEV` checkout at `74ad7e2` |
+| Docker image | `weavenote:4.4.18` built successfully on the host |
+| Container | `weavenote-app` running and Docker health status `healthy` |
+| Health API | Version `4.4.18`, database `connected`, 2 ms observed latency, 4 users |
+| Browser smoke test | Deployed guest shell, Login, Settings, and compact layout render without console errors |
 
 ## Known Validation Notes
 
 - Historical changelog and release-note versions intentionally remain unchanged.
 - Application source has zero TypeScript diagnostics. Repository-wide checking still reports missing optional dependencies in standalone `examples/` and `skills/` scripts; production build and release-surface checks are authoritative for this patch.
+- The live browser session was unauthenticated, so data-changing workspace actions were not exercised against user data. Their release surfaces passed targeted lint and production build validation.

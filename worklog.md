@@ -10,6 +10,8 @@ Resolve the version mismatch between GitHub `main`, `TST-DEV`, and the deployed 
 - Aligned release and Docker metadata to the canonical v4.4.18 identity and made update scripts follow the checked-out branch safely.
 - Fixed the paginated query/cache contract, admin diagnostics, authenticated environment requests, Quick Reference and Notebook initialization, and Mind Map render/ref lifecycle.
 - Passed targeted ESLint, completed the 23-route production build, and verified the compact guest/login/settings flows without overflow.
+- Pushed `TST-DEV` at `74ad7e2`, rebuilt `weavenote:4.4.18` on `10.30.1.15`, and verified a healthy running container with a connected database.
+- Confirmed the deployed compact guest shell, Login, and Settings controls render without browser console errors; no user data was changed during the smoke test.
 
 ---
 ## Task ID: 9 - Mobile Workspace Optimization (v4.5.6)
